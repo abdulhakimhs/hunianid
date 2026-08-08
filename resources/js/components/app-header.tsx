@@ -61,7 +61,7 @@ const rightNavItems: NavItem[] = [
 ];
 
 const activeItemStyles =
-    'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
+    'rounded-full bg-[color:var(--color-sky)]/10 text-[color:var(--color-sky-deep)] shadow-sm';
 
 export function AppHeader({ breadcrumbs = [] }: Props) {
     const page = usePage();
@@ -71,7 +71,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
     return (
         <>
-            <div className="border-b border-sidebar-border/80">
+            <div className="border-b border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)]/90 backdrop-blur">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Mobile Menu */}
                     <div className="lg:hidden">
@@ -102,7 +102,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                 <Link
                                                     key={item.title}
                                                     href={item.href}
-                                                    className="flex items-center space-x-2 font-medium"
+                                                    className="flex items-center space-x-2 font-medium text-[color:var(--color-ink)]/80"
                                                 >
                                                     {item.icon && (
                                                         <item.icon className="h-5 w-5" />
@@ -119,7 +119,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     href={toUrl(item.href)}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="flex items-center space-x-2 font-medium"
+                                                    className="flex items-center space-x-2 font-medium text-[color:var(--color-ink)]/80"
                                                 >
                                                     {item.icon && (
                                                         <item.icon className="h-5 w-5" />
@@ -159,7 +159,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     item.href,
                                                     activeItemStyles,
                                                 ),
-                                                'h-9 cursor-pointer px-3',
+                                                'h-9 cursor-pointer px-3 text-[color:var(--color-ink)]/75 hover:text-[color:var(--color-ink)]',
                                             )}
                                         >
                                             {item.icon && (
@@ -168,7 +168,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             {item.title}
                                         </Link>
                                         {isCurrentUrl(item.href) && (
-                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
+                                            <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-[color:var(--color-sky-deep)]"></div>
                                         )}
                                     </NavigationMenuItem>
                                 ))}
@@ -193,7 +193,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                 href={toUrl(item.href)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="group inline-flex h-9 w-9 items-center justify-center rounded-md bg-transparent p-0 text-sm font-medium text-accent-foreground ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                                                className="group inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent p-0 text-sm font-medium text-[color:var(--color-ink)]/70 ring-offset-background transition-colors hover:bg-[color:var(--color-sky)]/10 hover:text-[color:var(--color-sky-deep)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
                                             >
                                                 <span className="sr-only">
                                                     {item.title}
@@ -214,7 +214,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    className="size-10 rounded-full p-1"
+                                    className="size-10 rounded-full border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-1 shadow-sm"
                                 >
                                     <Avatar className="size-8 overflow-hidden rounded-full">
                                         <AvatarImage
