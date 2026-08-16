@@ -1,12 +1,124 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     ArrowUpRight,
     BadgeCheck,
     BellRing,
     CircleDollarSign,
+    Clock,
+    Home,
+    Send,
+    ShieldCheck,
     Users,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
+
+type Guidance = {
+    type:
+        | 'pengelola_new'
+        | 'penghuni_unclaimed'
+        | 'penghuni_unclaimed_and_pending_unit'
+        | 'penghuni_pending_approval'
+        | 'penghuni_pending_unit'
+        | 'penghuni_pending_both';
+    areaId: number;
+    areaName: string;
+} | null;
+
+function DashboardGuidance({ guidance }: { guidance: Guidance }) {
+    if (!guidance) {
+return null;
+}
+
+    if (guidance.type === 'pengelola_new') {
+        return (
+            <section className="rounded-[1.5rem] border border-[color:var(--color-sky,#2FC2E8)]/25 bg-[color:var(--color-sky,#2FC2E8)]/10 p-5 shadow-elevated">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep,#1aa3c9)]">
+                    Langkah selanjutnya
+                </p>
+                <h2 className="mt-2 font-display text-lg font-semibold text-[color:var(--color-ink,#142033)]">
+                    Undang warga Anda
+                </h2>
+                <p className="mt-1 text-sm text-[color:var(--color-ink,#142033)]/70">
+                    Buat tautan undangan agar warga {guidance.areaName} bisa mulai bergabung.
+                </p>
+                <Link
+                    href="/admin/invites"
+                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)] px-4 py-2 text-sm font-semibold text-white"
+                >
+                    <Send className="h-4 w-4" /> Buat tautan undangan
+                </Link>
+            </section>
+        );
+    }
+
+    const showUnclaimedCards =
+        guidance.type === 'penghuni_unclaimed' || guidance.type === 'penghuni_unclaimed_and_pending_unit';
+    const showPendingApproval =
+        guidance.type === 'penghuni_pending_approval' || guidance.type === 'penghuni_pending_both';
+    const showPendingUnit =
+        guidance.type === 'penghuni_pending_unit' ||
+        guidance.type === 'penghuni_pending_both' ||
+        guidance.type === 'penghuni_unclaimed_and_pending_unit';
+
+    return (
+        <div className="flex flex-col gap-4">
+            {showUnclaimedCards && (
+                <section className="rounded-[1.5rem] border border-[color:var(--color-ink,#142033)]/8 bg-[color:var(--color-surface,#fff)] p-5 shadow-elevated">
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep,#1aa3c9)]">
+                        Belum ada pengurus di {guidance.areaName}
+                    </p>
+                    <h2 className="mt-2 font-display text-lg font-semibold text-[color:var(--color-ink,#142033)]">
+                        Ajak orang lain bergabung
+                    </h2>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <Link
+                            href="/admin/invites?frame=pengelola"
+                            className="flex flex-col gap-2 rounded-2xl border-2 border-[color:var(--color-mint,#1FCB82)] bg-[color:var(--color-mint,#1FCB82)]/10 p-4 text-left"
+                        >
+                            <ShieldCheck className="h-5 w-5 text-[color:var(--color-mint-deep,#14a869)]" />
+                            <span className="font-semibold text-[color:var(--color-ink,#142033)]">Ajak RT/Pengelola Bergabung</span>
+                            <span className="text-sm text-[color:var(--color-ink,#142033)]/70">
+                                Setelah mereka bergabung, Anda bisa menyerahkan akses pengelola ke akun mereka.
+                            </span>
+                        </Link>
+                        <Link
+                            href="/admin/invites?frame=resident"
+                            className="flex flex-col gap-2 rounded-2xl border border-[color:var(--color-ink,#142033)]/8 bg-[color:var(--color-bg,#F3FBF9)]/70 p-4 text-left"
+                        >
+                            <Users className="h-5 w-5 text-[color:var(--color-sky-deep,#1aa3c9)]" />
+                            <span className="font-semibold text-[color:var(--color-ink,#142033)]">Ajak Warga Lain Bergabung</span>
+                            <span className="text-sm text-[color:var(--color-ink,#142033)]/70">
+                                Undang tetangga Anda untuk ikut terdaftar di sini.
+                            </span>
+                        </Link>
+                    </div>
+                    <p className="mt-4 text-sm text-[color:var(--color-ink,#142033)]/60">
+                        Anda bisa mengundang siapa saja duluan. Nanti, akses sebagai pengelola bisa dipindahkan ke akun warga
+                        manapun kapan saja dari halaman ini.
+                    </p>
+                </section>
+            )}
+
+            {showPendingApproval && (
+                <section className="flex items-start gap-3 rounded-[1.5rem] border border-[color:var(--color-coral,#FF6B57)]/25 bg-[color:var(--color-coral,#FF6B57)]/10 p-5 shadow-elevated">
+                    <Clock className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-coral,#FF6B57)]" />
+                    <p className="text-sm text-[color:var(--color-ink,#142033)]">
+                        Akun Anda sedang menunggu persetujuan dari pengurus {guidance.areaName}.
+                    </p>
+                </section>
+            )}
+
+            {showPendingUnit && (
+                <section className="flex items-start gap-3 rounded-[1.5rem] border border-[color:var(--color-ink,#142033)]/8 bg-[color:var(--color-surface,#fff)] p-5 shadow-elevated">
+                    <Home className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-sky-deep,#1aa3c9)]" />
+                    <p className="text-sm text-[color:var(--color-ink,#142033)]">
+                        Menunggu konfirmasi dari penghuni yang sudah terdaftar di rumah ini sebelum akses Anda aktif.
+                    </p>
+                </section>
+            )}
+        </div>
+    );
+}
 
 const stats = [
     {
@@ -38,11 +150,19 @@ const activity = [
     'Komplain pompa air diteruskan ke tukang',
 ];
 
-export default function Dashboard() {
+export default function Dashboard({ guidance = null, status }: { guidance?: Guidance; status?: string | null }) {
     return (
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-[2rem] bg-[color:var(--color-bg)] p-4 sm:p-6 lg:p-8">
+                {status && (
+                    <div className="rounded-xl border border-[color:var(--color-mint)]/25 bg-[color:var(--color-mint)]/10 px-4 py-2.5 text-sm text-[color:var(--color-mint-deep)]">
+                        {status}
+                    </div>
+                )}
+
+                <DashboardGuidance guidance={guidance} />
+
                 <section className="relative overflow-hidden rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-6 shadow-elevated lg:p-8">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,_var(--color-sky)_16%,_transparent),_transparent_45%),radial-gradient(circle_at_bottom_right,_color-mix(in_srgb,_var(--color-mint)_16%,_transparent),_transparent_40%)]" />
                     <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">

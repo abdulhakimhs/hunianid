@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['google_place_id', 'name', 'formatted_address', 'latitude', 'longitude'])]
+#[Fillable(['google_place_id', 'source', 'name', 'formatted_address', 'province_code', 'city_code', 'latitude', 'longitude'])]
 class Complex extends Model
 {
     /** @use HasFactory<ComplexFactory> */

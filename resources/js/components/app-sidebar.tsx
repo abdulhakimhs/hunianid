@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     BookOpen,
     Building2,
@@ -8,8 +8,10 @@ import {
     LayoutGrid,
     MapPinned,
     ReceiptText,
+    Send,
     Settings2,
     Ticket,
+    UserCheck,
     Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -26,80 +28,97 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import type { AdminAccess, NavItem } from '@/types';
 
-const mainNavGroups = [
-    {
-        label: 'Utama',
-        items: [
-            {
-                title: 'Dashboard',
-                href: dashboard(),
-                icon: LayoutGrid,
-            },
-            {
-                title: 'Ringkasan Komplek',
-                href: '#',
-                icon: Home,
-            },
-            {
-                title: 'Peta Unit',
-                href: '/units-map',
-                icon: MapPinned,
-            },
-        ],
-    },
-    {
-        label: 'Manajemen',
-        items: [
-            {
-                title: 'Kepemilikan & Warga',
-                href: '#',
-                icon: Users,
-            },
-            {
-                title: 'Unit / Rumah',
-                href: '#',
-                icon: Building2,
-            },
-            {
-                title: 'Tiket & Komplain',
-                href: '#',
-                icon: Ticket,
-            },
-        ],
-    },
-    {
-        label: 'Keuangan',
-        items: [
-            {
-                title: 'Tagihan',
-                href: '#',
-                icon: ReceiptText,
-            },
-            {
-                title: 'Pembayaran',
-                href: '#',
-                icon: CircleDollarSign,
-            },
-        ],
-    },
-    {
-        label: 'Lainnya',
-        items: [
-            {
-                title: 'Pengunjung',
-                href: '#',
-                icon: Users,
-            },
-            {
-                title: 'Pengaturan',
-                href: '#',
-                icon: Settings2,
-            },
-        ],
-    },
-];
+// 'Manajemen' items gated by an admin capability declare it via `requires`, filtered
+// against auth.adminAccess so users don't see links they'd just 403 on.
+function buildNavGroups(adminAccess: AdminAccess) {
+    return [
+        {
+            label: 'Utama',
+            items: [
+                {
+                    title: 'Dashboard',
+                    href: dashboard(),
+                    icon: LayoutGrid,
+                },
+                {
+                    title: 'Ringkasan Komplek',
+                    href: '#',
+                    icon: Home,
+                },
+                {
+                    title: 'Peta Unit',
+                    href: '/units-map',
+                    icon: MapPinned,
+                },
+            ],
+        },
+        {
+            label: 'Manajemen',
+            items: [
+                {
+                    title: 'Kepemilikan & Warga',
+                    href: '/admin/members',
+                    icon: Users,
+                    requires: adminAccess.members,
+                },
+                {
+                    title: 'Undangan',
+                    href: '/admin/invites',
+                    icon: Send,
+                    requires: adminAccess.invites,
+                },
+                {
+                    title: 'Menunggu Persetujuan',
+                    href: '/admin/members/pending',
+                    icon: UserCheck,
+                    requires: adminAccess.pendingApprovals,
+                },
+                {
+                    title: 'Unit / Rumah',
+                    href: '#',
+                    icon: Building2,
+                },
+                {
+                    title: 'Tiket & Komplain',
+                    href: '#',
+                    icon: Ticket,
+                },
+            ].filter((item) => item.requires ?? true),
+        },
+        {
+            label: 'Keuangan',
+            items: [
+                {
+                    title: 'Tagihan',
+                    href: '#',
+                    icon: ReceiptText,
+                },
+                {
+                    title: 'Pembayaran',
+                    href: '#',
+                    icon: CircleDollarSign,
+                },
+            ],
+        },
+        {
+            label: 'Lainnya',
+            items: [
+                {
+                    title: 'Pengunjung',
+                    href: '#',
+                    icon: Users,
+                },
+                {
+                    title: 'Pengaturan',
+                    href: '#',
+                    icon: Settings2,
+                },
+            ],
+        },
+    ];
+}
 
 const footerNavItems: NavItem[] = [
     {
@@ -115,6 +134,9 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props;
+    const mainNavGroups = buildNavGroups(auth.adminAccess);
+
     return (
         <Sidebar collapsible="icon" variant="inset" className="border-r border-white/10 bg-(--color-ink) text-(--color-surface)">
             <SidebarHeader className="border-b border-white/10 bg-(--color-ink)/95">

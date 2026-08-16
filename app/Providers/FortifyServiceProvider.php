@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -40,11 +39,14 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureActions(): void
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
-        Fortify::createUsersUsing(CreateNewUser::class);
     }
 
     /**
      * Configure Fortify views.
+     *
+     * Registration is NOT configured here — Features::registration() is disabled in
+     * config/fortify.php, and /register is handled entirely by our own single-page wizard
+     * (App\Http\Controllers\Auth\RegistrationController), not Fortify's controller.
      */
     private function configureViews(): void
     {
@@ -65,10 +67,6 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
             'status' => $request->session()->get('status'),
-        ]));
-
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
@@ -95,6 +93,18 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by(
                 ($request->input('credential.id') ?: $request->session()->getId()).'|'.$request->ip(),
             );
+        });
+
+        RateLimiter::for('register', function (Request $request) {
+            return Limit::perMinute(6)->by($request->ip());
+        });
+
+        RateLimiter::for('otp-request', function (Request $request) {
+            return Limit::perMinute(3)->by($request->ip().'|'.$request->input('phone'));
+        });
+
+        RateLimiter::for('otp-verify', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip().'|'.$request->input('phone'));
         });
     }
 }

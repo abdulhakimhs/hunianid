@@ -10,8 +10,26 @@ export type User = {
     [key: string]: unknown;
 };
 
+export type Membership = {
+    id: number;
+    areaId: number;
+    areaName: string;
+    complexName: string;
+    roleKey: 'superadmin' | 'staff' | 'security' | 'resident';
+    roleLabel: string;
+};
+
+export type AdminAccess = {
+    members: boolean;
+    invites: boolean;
+    pendingApprovals: boolean;
+};
+
 export type Auth = {
     user: User;
+    memberships: Membership[];
+    currentMembershipId: number | null;
+    adminAccess: AdminAccess;
 };
 
 /* @chisel-passkeys */

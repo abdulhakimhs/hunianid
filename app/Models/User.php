@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -24,6 +25,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $phone_verified_at
  * @property Carbon|null $email_verified_at
  * @property string $password
+ * @property int|null $last_membership_id
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
@@ -59,6 +61,18 @@ class User extends Authenticatable implements PasskeyUser
     public function areaMemberships(): HasMany
     {
         return $this->hasMany(AreaMember::class);
+    }
+
+    /**
+     * The area_members row the user last explicitly switched to (see MembershipContext)
+     * — restored automatically on their next login, since the session-based selection
+     * doesn't survive logout.
+     *
+     * @return BelongsTo<AreaMember, $this>
+     */
+    public function lastMembership(): BelongsTo
+    {
+        return $this->belongsTo(AreaMember::class, 'last_membership_id');
     }
 
     /**
