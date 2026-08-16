@@ -8,6 +8,18 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+    server: {
+        watch: {
+            // Laravel writes to storage/ on every single request — session files (when
+            // using the `file` session driver) and, notably, a fresh JSON snapshot per
+            // request from Inertia's devtools feature (storage/inertia-devtools/*.json).
+            // Vite's watcher was picking those up as "source changed" and firing a full
+            // page reload on every request — which is what looked like the app randomly
+            // reloading mid-navigation throughout this whole debugging session. None of
+            // storage/ is a frontend source file, so it never needs to be watched at all.
+            ignored: ['**/storage/**'],
+        },
+    },
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
@@ -38,7 +50,11 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: false,
-            outDir: 'public',
+            // No explicit outDir — inherit Vite's actual build.outDir (laravel-vite-plugin
+            // resolves that to `public/build`), matching the <link rel="manifest"
+            // href="/build/manifest.webmanifest"> reference in resources/views/app.blade.php.
+            // The previous `outDir: 'public'` wrote the manifest to `public/manifest.webmanifest`
+            // instead, which is why it always 404'd — even after a production build.
             base: '/',
             includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
             manifest: {

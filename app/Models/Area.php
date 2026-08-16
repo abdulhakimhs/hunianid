@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval'])]
+#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by'])]
 class Area extends Model
 {
     /** @use HasFactory<AreaFactory> */
@@ -68,5 +68,13 @@ class Area extends Model
     public function invites(): HasMany
     {
         return $this->hasMany(Invite::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

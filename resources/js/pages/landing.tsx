@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import {
     MockupChat,
@@ -10,6 +10,7 @@ import {
     MockupBroadcast,
 } from '../components/mockups.jsx';
 import Reveal from '../components/reveal.jsx';
+import { login } from '@/routes';
 
 const NAV_LINKS = [
     { href: '#cara-kerja', label: 'Cara Kerja' },
@@ -652,12 +653,20 @@ export default function Landing() {
                                 </a>
                             ))}
                         </nav>
-                        <a
-                            href="#daftar"
-                            className="shadow-elevated rounded-full bg-[color:var(--color-ink)] px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
-                        >
-                            Daftarkan Perumahan
-                        </a>
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href={login()}
+                                className="text-sm font-medium text-[color:var(--color-ink)]/75 transition hover:text-[color:var(--color-ink)]"
+                            >
+                                Masuk
+                            </Link>
+                            <a
+                                href="#daftar"
+                                className="shadow-elevated rounded-full bg-[color:var(--color-ink)] px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                            >
+                                Daftar Sekarang
+                            </a>
+                        </div>
                     </div>
                 </header>
 
@@ -708,7 +717,7 @@ export default function Landing() {
                                                 'linear-gradient(135deg, var(--color-sky-deep), var(--color-sky))',
                                         }}
                                     >
-                                        Daftarkan Perumahan Anda
+                                        Daftar Sekarang
                                     </a>
                                     <a
                                         href="#cara-kerja"
@@ -1165,7 +1174,7 @@ export default function Landing() {
                                     'linear-gradient(135deg, var(--color-sky-deep), var(--color-sky))',
                             }}
                         >
-                            Daftarkan Perumahan Anda
+                            Daftar Sekarang
                         </a>
                     </Reveal>
                 </section>

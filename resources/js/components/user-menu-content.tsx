@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { Building2, Check, LogOut, Settings, ShieldCheck } from 'lucide-react';
+import { Building2, Check, Loader2, LogOut, Settings, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import {
     DropdownMenuGroup,
@@ -9,47 +9,46 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
+import { postJson } from '@/lib/api';
+import { membershipSubtitle } from '@/lib/membership';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
-import type { User } from '@/types';
+import type { Membership, User } from '@/types';
 
 type Props = {
     user: User;
+    memberships: Membership[];
+    currentMembershipId: number | null;
 };
 
-const mockRoles = [
-    {
-        id: 'admin',
-        label: 'Pengelola / Admin',
-        description: 'Manage complexes and residents',
-    },
-    {
-        id: 'tenant',
-        label: 'Tenant / Owner',
-        description: 'View your unit and community updates',
-    },
-] as const;
-
-const mockComplexes = [
-    {
-        id: 'grisenda',
-        name: 'Taman Grisenda',
-        address: 'Jl. Cendrawasih No. 12',
-    },
-    {
-        id: 'sentosa',
-        name: 'Citra Sentosa',
-        address: 'Jl. Merapi Raya No. 8',
-    },
-] as const;
-
-export function UserMenuContent({ user }: Props) {
+export function UserMenuContent({ user, memberships, currentMembershipId }: Props) {
     const cleanup = useMobileNavigation();
-    const [activeRoleId, setActiveRoleId] = useState<(typeof mockRoles)[number]['id']>(mockRoles[0].id);
-    const [activeComplexId, setActiveComplexId] = useState<(typeof mockComplexes)[number]['id']>(mockComplexes[0].id);
+    const [switching, setSwitching] = useState<number | null>(null);
 
-    const activeRole = mockRoles.find((role) => role.id === activeRoleId) ?? mockRoles[0];
-    const activeComplex = mockComplexes.find((complex) => complex.id === activeComplexId) ?? mockComplexes[0];
+    const current = memberships.find((m) => m.id === currentMembershipId) ?? null;
+    const subtitle = current ? membershipSubtitle(current) : undefined;
+
+    // Distinct areas the user belongs to, in first-seen order.
+    const complexes = Array.from(new Map(memberships.map((m) => [m.areaId, { areaId: m.areaId, areaName: m.areaName }])).values());
+
+    // Roles available within whichever area is currently active.
+    const rolesInCurrentArea = current ? memberships.filter((m) => m.areaId === current.areaId) : [];
+
+    function switchTo(membershipId: number) {
+        if (membershipId === currentMembershipId || switching !== null) {
+            return;
+        }
+
+        setSwitching(membershipId);
+
+        // Hard redirect, not an Inertia visit — avoids serving a stale prefetch-cached
+        // response for the area just switched away from.
+        postJson<{ redirect: string }>('/switch-membership', { membership_id: membershipId })
+            .then((data) => {
+                window.location.href = data.redirect;
+            })
+            .catch(() => setSwitching(null));
+    }
 
     const handleLogout = () => {
         cleanup();
@@ -60,14 +59,7 @@ export function UserMenuContent({ user }: Props) {
         <>
             <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex flex-col gap-2 px-1 py-1.5 text-left text-sm">
-                    <UserInfo user={user} showEmail={false} />
-                    {/* <div className="rounded-lg border border-border/70 bg-muted/40 px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-                            Active context
-                        </p>
-                        <p className="mt-1 font-medium text-foreground">{activeRole.label}</p>
-                        <p className="text-xs text-muted-foreground">{activeComplex.name}</p>
-                    </div> */}
+                    <UserInfo user={user} subtitle={subtitle} showEmail={false} />
                 </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -76,26 +68,28 @@ export function UserMenuContent({ user }: Props) {
                     Switch Role
                 </p>
                 <div className="space-y-1">
-                    {mockRoles.map((role) => {
-                        const isActive = role.id === activeRoleId;
+                    {rolesInCurrentArea.map((m) => {
+                        const isActive = m.id === currentMembershipId;
 
                         return (
                             <button
-                                key={role.id}
+                                key={m.id}
                                 type="button"
-                                onClick={() => setActiveRoleId(role.id)}
+                                disabled={switching !== null}
+                                onClick={() => switchTo(m.id)}
                                 className={`flex w-full items-start justify-between rounded-md px-2.5 py-2 text-left text-sm transition ${isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'}`}
                             >
                                 <span className="flex items-start gap-2">
                                     <ShieldCheck className="mt-0.5 size-4 shrink-0" />
                                     <span>
-                                        <span className="block font-medium">{role.label}</span>
-                                        {/* <span className="block text-xs text-muted-foreground">
-                                            {role.description}
-                                        </span> */}
+                                        <span className="block font-medium">{m.roleLabel}</span>
                                     </span>
                                 </span>
-                                {isActive ? <Check className="size-4 shrink-0" /> : null}
+                                {switching === m.id ? (
+                                    <Loader2 className="size-4 shrink-0 animate-spin" />
+                                ) : isActive ? (
+                                    <Check className="size-4 shrink-0" />
+                                ) : null}
                             </button>
                         );
                     })}
@@ -107,26 +101,34 @@ export function UserMenuContent({ user }: Props) {
                     Switch Complex
                 </p>
                 <div className="space-y-1">
-                    {mockComplexes.map((complex) => {
-                        const isActive = complex.id === activeComplexId;
+                    {complexes.map((complex) => {
+                        const isActive = current?.areaId === complex.areaId;
+                        // Landing membership for this area if the user switches to it.
+                        const target = memberships.find((m) => m.areaId === complex.areaId);
+
+                        if (!target) {
+                            return null;
+                        }
 
                         return (
                             <button
-                                key={complex.id}
+                                key={complex.areaId}
                                 type="button"
-                                onClick={() => setActiveComplexId(complex.id)}
+                                disabled={switching !== null}
+                                onClick={() => switchTo(target.id)}
                                 className={`flex w-full items-start justify-between rounded-md px-2.5 py-2 text-left text-sm transition ${isActive ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'}`}
                             >
                                 <span className="flex items-start gap-2">
                                     <Building2 className="mt-0.5 size-4 shrink-0" />
                                     <span>
-                                        <span className="block font-medium">{complex.name}</span>
-                                        {/* <span className="block text-xs text-muted-foreground">
-                                            {complex.address}
-                                        </span> */}
+                                        <span className="block font-medium">{complex.areaName}</span>
                                     </span>
                                 </span>
-                                {isActive ? <Check className="size-4 shrink-0" /> : null}
+                                {switching === target.id ? (
+                                    <Loader2 className="size-4 shrink-0 animate-spin" />
+                                ) : isActive ? (
+                                    <Check className="size-4 shrink-0" />
+                                ) : null}
                             </button>
                         );
                     })}

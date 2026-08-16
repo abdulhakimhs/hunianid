@@ -161,9 +161,12 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Features::registration() intentionally disabled — registration is handled by our
+        // own single-page wizard (RegistrationController + /register/complete), not
+        // Fortify's RegisteredUserController. See app/Http/Controllers/Auth/RegistrationController.php.
         Features::resetPasswords(),
-        Features::emailVerification(),
+        // Features::emailVerification() intentionally disabled — no verification gate,
+        // see CLAUDE.md and task_public_registration.md.
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,
