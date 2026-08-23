@@ -27,6 +27,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['admin.role:superadmin,staff,area_without_admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('invites', [InviteController::class, 'index'])->name('invites.index');
         Route::post('invites', [InviteController::class, 'store'])->name('invites.store');
+        Route::post('invites/tenant', [InviteController::class, 'storeTenant'])->name('invites.tenant.store');
         Route::post('invites/{invite}/revoke', [InviteController::class, 'revoke'])->name('invites.revoke');
     });
 

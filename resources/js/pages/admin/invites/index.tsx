@@ -1,14 +1,18 @@
 import { Head, router } from '@inertiajs/react';
 import {
+    AlertCircle,
+    Calendar,
     Check,
+    Clock,
     Copy,
     Link2,
     Loader2,
     MessageCircle,
     RefreshCw,
+    Send,
     ShieldCheck,
-    Sparkles,
     Users,
+    X,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -20,19 +24,101 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type Invite = { id: number; code: string; status: string } | null;
+type Unit = { id: number; label: string };
+type TenantInvite = {
+    id: number;
+    phone: string;
+    unit: string;
+    status: 'active' | 'expired' | 'revoked' | 'accepted';
+    send_status: 'pending' | 'sent' | 'failed';
+    scheduled_at: string | null;
+    sent_at: string | null;
+    send_error: string | null;
+    created_at: string;
+};
 
 type Props = {
     invite: Invite;
     areaName: string;
     frame?: 'pengelola' | 'resident' | null;
+    tenantInvites: TenantInvite[];
+    units: Unit[];
 };
 
-export default function InvitesIndex({ invite, areaName, frame }: Props) {
+type Tab = 'warga' | 'pengurus';
+
+function formatDateTime(iso: string | null): string {
+    if (!iso) {
+        return '—';
+    }
+
+    return new Date(iso).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function StatusBadge({ invite }: { invite: TenantInvite }) {
+    if (invite.status === 'accepted') {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-mint)]/25 bg-[color:var(--color-mint)]/10 px-2.5 py-1 text-xs font-semibold text-[color:var(--color-mint-deep)]">
+                <Check className="h-3 w-3" /> Diterima
+            </span>
+        );
+    }
+
+    if (invite.status === 'revoked') {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-ink)]/10 bg-[color:var(--color-ink)]/5 px-2.5 py-1 text-xs font-semibold text-[color:var(--color-ink)]/50">
+                <X className="h-3 w-3" /> Dibatalkan
+            </span>
+        );
+    }
+
+    if (invite.status === 'expired') {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-ink)]/10 bg-[color:var(--color-ink)]/5 px-2.5 py-1 text-xs font-semibold text-[color:var(--color-ink)]/50">
+                Kedaluwarsa
+            </span>
+        );
+    }
+
+    if (invite.send_status === 'failed') {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-coral)]/25 bg-[color:var(--color-coral)]/10 px-2.5 py-1 text-xs font-semibold text-[color:var(--color-coral)]">
+                <AlertCircle className="h-3 w-3" /> Gagal terkirim
+            </span>
+        );
+    }
+
+    if (invite.send_status === 'sent') {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-mint)]/25 bg-[color:var(--color-mint)]/10 px-2.5 py-1 text-xs font-semibold text-[color:var(--color-mint-deep)]">
+                <Send className="h-3 w-3" /> Terkirim
+            </span>
+        );
+    }
+
+    return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-sky)]/25 bg-[color:var(--color-sky)]/10 px-2.5 py-1 text-xs font-semibold text-[color:var(--color-sky-deep)]">
+            <Clock className="h-3 w-3" /> Terjadwal
+        </span>
+    );
+}
+
+export default function InvitesIndex({ invite, areaName, frame, tenantInvites, units }: Props) {
+    const [tab, setTab] = useState<Tab>(frame === 'pengelola' ? 'pengurus' : 'warga');
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [revokeTarget, setRevokeTarget] = useState<TenantInvite | null>(null);
 
     const link = invite ? `${window.location.origin}/invite/${invite.code}` : null;
     const isPengelolaFrame = frame === 'pengelola';
@@ -62,12 +148,22 @@ export default function InvitesIndex({ invite, areaName, frame }: Props) {
             return;
         }
 
-        const text = encodeURIComponent(
-            isPengelolaFrame
-                ? `Halo! Saya ingin mengajak Anda menjadi pengurus di ${areaName}. Daftar lewat tautan ini ya: ${link}`
-                : `Halo! Yuk gabung sebagai warga terdaftar di ${areaName}. Daftar lewat tautan ini ya: ${link}`,
-        );
+        const text = encodeURIComponent(`Halo! Saya ingin mengajak Anda menjadi pengurus di ${areaName}. Daftar lewat tautan ini ya: ${link}`);
         window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
+
+    function revoke() {
+        if (!revokeTarget) {
+            return;
+        }
+
+        setProcessing(true);
+        router.post(`/admin/invites/${revokeTarget.id}/revoke`, {}, {
+            onFinish: () => {
+                setProcessing(false);
+                setRevokeTarget(null);
+            },
+        });
     }
 
     return (
@@ -81,123 +177,127 @@ export default function InvitesIndex({ invite, areaName, frame }: Props) {
                 <h1 className="font-display text-2xl font-bold tracking-tight text-[color:var(--color-ink)] sm:text-3xl">
                     Undangan {areaName}
                 </h1>
-                <p className="max-w-xl text-sm leading-relaxed text-[color:var(--color-ink)]/60">
-                    Bagikan satu tautan, siapa pun yang membukanya bisa langsung mendaftar dan masuk ke antrean persetujuan Anda.
-                </p>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
-                <section className="relative overflow-hidden rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-6 shadow-elevated lg:p-8">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,_var(--color-mint)_14%,_transparent),_transparent_45%),radial-gradient(circle_at_bottom_right,_color-mix(in_srgb,_var(--color-sky)_14%,_transparent),_transparent_40%)]" />
+            <div className="flex items-center gap-1 rounded-lg bg-[color:var(--color-ink)]/5 p-1 sm:w-fit">
+                <button
+                    type="button"
+                    onClick={() => setTab('warga')}
+                    className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
+                        tab === 'warga' ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-sm' : 'text-[color:var(--color-ink)]/55'
+                    }`}
+                >
+                    Undang Warga
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setTab('pengurus')}
+                    className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
+                        tab === 'pengurus' ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-sm' : 'text-[color:var(--color-ink)]/55'
+                    }`}
+                >
+                    Tautan Pengurus
+                </button>
+            </div>
 
-                    <div className="relative">
-                        {invite ? (
-                            <>
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <span
-                                            className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-                                                isPengelolaFrame
-                                                    ? 'bg-[color:var(--color-mint)]/12 text-[color:var(--color-mint-deep)]'
-                                                    : 'bg-[color:var(--color-sky)]/12 text-[color:var(--color-sky-deep)]'
-                                            }`}
-                                        >
-                                            {isPengelolaFrame ? <ShieldCheck className="h-5 w-5" /> : <Link2 className="h-5 w-5" />}
-                                        </span>
-                                        <div>
-                                            <p className="font-display text-lg font-semibold text-[color:var(--color-ink)]">
-                                                Tautan undangan aktif
-                                            </p>
-                                            <p className="text-sm text-[color:var(--color-ink)]/55">
-                                                {isPengelolaFrame ? 'Untuk mengajak calon pengurus' : 'Untuk mengajak warga baru'}
-                                            </p>
+            {tab === 'warga' ? (
+                <TenantInvitesPanel units={units} invites={tenantInvites} onRevoke={setRevokeTarget} />
+            ) : (
+                <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">
+                    <section className="relative overflow-hidden rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-6 shadow-elevated lg:p-8">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,_var(--color-mint)_14%,_transparent),_transparent_45%),radial-gradient(circle_at_bottom_right,_color-mix(in_srgb,_var(--color-sky)_14%,_transparent),_transparent_40%)]" />
+
+                        <div className="relative">
+                            {invite ? (
+                                <>
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--color-mint)]/12 text-[color:var(--color-mint-deep)]">
+                                                <ShieldCheck className="h-5 w-5" />
+                                            </span>
+                                            <div>
+                                                <p className="font-display text-lg font-semibold text-[color:var(--color-ink)]">
+                                                    Tautan undangan aktif
+                                                </p>
+                                                <p className="text-sm text-[color:var(--color-ink)]/55">Untuk mengajak calon pengurus</p>
+                                            </div>
                                         </div>
+                                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-mint)]/25 bg-[color:var(--color-mint)]/10 px-3 py-1 text-xs font-semibold text-[color:var(--color-mint-deep)]">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--color-mint-deep)]" />
+                                            Aktif
+                                        </span>
                                     </div>
-                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--color-mint)]/25 bg-[color:var(--color-mint)]/10 px-3 py-1 text-xs font-semibold text-[color:var(--color-mint-deep)]">
-                                        <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--color-mint-deep)]" />
-                                        Aktif
+
+                                    <div className="mt-6 flex flex-col gap-2 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <p className="min-w-0 flex-1 truncate font-mono text-sm text-[color:var(--color-ink)]/80">{link}</p>
+                                        <Button variant={copied ? 'secondary' : 'outline'} size="sm" className="shrink-0" onClick={copyLink}>
+                                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                            {copied ? 'Tersalin' : 'Salin tautan'}
+                                        </Button>
+                                    </div>
+
+                                    <div className="mt-4 flex flex-wrap gap-2.5">
+                                        <Button
+                                            onClick={shareWhatsApp}
+                                            className="bg-[color:var(--color-mint-deep)] text-white hover:bg-[color:var(--color-mint-deep)]/90"
+                                        >
+                                            <MessageCircle className="h-4 w-4" /> Bagikan ke WhatsApp
+                                        </Button>
+                                        <Button variant="outline" onClick={() => setConfirmOpen(true)}>
+                                            <RefreshCw className="h-4 w-4" /> Buat ulang
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center py-6 text-center">
+                                    <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--color-mint)]/12 text-[color:var(--color-mint-deep)]">
+                                        <ShieldCheck className="h-7 w-7" />
                                     </span>
-                                </div>
-
-                                <div className="mt-6 flex flex-col gap-2 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 p-4 sm:flex-row sm:items-center sm:justify-between">
-                                    <p className="min-w-0 flex-1 truncate font-mono text-sm text-[color:var(--color-ink)]/80">{link}</p>
-                                    <Button variant={copied ? 'secondary' : 'outline'} size="sm" className="shrink-0" onClick={copyLink}>
-                                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        {copied ? 'Tersalin' : 'Salin tautan'}
+                                    <p className="mt-4 font-display text-lg font-semibold text-[color:var(--color-ink)]">
+                                        Belum ada undangan aktif
+                                    </p>
+                                    <p className="mt-1 max-w-sm text-sm leading-relaxed text-[color:var(--color-ink)]/55">
+                                        Buat tautan untuk mengajak calon pengurus bergabung sebagai admin di area Anda.
+                                    </p>
+                                    <Button className="mt-5" disabled={processing} onClick={generate}>
+                                        {processing && <Loader2 className="h-4 w-4 animate-spin" />}
+                                        Buat tautan undangan
                                     </Button>
                                 </div>
+                            )}
+                        </div>
+                    </section>
 
-                                <div className="mt-4 flex flex-wrap gap-2.5">
-                                    <Button
-                                        onClick={shareWhatsApp}
-                                        className="bg-[color:var(--color-mint-deep)] text-white hover:bg-[color:var(--color-mint-deep)]/90"
-                                    >
-                                        <MessageCircle className="h-4 w-4" /> Bagikan ke WhatsApp
-                                    </Button>
-                                    <Button variant="outline" onClick={() => setConfirmOpen(true)}>
-                                        <RefreshCw className="h-4 w-4" /> Buat ulang
-                                    </Button>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="flex flex-col items-center py-6 text-center">
-                                <span
-                                    className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
-                                        isPengelolaFrame
-                                            ? 'bg-[color:var(--color-mint)]/12 text-[color:var(--color-mint-deep)]'
-                                            : 'bg-[color:var(--color-sky)]/12 text-[color:var(--color-sky-deep)]'
-                                    }`}
-                                >
-                                    {isPengelolaFrame ? <ShieldCheck className="h-7 w-7" /> : <Sparkles className="h-7 w-7" />}
-                                </span>
-                                <p className="mt-4 font-display text-lg font-semibold text-[color:var(--color-ink)]">
-                                    Belum ada undangan aktif
-                                </p>
-                                <p className="mt-1 max-w-sm text-sm leading-relaxed text-[color:var(--color-ink)]/55">
-                                    {isPengelolaFrame
-                                        ? 'Buat tautan untuk mengajak calon pengurus bergabung sebagai admin di area Anda.'
-                                        : 'Buat tautan sekali, lalu bagikan ke warga lewat WhatsApp atau grup manapun.'}
-                                </p>
-                                <Button className="mt-5" disabled={processing} onClick={generate}>
-                                    {processing && <Loader2 className="h-4 w-4 animate-spin" />}
-                                    Buat tautan undangan
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                </section>
+                    <aside className="flex flex-col gap-4">
+                        <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated">
+                            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-ink)]/50">
+                                Cara kerjanya
+                            </p>
+                            <ul className="mt-3 space-y-3">
+                                {[
+                                    { icon: Link2, text: 'Bagikan satu tautan ke calon pengurus.' },
+                                    { icon: Users, text: 'Mereka isi data dan langsung terdaftar sebagai warga.' },
+                                    { icon: RefreshCw, text: 'Buat ulang kapan saja — tautan lama otomatis tidak berlaku.' },
+                                ].map((item) => (
+                                    <li key={item.text} className="flex items-start gap-2.5 text-sm text-[color:var(--color-ink)]/70">
+                                        <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-ink)]/5 text-[color:var(--color-ink)]/60">
+                                            <item.icon className="h-3.5 w-3.5" />
+                                        </span>
+                                        <span className="leading-relaxed">{item.text}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
 
-                <aside className="flex flex-col gap-4">
-                    <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated">
-                        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-ink)]/50">
-                            Cara kerjanya
-                        </p>
-                        <ul className="mt-3 space-y-3">
-                            {[
-                                { icon: Link2, text: 'Bagikan satu tautan ke siapa pun yang ingin bergabung.' },
-                                { icon: Users, text: 'Mereka isi data dan unit rumah, lalu masuk ke antrean persetujuan.' },
-                                { icon: RefreshCw, text: 'Buat ulang kapan saja — tautan lama otomatis tidak berlaku.' },
-                            ].map((item) => (
-                                <li key={item.text} className="flex items-start gap-2.5 text-sm text-[color:var(--color-ink)]/70">
-                                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-ink)]/5 text-[color:var(--color-ink)]/60">
-                                        <item.icon className="h-3.5 w-3.5" />
-                                    </span>
-                                    <span className="leading-relaxed">{item.text}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {isPengelolaFrame && (
                         <div className="rounded-[1.5rem] border border-[color:var(--color-mint)]/20 bg-[color:var(--color-mint)]/8 p-5">
                             <p className="text-sm leading-relaxed text-[color:var(--color-ink)]">
-                                Setelah calon pengurus bergabung, Anda bisa menyerahkan akses pengelola ke akun mereka dari halaman
-                                Anggota kapan saja.
+                                Setelah calon pengurus bergabung, Anda bisa menyerahkan akses pengelola ke akun mereka dari halaman Anggota
+                                kapan saja.
                             </p>
                         </div>
-                    )}
-                </aside>
-            </div>
+                    </aside>
+                </div>
+            )}
 
             <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                 <DialogContent>
@@ -219,6 +319,234 @@ export default function InvitesIndex({ invite, areaName, frame }: Props) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={!!revokeTarget} onOpenChange={(open) => !open && setRevokeTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Batalkan undangan ini?</DialogTitle>
+                        <DialogDescription>
+                            Undangan untuk <span className="font-medium text-[color:var(--color-ink)]">{revokeTarget?.phone}</span> (unit{' '}
+                            {revokeTarget?.unit}) tidak akan bisa dipakai lagi untuk mendaftar.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setRevokeTarget(null)}>
+                            Batal
+                        </Button>
+                        <Button disabled={processing} onClick={revoke}>
+                            {processing && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Ya, batalkan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+function TenantInvitesPanel({
+    units,
+    invites,
+    onRevoke,
+}: {
+    units: Unit[];
+    invites: TenantInvite[];
+    onRevoke: (invite: TenantInvite) => void;
+}) {
+    const [phone, setPhone] = useState('');
+    const [unitId, setUnitId] = useState('');
+    const [scheduleMode, setScheduleMode] = useState<'now' | 'later'>('now');
+    const [scheduledAt, setScheduledAt] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    function submit() {
+        const next: Record<string, string> = {};
+
+        if (!phone.trim()) {
+            next.phone = 'No. HP wajib diisi.';
+        }
+
+        if (!unitId) {
+            next.unit_id = 'Pilih unit terlebih dahulu.';
+        }
+
+        if (scheduleMode === 'later' && !scheduledAt) {
+            next.scheduled_at = 'Pilih tanggal & waktu pengiriman.';
+        }
+
+        if (Object.keys(next).length > 0) {
+            setErrors(next);
+
+            return;
+        }
+
+        setErrors({});
+        setSubmitting(true);
+
+        router.post(
+            '/admin/invites/tenant',
+            {
+                phone,
+                unit_id: unitId,
+                scheduled_at: scheduleMode === 'later' ? scheduledAt : undefined,
+            },
+            {
+                onFinish: () => setSubmitting(false),
+                onSuccess: () => {
+                    setPhone('');
+                    setUnitId('');
+                    setScheduleMode('now');
+                    setScheduledAt('');
+                },
+                onError: setErrors,
+            },
+        );
+    }
+
+    return (
+        <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+            <section className="flex flex-col gap-4 rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-6 shadow-elevated">
+                <div>
+                    <p className="font-display text-lg font-semibold text-[color:var(--color-ink)]">Undang warga baru</p>
+                    <p className="mt-1 text-sm text-[color:var(--color-ink)]/55">
+                        Masukkan no. HP dan pilih unitnya — undangan akan langsung aktif begitu mereka mendaftar, tanpa perlu persetujuan.
+                    </p>
+                </div>
+
+                <div className="grid gap-2">
+                    <label className="text-sm font-medium text-[color:var(--color-ink)]" htmlFor="tenant-phone">
+                        No. HP warga
+                    </label>
+                    <input
+                        id="tenant-phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="08xxxxxxxxxx"
+                        className="rounded-xl border border-[color:var(--color-ink)]/12 bg-[color:var(--color-bg)] px-3.5 py-2 text-sm text-[color:var(--color-ink)] outline-none placeholder:text-[color:var(--color-ink)]/40 focus:border-[color:var(--color-sky)]/50 focus:ring-2 focus:ring-[color:var(--color-sky)]/20"
+                    />
+                    {errors.phone && <p className="text-sm text-[color:var(--color-coral)]">{errors.phone}</p>}
+                </div>
+
+                <div className="grid gap-2">
+                    <label className="text-sm font-medium text-[color:var(--color-ink)]">Unit</label>
+                    <Select value={unitId} onValueChange={setUnitId}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder={units.length === 0 ? 'Belum ada unit terdaftar' : 'Pilih unit'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {units.map((u) => (
+                                <SelectItem key={u.id} value={String(u.id)}>
+                                    {u.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    {errors.unit_id && <p className="text-sm text-[color:var(--color-coral)]">{errors.unit_id}</p>}
+                </div>
+
+                <div className="grid gap-2">
+                    <label className="text-sm font-medium text-[color:var(--color-ink)]">Pengiriman</label>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setScheduleMode('now')}
+                            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                                scheduleMode === 'now'
+                                    ? 'border-[color:var(--color-sky-deep)] bg-[color:var(--color-sky)]/8 text-[color:var(--color-sky-deep)]'
+                                    : 'border-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]/70 hover:bg-[color:var(--color-bg)]'
+                            }`}
+                        >
+                            <Send className="mr-1.5 inline h-3.5 w-3.5" /> Kirim sekarang
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setScheduleMode('later')}
+                            className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                                scheduleMode === 'later'
+                                    ? 'border-[color:var(--color-sky-deep)] bg-[color:var(--color-sky)]/8 text-[color:var(--color-sky-deep)]'
+                                    : 'border-[color:var(--color-ink)]/10 text-[color:var(--color-ink)]/70 hover:bg-[color:var(--color-bg)]'
+                            }`}
+                        >
+                            <Calendar className="mr-1.5 inline h-3.5 w-3.5" /> Jadwalkan
+                        </button>
+                    </div>
+
+                    {scheduleMode === 'later' && (
+                        <div className="duration-150 animate-in fade-in">
+                            <input
+                                type="datetime-local"
+                                value={scheduledAt}
+                                onChange={(e) => setScheduledAt(e.target.value)}
+                                className="w-full rounded-xl border border-[color:var(--color-ink)]/12 bg-[color:var(--color-bg)] px-3.5 py-2 text-sm text-[color:var(--color-ink)] outline-none focus:border-[color:var(--color-sky)]/50 focus:ring-2 focus:ring-[color:var(--color-sky)]/20"
+                            />
+                            {errors.scheduled_at && <p className="mt-1.5 text-sm text-[color:var(--color-coral)]">{errors.scheduled_at}</p>}
+                        </div>
+                    )}
+                </div>
+
+                <Button className="w-full" disabled={submitting} onClick={submit}>
+                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {scheduleMode === 'now' ? 'Simpan & Kirim' : 'Jadwalkan Undangan'}
+                </Button>
+
+                <p className="text-xs text-[color:var(--color-ink)]/40">Undangan dikirim lewat WhatsApp.</p>
+            </section>
+
+            <section className="overflow-hidden rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] shadow-elevated">
+                <div className="border-b border-[color:var(--color-ink)]/8 px-5 py-4">
+                    <p className="font-display text-base font-semibold text-[color:var(--color-ink)]">Riwayat undangan</p>
+                    <p className="text-xs text-[color:var(--color-ink)]/45">{invites.length} undangan tercatat</p>
+                </div>
+
+                <Table>
+                    <TableHeader>
+                        <TableRow className="border-[color:var(--color-ink)]/8 hover:bg-transparent">
+                            <TableHead className="h-8 pl-5 text-[11px] font-medium text-[color:var(--color-ink)]/40">No. HP</TableHead>
+                            <TableHead className="h-8 text-[11px] font-medium text-[color:var(--color-ink)]/40">Unit</TableHead>
+                            <TableHead className="h-8 text-[11px] font-medium text-[color:var(--color-ink)]/40">Status</TableHead>
+                            <TableHead className="h-8 text-[11px] font-medium text-[color:var(--color-ink)]/40">Jadwal / Terkirim</TableHead>
+                            <TableHead className="h-8 pr-5" />
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {invites.map((inv) => (
+                            <TableRow key={inv.id} className="border-[color:var(--color-ink)]/6 last:border-0">
+                                <TableCell className="py-2.5 pl-5 text-sm font-medium text-[color:var(--color-ink)]">{inv.phone}</TableCell>
+                                <TableCell className="py-2.5 text-sm text-[color:var(--color-ink)]/60">{inv.unit}</TableCell>
+                                <TableCell className="py-2.5">
+                                    <StatusBadge invite={inv} />
+                                    {inv.send_status === 'failed' && inv.send_error && (
+                                        <p className="mt-1 max-w-[16rem] truncate text-xs text-[color:var(--color-coral)]" title={inv.send_error}>
+                                            {inv.send_error}
+                                        </p>
+                                    )}
+                                </TableCell>
+                                <TableCell className="py-2.5 text-xs text-[color:var(--color-ink)]/50">
+                                    {inv.sent_at ? formatDateTime(inv.sent_at) : formatDateTime(inv.scheduled_at)}
+                                </TableCell>
+                                <TableCell className="py-2.5 pr-5 text-right">
+                                    {inv.status === 'active' && (
+                                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[color:var(--color-coral)]" onClick={() => onRevoke(inv)}>
+                                            Batalkan
+                                        </Button>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+
+                {invites.length === 0 && (
+                    <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-ink)]/5 text-[color:var(--color-ink)]/40">
+                            <Users className="h-4.5 w-4.5" />
+                        </span>
+                        <p className="text-sm text-[color:var(--color-ink)]/50">Belum ada undangan yang dikirim.</p>
+                    </div>
+                )}
+            </section>
         </div>
     );
 }

@@ -30,6 +30,10 @@ class DashboardController extends Controller
      */
     private function guidanceFor(User $user, AreaMember $current): ?array
     {
+        if ($user->profile_completed_at === null) {
+            return ['type' => 'complete_profile'];
+        }
+
         $area = $current->area;
 
         if ($current->role->key_name === 'superadmin' || $current->role->key_name === 'staff') {

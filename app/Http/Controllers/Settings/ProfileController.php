@@ -36,6 +36,13 @@ class ProfileController extends Controller
             $request->user()->email_verified_at = null;
         }
 
+        // Saving this form is itself the "complete your profile" action for accounts
+        // created without real name/email (phone-quick signup) — clears the dashboard
+        // guidance regardless of what they typed.
+        if ($request->user()->profile_completed_at === null) {
+            $request->user()->profile_completed_at = now();
+        }
+
         $request->user()->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);

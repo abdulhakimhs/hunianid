@@ -26,9 +26,9 @@ class PhoneLoginController extends Controller
         $user = User::where('phone', $data['phone'])->first();
 
         if (! $user) {
-            throw ValidationException::withMessages([
-                'phone' => 'Nomor HP belum terdaftar. Silakan daftar terlebih dahulu.',
-            ]);
+            // Not an error — the frontend hands this off to the registration wizard,
+            // pre-filled with the phone number, instead of showing a dead end.
+            return response()->json(['registered' => false, 'phone' => $data['phone']]);
         }
 
         // Only one live code per user at a time — requesting again invalidates the last one.

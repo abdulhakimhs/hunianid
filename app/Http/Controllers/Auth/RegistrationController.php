@@ -26,9 +26,15 @@ class RegistrationController extends Controller
     {
         return Inertia::render('auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
-            // Set by SocialLoginController on an unmatched Google sign-in; pull() clears
-            // it so it only pre-fills once.
-            'googlePrefill' => $request->session()->pull('google_prefill'),
+            // Set by SocialLoginController on an unmatched Google sign-in. Not pull()ed
+            // here — a reload mid-wizard shouldn't lose it; it's only cleared once the
+            // account is actually created.
+            'googlePrefill' => $request->session()->get('google_prefill'),
+            // Set by PhoneLoginController when an OTP was requested for a number that
+            // isn't registered yet.
+            'quickPhonePrefill' => $request->query('quick') === '1' && $request->query('phone')
+                ? ['phone' => $request->query('phone')]
+                : null,
         ]);
     }
 
@@ -49,11 +55,27 @@ class RegistrationController extends Controller
      * POST /register/complete — the one and only write. Everything collected across the
      * wizard's steps is submitted together and created in a single transaction. Returns
      * plain JSON (called via fetch, not Inertia's router) so a failed submission stays
-     * inline rather than looking like a page navigation. Not auto-logged-in — the
-     * frontend redirects to /login on success.
+     * inline rather than looking like a page navigation. Logs the account in and sends
+     * the frontend straight to the dashboard.
      */
     public function complete(Request $request, RegistrationService $registration): JsonResponse
     {
+        // 'google' skips the password requirement — only trusted if it actually matches
+        // the email SocialLoginController stashed in session, never the client's say-so
+        // alone. 'phone_quick' skips name/email/password entirely (phone-only signup
+        // triggered from an unregistered OTP login attempt).
+        $mode = 'normal';
+
+        if ($request->input('auth_provider') === 'google') {
+            $googlePrefill = $request->session()->get('google_prefill');
+
+            if ($googlePrefill && strtolower((string) ($googlePrefill['email'] ?? '')) === strtolower((string) $request->input('email'))) {
+                $mode = 'google';
+            }
+        } elseif ($request->input('auth_provider') === 'phone_quick') {
+            $mode = 'phone_quick';
+        }
+
         $data = $request->validate([
             'role' => ['required', Rule::in(['penghuni', 'pengelola'])],
             'sub_type' => [Rule::requiredIf($request->input('role') === 'pengelola'), Rule::in(['rt_rw', 'developer'])],
@@ -69,8 +91,9 @@ class RegistrationController extends Controller
             'city_code' => ['required_if:location_mode,manual', 'string'],
             'address' => ['nullable', 'string', 'max:255'],
 
-            ...$this->profileRules(),
-            'password' => $this->passwordRules(),
+            'name' => $mode === 'phone_quick' ? ['nullable', 'string', 'max:255'] : $this->nameRules(),
+            'email' => $mode === 'phone_quick' ? ['nullable', 'string', 'email', 'max:255'] : $this->emailRules(),
+            'password' => $mode === 'normal' ? $this->passwordRules() : ['nullable'],
             'phone' => ['required', 'string', 'max:20', Rule::unique(User::class)],
 
             // Only meaningful for Penghuni joining an existing (non-unclaimed) area —
@@ -81,10 +104,12 @@ class RegistrationController extends Controller
             'block' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $registration->register($data);
+        $user = $registration->register($data, $mode);
 
-        session()->flash('status', 'Pendaftaran berhasil dilakukan. Silakan masuk ke akun Anda dengan email/no. HP yang telah Anda daftarkan.');
+        auth()->login($user);
+        $request->session()->regenerate();
+        $request->session()->forget('google_prefill');
 
-        return response()->json(['redirect' => route('login')]);
+        return response()->json(['redirect' => route('dashboard')]);
     }
 }
