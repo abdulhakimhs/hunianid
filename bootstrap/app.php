@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureAdminRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -17,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withSchedule(function (Schedule $schedule): void {
+        // Requires `php artisan schedule:run` to actually be invoked once a minute —
+        // see the `scheduler` service in docker-compose.yml.
+        $schedule->command('invites:send-scheduled')->everyMinute()->withoutOverlapping();
+    })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['admin.role' => EnsureAdminRole::class]);
 

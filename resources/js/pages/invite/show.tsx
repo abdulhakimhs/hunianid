@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { AlertTriangle, Loader2, Sparkles, Users } from 'lucide-react';
+import { AlertTriangle, Home, Loader2, Phone, Sparkles, Users } from 'lucide-react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
@@ -12,14 +12,17 @@ type Props = {
     complexName?: string;
     areaName?: string | null;
     isUnclaimed?: boolean;
+    isTenantInvite?: boolean;
+    phone?: string | null;
+    unit?: string | null;
 };
 
-export default function InviteShow({ valid, code, complexName, areaName, isUnclaimed }: Props) {
+export default function InviteShow({ valid, code, complexName, areaName, isUnclaimed, isTenantInvite, phone, unit }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         email: '',
         password: '',
-        phone: '',
+        phone: phone ?? '',
         unit_number: '',
         block: '',
     });
@@ -63,11 +66,26 @@ export default function InviteShow({ valid, code, complexName, areaName, isUncla
                 )}
                 <h1 className="font-display text-lg font-semibold text-[color:var(--color-ink)]">Gabung {complexName}</h1>
                 <p className="text-sm leading-relaxed text-[color:var(--color-ink)]/55">
-                    {isUnclaimed
-                        ? 'Belum ada pengurus di sini — jadilah salah satu warga pertama yang terdaftar.'
-                        : 'Lengkapi data di bawah untuk mendaftar.'}
+                    {isTenantInvite
+                        ? 'Anda diundang khusus untuk unit di bawah ini — begitu mendaftar, akun Anda langsung aktif tanpa menunggu persetujuan.'
+                        : isUnclaimed
+                          ? 'Belum ada pengurus di sini — jadilah salah satu warga pertama yang terdaftar.'
+                          : 'Lengkapi data di bawah untuk mendaftar.'}
                 </p>
             </div>
+
+            {isTenantInvite && (
+                <div className="mb-5 flex items-center gap-3 rounded-xl border border-[color:var(--color-mint)]/20 bg-[color:var(--color-mint)]/8 px-4 py-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-mint)]/15 text-[color:var(--color-mint-deep)]">
+                        <Home className="h-4.5 w-4.5" />
+                    </span>
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-medium tracking-wide text-[color:var(--color-ink)]/50 uppercase">Unit Anda</p>
+                        <p className="truncate text-sm font-semibold text-[color:var(--color-ink)]">{unit}</p>
+                    </div>
+                </div>
+            )}
+
             <form onSubmit={submit} className="flex flex-col gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="name">Nama lengkap</Label>
@@ -83,7 +101,14 @@ export default function InviteShow({ valid, code, complexName, areaName, isUncla
 
                 <div className="grid gap-2">
                     <Label htmlFor="phone">No. HP</Label>
-                    <Input id="phone" type="tel" value={data.phone} onChange={(e) => setData('phone', e.target.value)} />
+                    {isTenantInvite ? (
+                        <div className="flex items-center gap-2 rounded-md border border-[color:var(--color-ink)]/10 bg-[color:var(--color-bg)] px-3 py-2 text-sm text-[color:var(--color-ink)]/70">
+                            <Phone className="h-4 w-4 shrink-0 text-[color:var(--color-ink)]/40" />
+                            {data.phone}
+                        </div>
+                    ) : (
+                        <Input id="phone" type="tel" value={data.phone} onChange={(e) => setData('phone', e.target.value)} />
+                    )}
                     <InputError message={errors.phone} />
                 </div>
 
@@ -93,17 +118,19 @@ export default function InviteShow({ valid, code, complexName, areaName, isUncla
                     <InputError message={errors.password} />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="grid gap-2">
-                        <Label htmlFor="block">Blok (opsional)</Label>
-                        <Input id="block" value={data.block} onChange={(e) => setData('block', e.target.value)} placeholder="Blok A" />
+                {!isTenantInvite && (
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="grid gap-2">
+                            <Label htmlFor="block">Blok (opsional)</Label>
+                            <Input id="block" value={data.block} onChange={(e) => setData('block', e.target.value)} placeholder="Blok A" />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="unit_number">No. rumah/unit</Label>
+                            <Input id="unit_number" value={data.unit_number} onChange={(e) => setData('unit_number', e.target.value)} placeholder="No. 12" />
+                            <InputError message={errors.unit_number} />
+                        </div>
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="unit_number">No. rumah/unit</Label>
-                        <Input id="unit_number" value={data.unit_number} onChange={(e) => setData('unit_number', e.target.value)} placeholder="No. 12" />
-                        <InputError message={errors.unit_number} />
-                    </div>
-                </div>
+                )}
 
                 <Button type="submit" className="mt-2 w-full" disabled={processing}>
                     {processing && <Loader2 className="h-4 w-4 animate-spin" />}

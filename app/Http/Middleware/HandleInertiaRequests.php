@@ -56,8 +56,7 @@ class HandleInertiaRequests extends Middleware
                     'roleLabel' => $m->role->label,
                 ])->values(),
                 'currentMembershipId' => $current?->id,
-                // Drives which admin nav links the sidebar shows — backed by the same
-                // MembershipContext helpers EnsureAdminRole gates on.
+
                 'adminAccess' => $this->adminAccess($current),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
@@ -65,24 +64,25 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{members: bool, invites: bool, pendingApprovals: bool}
+     * @return array{members: bool, invites: bool, pendingApprovals: bool, settings: bool}
      */
     private function adminAccess(?AreaMember $current): array
     {
-        $none = ['members' => false, 'invites' => false, 'pendingApprovals' => false];
+        $none = ['members' => false, 'invites' => false, 'pendingApprovals' => false, 'settings' => false];
 
         if (! $current || $current->status !== 'active') {
             return $none;
         }
 
         if (in_array($current->role->key_name, ['superadmin', 'staff'], true)) {
-            return ['members' => true, 'invites' => true, 'pendingApprovals' => true];
+            return ['members' => true, 'invites' => true, 'pendingApprovals' => true, 'settings' => true];
         }
 
         return [
             'members' => MembershipContext::isUnclaimedCreator($current),
             'invites' => MembershipContext::isAreaWithoutAdmin($current),
             'pendingApprovals' => false,
+            'settings' => false,
         ];
     }
 }

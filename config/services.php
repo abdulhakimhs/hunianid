@@ -41,4 +41,14 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'wablas' => [
+        // Wablas devices are hosted on a per-account server cluster (e.g.
+        // https://tegal.wablas.com) — check the dashboard's own URL, not a generic
+        // wablas.com domain, or every request 400s with "token invalid or device
+        // expired" even with a correct token/secret.
+        'base_url' => env('WABLAST_BASE_URL', 'https://wablas.com'),
+        'token' => env('WABLAST_API_KEY'),
+        'secret_key' => env('WABLAST_SECRET_KEY'),
+    ],
+
 ];

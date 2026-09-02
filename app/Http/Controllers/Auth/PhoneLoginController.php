@@ -12,11 +12,6 @@ use Illuminate\Validation\ValidationException;
 
 class PhoneLoginController extends Controller
 {
-    /**
-     * POST /login/phone/request — issues a 6-digit OTP for an existing account's phone
-     * number. WhatsApp delivery isn't wired up yet, so the code is only exposed back to
-     * the caller outside production, for manual testing until that integration ships.
-     */
     public function request(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -26,12 +21,10 @@ class PhoneLoginController extends Controller
         $user = User::where('phone', $data['phone'])->first();
 
         if (! $user) {
-            throw ValidationException::withMessages([
-                'phone' => 'Nomor HP belum terdaftar. Silakan daftar terlebih dahulu.',
-            ]);
+
+            return response()->json(['registered' => false, 'phone' => $data['phone']]);
         }
 
-        // Only one live code per user at a time — requesting again invalidates the last one.
         $user->otpCodes()->whereNull('verified_at')->delete();
 
         $code = (string) random_int(100000, 999999);
@@ -48,9 +41,6 @@ class PhoneLoginController extends Controller
         ]);
     }
 
-    /**
-     * POST /login/phone/verify
-     */
     public function verify(Request $request): JsonResponse
     {
         $data = $request->validate([

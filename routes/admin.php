@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AreaHandoverController;
 use App\Http\Controllers\Admin\InviteController;
 use App\Http\Controllers\Admin\MemberApprovalController;
 use App\Http\Controllers\Admin\MembersController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\UnitJoinController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('members/pending', [MemberApprovalController::class, 'index'])->name('members.pending');
         Route::post('members/{member}/approve', [MemberApprovalController::class, 'approve'])->name('members.approve');
         Route::post('members/{member}/reject', [MemberApprovalController::class, 'reject'])->name('members.reject');
+
+        Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
     });
 
     // Invites work for any resident of an area with no superadmin/staff yet, not just
@@ -27,7 +31,9 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['admin.role:superadmin,staff,area_without_admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('invites', [InviteController::class, 'index'])->name('invites.index');
         Route::post('invites', [InviteController::class, 'store'])->name('invites.store');
+        Route::post('invites/tenant', [InviteController::class, 'storeTenant'])->name('invites.tenant.store');
         Route::post('invites/{invite}/revoke', [InviteController::class, 'revoke'])->name('invites.revoke');
+        Route::post('invites/{invite}/resend', [InviteController::class, 'resend'])->name('invites.resend');
     });
 
     // Members list and promoting stay founder-only — a deliberate one-shot handover.

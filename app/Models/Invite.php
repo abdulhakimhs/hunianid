@@ -8,7 +8,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['area_id', 'created_by', 'code', 'expires_at', 'status'])]
+#[Fillable([
+    'area_id', 'unit_id', 'created_by', 'code', 'phone',
+    'expires_at', 'scheduled_at', 'sent_at', 'status', 'send_status', 'send_error',
+])]
 class Invite extends Model
 {
     /** @use HasFactory<InviteFactory> */
@@ -23,6 +26,8 @@ class Invite extends Model
     {
         return [
             'expires_at' => 'datetime',
+            'scheduled_at' => 'datetime',
+            'sent_at' => 'datetime',
         ];
     }
 
@@ -35,10 +40,23 @@ class Invite extends Model
     }
 
     /**
+     * @return BelongsTo<Unit, $this>
+     */
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function isTenantInvite(): bool
+    {
+        return $this->unit_id !== null && $this->phone !== null;
     }
 }

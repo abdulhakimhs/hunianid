@@ -13,6 +13,22 @@ services:
     networks:
       - hunianid-v2
 
+  # Dev-friendly stand-in for a real cron entry (`* * * * * php artisan schedule:run`).
+  # Runs the same image as `app`, just looping schedule:run every minute instead of
+  # serving php-fpm. In production, prefer a real cron entry over this loop.
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: hunianid-v2-scheduler
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    command: ["sh", "-c", "while true; do php artisan schedule:run; sleep 60; done"]
+    networks:
+      - hunianid-v2
+
   nginx:
     image: nginx:stable-alpine
     container_name: hunianid-v2-nginx

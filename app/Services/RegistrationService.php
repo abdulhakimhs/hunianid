@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class RegistrationService
@@ -18,24 +19,11 @@ class RegistrationService
         private readonly UnitResolverService $unitResolver,
     ) {}
 
-    /**
-     * The whole registration wizard, submitted once, at the very end — creates the
-     * complex (if needed), the user, and the role-specific area/unit rows in one
-     * transaction. Nothing touches the database until this runs.
-     *
-     * @param  array<string, mixed>  $data  Validated payload from RegistrationController::complete()
-     */
-    public function register(array $data): User
+    public function register(array $data, string $mode = 'normal'): User
     {
-        $user = DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $mode) {
             $complex = $this->resolveComplex($data);
-
-            $user = User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'phone' => $data['phone'] ?? null,
-                'password' => Hash::make($data['password']),
-            ]);
+            $user = User::create($this->userAttributes($data, $mode));
 
             if ($data['role'] === 'pengelola') {
                 $this->createPengelolaArea($user, $complex, $data['sub_type'], $data['area_name']);
@@ -45,9 +33,29 @@ class RegistrationService
 
             return $user;
         });
+    }
 
-        // Not auto-logged-in — the success screen sends them to /login instead.
-        return $user;
+    private function userAttributes(array $data, string $mode): array
+    {
+        if ($mode === 'phone_quick') {
+            $phone = $data['phone'];
+
+            return [
+                'name' => 'Warga '.substr($phone, -4),
+                'email' => "phone-{$phone}@pending.hunianid.local",
+                'phone' => $phone,
+                'password' => Hash::make(Str::random(40)),
+                'profile_completed_at' => null,
+            ];
+        }
+
+        return [
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'] ?? null,
+            'password' => $mode === 'google' ? Hash::make(Str::random(40)) : Hash::make($data['password']),
+            'profile_completed_at' => now(),
+        ];
     }
 
     private function resolveComplex(array $data): Complex
@@ -91,9 +99,6 @@ class RegistrationService
         ]);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     private function registerPenghuni(User $user, Complex $complex, array $data): void
     {
         $activeAreas = $this->complexResolver->activeAreas($complex);

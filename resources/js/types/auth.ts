@@ -23,6 +23,7 @@ export type AdminAccess = {
     members: boolean;
     invites: boolean;
     pendingApprovals: boolean;
+    settings: boolean;
 };
 
 export type Auth = {

@@ -1,6 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
 import { Loader2, Phone, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
+import { GoogleIcon } from '@/components/google-icon';
 import InputError from '@/components/input-error';
 import PasskeyVerify from '@/components/passkey-verify';
 import PasswordInput from '@/components/password-input';
@@ -20,29 +21,6 @@ type Props = {
 };
 
 type Tab = 'email' | 'phone';
-
-function GoogleIcon() {
-    return (
-        <svg viewBox="0 0 48 48" className="h-4 w-4" aria-hidden="true">
-            <path
-                fill="#FFC107"
-                d="M43.6 20.5H42V20.4H24v7.2h11.3c-1.6 4.7-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.1-5.1C33.6 6.1 29 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.4-.1-2.7-.4-4Z"
-            />
-            <path
-                fill="#FF3D00"
-                d="M6.3 14.6l5.9 4.3C13.9 15.1 18.6 12 24 12c3.1 0 5.8 1.1 8 3l5.1-5.1C33.6 6.1 29 4 24 4c-7.2 0-13.4 4.1-16.7 10.6Z"
-            />
-            <path
-                fill="#4CAF50"
-                d="M24 44c5 0 9.5-1.9 12.9-5l-6-5c-1.9 1.4-4.4 2.3-6.9 2.3-5.2 0-9.7-3.5-11.3-8.2l-5.9 4.6C9.9 39.6 16.4 44 24 44Z"
-            />
-            <path
-                fill="#1976D2"
-                d="M43.6 20.5H42V20.4H24v7.2h11.3c-.8 2.2-2.2 4.1-4 5.5l6 5c-.4.4 6.7-4.9 6.7-14.1 0-1.4-.1-2.7-.4-4Z"
-            />
-        </svg>
-    );
-}
 
 export default function Login({ status, canResetPassword }: Props) {
     const [tab, setTab] = useState<Tab>('email');
@@ -194,10 +172,23 @@ function PhoneOtpForm() {
         setErrors({});
         setSending(true);
 
-        postJson<{ ok: boolean; expires_in: number; dev_code?: string }>('/login/phone/request', { phone }, { showOverlay: false })
+        postJson<{ ok?: boolean; expires_in?: number; dev_code?: string; registered?: boolean; phone?: string }>(
+            '/login/phone/request',
+            { phone },
+            { showOverlay: false },
+        )
             .then((data) => {
+                if (data.registered === false) {
+                    // Not an error — hand off to the registration wizard, pre-filled
+                    // with this phone number, instead of showing a dead end.
+                    window.location.href = `/register?phone=${encodeURIComponent(data.phone ?? phone)}&quick=1`;
+
+                    return;
+                }
+
                 setDevCode(data.dev_code ?? null);
                 setPhase('code');
+                setSending(false);
             })
             .catch((err) => {
                 if (err instanceof ApiValidationError) {
@@ -205,8 +196,9 @@ function PhoneOtpForm() {
                 } else {
                     setErrors({ phone: 'Gagal mengirim kode. Coba lagi.' });
                 }
-            })
-            .finally(() => setSending(false));
+
+                setSending(false);
+            });
     }
 
     function verifyCode() {

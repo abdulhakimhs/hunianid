@@ -8,26 +8,50 @@ import {
     Home,
     Send,
     ShieldCheck,
+    UserCircle,
     Users,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
 
-type Guidance = {
-    type:
-        | 'pengelola_new'
-        | 'penghuni_unclaimed'
-        | 'penghuni_unclaimed_and_pending_unit'
-        | 'penghuni_pending_approval'
-        | 'penghuni_pending_unit'
-        | 'penghuni_pending_both';
-    areaId: number;
-    areaName: string;
-} | null;
+type Guidance =
+    | { type: 'complete_profile' }
+    | {
+          type:
+              | 'pengelola_new'
+              | 'penghuni_unclaimed'
+              | 'penghuni_unclaimed_and_pending_unit'
+              | 'penghuni_pending_approval'
+              | 'penghuni_pending_unit'
+              | 'penghuni_pending_both';
+          areaId: number;
+          areaName: string;
+      }
+    | null;
 
 function DashboardGuidance({ guidance }: { guidance: Guidance }) {
     if (!guidance) {
 return null;
 }
+
+    if (guidance.type === 'complete_profile') {
+        return (
+            <section className="flex items-start gap-3 rounded-[1.5rem] border border-[color:var(--color-sky)]/25 bg-[color:var(--color-sky)]/10 p-5 shadow-elevated">
+                <UserCircle className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-sky-deep)]" />
+                <div className="flex-1">
+                    <h2 className="font-display text-lg font-semibold text-[color:var(--color-ink)]">Lengkapi profil Anda</h2>
+                    <p className="mt-1 text-sm text-[color:var(--color-ink)]/70">
+                        Nama dan email Anda belum diisi. Lengkapi data ini supaya akun Anda mudah dikenali oleh pengurus dan warga lain.
+                    </p>
+                    <Link
+                        href="/settings/profile"
+                        className="mt-3 inline-flex items-center gap-2 rounded-full bg-[color:var(--color-sky-deep)] px-4 py-2 text-sm font-semibold text-white"
+                    >
+                        Lengkapi profil
+                    </Link>
+                </div>
+            </section>
+        );
+    }
 
     if (guidance.type === 'pengelola_new') {
         return (

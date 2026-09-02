@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\DB;
 
 class RegionController extends Controller
 {
-    /**
-     * Provinces, from the `indonesia_provinces` table (see docs/hunianid_indonesia.sql).
-     */
     public function provinces()
     {
         return DB::table('indonesia_provinces')

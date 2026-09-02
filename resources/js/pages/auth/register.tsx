@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
-import { Building2, Check, CheckCircle2, Home, Loader2, MapPin, Search, Sparkles } from 'lucide-react';
+import { Building2, Check, CheckCircle2, Home, Loader2, MapPin, Navigation, Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { GoogleIcon } from '@/components/google-icon';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
@@ -22,6 +23,7 @@ type Role = 'penghuni' | 'pengelola';
 type SubType = 'rt_rw' | 'developer';
 type Area = { id: number; name: string };
 type Region = { code: string; name: string };
+type StepKey = 'akun' | 'peran' | 'lokasi' | 'unit';
 
 type LocationState = {
     mode: 'google' | 'manual';
@@ -38,9 +40,14 @@ type LocationState = {
 };
 
 type GooglePrefill = { name: string; email: string };
-type Props = { passwordRules: string; googlePrefill?: GooglePrefill | null };
+type QuickPhonePrefill = { phone: string };
+type Props = {
+    passwordRules: string;
+    googlePrefill?: GooglePrefill | null;
+    quickPhonePrefill?: QuickPhonePrefill | null;
+};
 
-const STEP_LABELS = ['Peran', 'Lokasi', 'Akun', 'Unit'];
+const STEP_LABEL: Record<StepKey, string> = { akun: 'Akun', peran: 'Peran', lokasi: 'Lokasi', unit: 'Unit' };
 
 // Wizard state lives only in React state until the final submit (no half-created
 // accounts); mirrored into sessionStorage so a stray reload doesn't wipe progress.
@@ -83,8 +90,18 @@ function clearPersisted() {
     }
 }
 
-export default function Register({ passwordRules, googlePrefill }: Props) {
-    const [initial] = useState(loadPersisted);
+export default function Register({ passwordRules, googlePrefill, quickPhonePrefill }: Props) {
+    // Google sign-up still asks for phone (Google doesn't provide it) and hides the
+    // password fields. Phone-quick sign-up (triggered from an unregistered OTP login
+    // attempt) skips Akun entirely — name/email/password are collected later, on the
+    // dashboard's "complete profile" nudge.
+    const mode: 'normal' | 'google' | 'phone_quick' = googlePrefill ? 'google' : quickPhonePrefill ? 'phone_quick' : 'normal';
+
+    // A prefill means this visit was triggered by an explicit external action (a Google
+    // sign-in or a phone login attempt) — any leftover progress from an earlier,
+    // unrelated wizard session shouldn't be mixed in (and would otherwise silently win
+    // over the prefill, since an empty persisted string isn't `null`/`undefined`).
+    const [initial] = useState(() => (googlePrefill || quickPhonePrefill ? {} : loadPersisted()));
 
     const [step, setStep] = useState(initial.step ?? 1);
 
@@ -93,11 +110,9 @@ export default function Register({ passwordRules, googlePrefill }: Props) {
     const [location, setLocation] = useState<LocationState | null>(initial.location ?? null);
     const [areaName, setAreaName] = useState(initial.areaName ?? '');
 
-    // A prior session's persisted values win over the Google prefill — otherwise
-    // reloading mid-wizard after already typing something would clobber it.
     const [name, setName] = useState(initial.name ?? googlePrefill?.name ?? '');
     const [email, setEmail] = useState(initial.email ?? googlePrefill?.email ?? '');
-    const [phone, setPhone] = useState(initial.phone ?? '');
+    const [phone, setPhone] = useState(initial.phone ?? quickPhonePrefill?.phone ?? '');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
 
@@ -118,7 +133,22 @@ export default function Register({ passwordRules, googlePrefill }: Props) {
     }, [step, role, subType, location, areaName, name, email, phone, areaId, unitNumber, block]);
 
     const needsUnitStep = role === 'penghuni' && (location?.active_areas_count ?? 0) > 0;
-    const totalSteps = needsUnitStep ? 4 : 3;
+    const activeSteps: StepKey[] = [
+        ...(mode === 'phone_quick' ? [] : (['akun'] as StepKey[])),
+        'peran',
+        'lokasi',
+        ...(needsUnitStep ? (['unit'] as StepKey[]) : []),
+    ];
+    const currentStepKey = activeSteps[step - 1];
+    const totalSteps = activeSteps.length;
+
+    function goToStep(key: StepKey) {
+        const index = activeSteps.indexOf(key);
+
+        if (index >= 0) {
+            setStep(index + 1);
+        }
+    }
 
     function submitAll(extra: Record<string, string | undefined> = {}) {
         if (!role || !location) {
@@ -144,11 +174,12 @@ export default function Register({ passwordRules, googlePrefill }: Props) {
             province_code: location.province_code,
             city_code: location.city_code,
             address: location.address,
-            name,
-            email,
-            password,
-            password_confirmation: passwordConfirmation,
+            name: mode === 'phone_quick' ? undefined : name,
+            email: mode === 'phone_quick' ? undefined : email,
+            password: mode === 'normal' ? password : undefined,
+            password_confirmation: mode === 'normal' ? passwordConfirmation : undefined,
             phone: phone || undefined,
+            auth_provider: mode === 'normal' ? undefined : mode,
             ...extra,
         }, { showOverlay: false })
             .then((data) => {
@@ -164,7 +195,7 @@ export default function Register({ passwordRules, googlePrefill }: Props) {
                     // than the user was on — surface a banner so that jump doesn't look
                     // like a silent reset.
                     setErrors(error.errors);
-                    setStep(earliestErroredStep(error.errors));
+                    goToStep(earliestErroredStep(error.errors, activeSteps));
                     setFormError('Ada bagian yang perlu diperiksa kembali — silakan lengkapi ulang sesuai catatan di bawah.');
                 } else {
                     setFormError('Terjadi kesalahan. Silakan coba lagi.');
@@ -178,22 +209,24 @@ export default function Register({ passwordRules, googlePrefill }: Props) {
         const next: Record<string, string> = {};
 
         if (!name) {
-next.name = 'Nama wajib diisi.';
-}
+            next.name = 'Nama wajib diisi.';
+        }
 
         if (!email) {
-next.email = 'Email wajib diisi.';
-}
+            next.email = 'Email wajib diisi.';
+        }
 
         if (!phone) {
-next.phone = 'No. HP wajib diisi.';
-}
+            next.phone = 'No. HP wajib diisi.';
+        }
 
-        if (!password) {
-next.password = 'Kata sandi wajib diisi.';
-} else if (password !== passwordConfirmation) {
-next.password_confirmation = 'Konfirmasi kata sandi tidak sama.';
-}
+        if (mode === 'normal') {
+            if (!password) {
+                next.password = 'Kata sandi wajib diisi.';
+            } else if (password !== passwordConfirmation) {
+                next.password_confirmation = 'Konfirmasi kata sandi tidak sama.';
+            }
+        }
 
         if (Object.keys(next).length > 0) {
             setErrors(next);
@@ -202,24 +235,19 @@ next.password_confirmation = 'Konfirmasi kata sandi tidak sama.';
         }
 
         setErrors({});
-
-        if (needsUnitStep) {
-            setStep(4);
-        } else {
-            submitAll();
-        }
+        goToStep('peran');
     }
 
     function handleUnitSubmit() {
         const next: Record<string, string> = {};
 
         if ((location?.active_areas_count ?? 0) > 1 && !areaId) {
-next.area_id = 'Pilih RT/pengelola Anda.';
-}
+            next.area_id = 'Pilih RT/pengelola Anda.';
+        }
 
         if (!unitNumber) {
-next.unit_number = 'Nomor rumah/unit wajib diisi.';
-}
+            next.unit_number = 'Nomor rumah/unit wajib diisi.';
+        }
 
         if (Object.keys(next).length > 0) {
             setErrors(next);
@@ -239,7 +267,13 @@ next.unit_number = 'Nomor rumah/unit wajib diisi.';
         <>
             <Head title="Daftar" />
             <div className="flex flex-col gap-6">
-                <WizardSteps step={step} total={totalSteps} onStepClick={(n) => n < step && setStep(n)} />
+                <WizardSteps steps={activeSteps} step={step} onStepClick={(n) => n < step && setStep(n)} />
+
+                {mode === 'phone_quick' && currentStepKey === 'peran' && (
+                    <p className="rounded-xl border border-[color:var(--color-sky)]/25 bg-[color:var(--color-sky)]/10 px-3 py-2 text-sm text-[color:var(--color-sky-deep)]">
+                        No. HP <span className="font-semibold">{quickPhonePrefill?.phone}</span> belum terdaftar. Yuk lanjutkan dengan proses pendaftaran dulu — kamu berperan sebagai apa?
+                    </p>
+                )}
 
                 {formError && (
                     <p className="rounded-xl border border-[color:var(--color-coral)]/25 bg-[color:var(--color-coral)]/10 px-3 py-2 text-sm text-[color:var(--color-coral)]">
@@ -247,7 +281,22 @@ next.unit_number = 'Nomor rumah/unit wajib diisi.';
                     </p>
                 )}
 
-                {step === 1 && (
+                {currentStepKey === 'akun' && (
+                    <AccountStep
+                        passwordRules={passwordRules}
+                        mode={mode}
+                        name={name}
+                        email={email}
+                        phone={phone}
+                        password={password}
+                        passwordConfirmation={passwordConfirmation}
+                        errors={errors}
+                        onChange={{ name: setName, email: setEmail, phone: setPhone, password: setPassword, passwordConfirmation: setPasswordConfirmation }}
+                        onContinue={handleAccountContinue}
+                    />
+                )}
+
+                {currentStepKey === 'peran' && (
                     <RoleStep
                         role={role}
                         subType={subType}
@@ -257,11 +306,11 @@ next.unit_number = 'Nomor rumah/unit wajib diisi.';
                             setSubType(null);
                         }}
                         onSelectSubType={setSubType}
-                        onContinue={() => setStep(2)}
+                        onContinue={() => goToStep('lokasi')}
                     />
                 )}
 
-                {step === 2 && role && (
+                {currentStepKey === 'lokasi' && role && (
                     <LocationStep
                         role={role}
                         location={location}
@@ -277,29 +326,19 @@ next.unit_number = 'Nomor rumah/unit wajib diisi.';
                             }
 
                             setErrors({});
-                            setStep(3);
-                        }}
-                    />
-                )}
 
-                {step === 3 && (
-                    <AccountStep
-                        passwordRules={passwordRules}
-                        fromGoogle={!!googlePrefill && email === googlePrefill.email}
-                        name={name}
-                        email={email}
-                        phone={phone}
-                        password={password}
-                        passwordConfirmation={passwordConfirmation}
-                        errors={errors}
+                            if (needsUnitStep) {
+                                goToStep('unit');
+                            } else {
+                                submitAll();
+                            }
+                        }}
                         submitting={submitting && !needsUnitStep}
                         isFinalStep={!needsUnitStep}
-                        onChange={{ name: setName, email: setEmail, phone: setPhone, password: setPassword, passwordConfirmation: setPasswordConfirmation }}
-                        onContinue={handleAccountContinue}
                     />
                 )}
 
-                {step === 4 && location && (
+                {currentStepKey === 'unit' && location && (
                     <UnitStep
                         areas={location.active_areas}
                         areaId={areaId}
@@ -316,40 +355,47 @@ next.unit_number = 'Nomor rumah/unit wajib diisi.';
     );
 }
 
-function earliestErroredStep(errors: Record<string, string>): number {
-    const stepOf: Record<string, number> = {
-        role: 1,
-        sub_type: 1,
-        location_mode: 2,
-        place_id: 2,
-        location_name: 2,
-        province_code: 2,
-        city_code: 2,
-        address: 2,
-        area_name: 2,
-        name: 3,
-        email: 3,
-        password: 3,
-        password_confirmation: 3,
-        phone: 3,
-        area_id: 4,
-        unit_number: 4,
-        block: 4,
+function earliestErroredStep(errors: Record<string, string>, activeSteps: StepKey[]): StepKey {
+    const stepOfField: Record<string, StepKey> = {
+        name: 'akun',
+        email: 'akun',
+        password: 'akun',
+        password_confirmation: 'akun',
+        phone: 'akun',
+        role: 'peran',
+        sub_type: 'peran',
+        location_mode: 'lokasi',
+        place_id: 'lokasi',
+        location_name: 'lokasi',
+        province_code: 'lokasi',
+        city_code: 'lokasi',
+        address: 'lokasi',
+        area_name: 'lokasi',
+        area_id: 'unit',
+        unit_number: 'unit',
+        block: 'unit',
     };
 
-    const steps = Object.keys(errors).map((field) => stepOf[field] ?? 3);
+    const indices = Object.keys(errors)
+        .map((field) => activeSteps.indexOf(stepOfField[field] ?? 'peran'))
+        .filter((i) => i >= 0);
 
-    return steps.length > 0 ? Math.min(...steps) : 1;
+    const earliest = indices.length > 0 ? Math.min(...indices) : 0;
+
+    return activeSteps[earliest];
 }
 
-function WizardSteps({ step, total, onStepClick }: { step: number; total: number; onStepClick: (n: number) => void }) {
+function WizardSteps({ steps, step, onStepClick }: { steps: StepKey[]; step: number; onStepClick: (n: number) => void }) {
+    const total = steps.length;
+
     return (
         <div className="flex w-full items-start">
-            {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
+            {steps.map((key, i) => {
+                const n = i + 1;
                 const clickable = n < step;
 
                 return (
-                    <div key={n} className="flex flex-1 items-center last:flex-none">
+                    <div key={key} className="flex flex-1 items-center last:flex-none">
                         <button
                             type="button"
                             disabled={!clickable}
@@ -372,7 +418,7 @@ function WizardSteps({ step, total, onStepClick }: { step: number; total: number
                                     n === step ? 'text-[color:var(--color-ink)]' : clickable ? 'text-[color:var(--color-ink)]/60' : 'text-[color:var(--color-ink)]/40'
                                 }`}
                             >
-                                {STEP_LABELS[n - 1]}
+                                {STEP_LABEL[key]}
                             </span>
                         </button>
                         {n < total && (
@@ -415,8 +461,8 @@ function RoleStep({
     return (
         <div className="flex flex-col gap-5">
             <div>
-                <h1 className="font-display text-lg font-semibold text-[color:var(--color-ink)]">Buat akun</h1>
-                <p className="text-sm text-[color:var(--color-ink)]/55">Pilih peran Anda untuk memulai</p>
+                <h1 className="font-display text-lg font-semibold text-[color:var(--color-ink)]">Pilih peran Anda</h1>
+                <p className="text-sm text-[color:var(--color-ink)]/55">Peran menentukan langkah pendaftaran berikutnya</p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -478,10 +524,6 @@ function RoleStep({
             <Button type="button" className="w-full" disabled={!canContinue} onClick={onContinue}>
                 Lanjutkan
             </Button>
-
-            <p className="text-center text-sm text-[color:var(--color-ink)]/55">
-                Sudah punya akun? <TextLink href={login()}>Masuk</TextLink>
-            </p>
         </div>
     );
 }
@@ -494,6 +536,8 @@ function LocationStep({
     onAreaNameChange,
     areaNameError,
     onContinue,
+    submitting,
+    isFinalStep,
 }: {
     role: Role;
     location: LocationState | null;
@@ -502,11 +546,14 @@ function LocationStep({
     onAreaNameChange: (v: string) => void;
     areaNameError?: string;
     onContinue: () => void;
+    submitting: boolean;
+    isFinalStep: boolean;
 }) {
     const [showManual, setShowManual] = useState(false);
     const [previewing, setPreviewing] = useState(false);
     const [mapsReady, setMapsReady] = useState(false);
     const [mapsError, setMapsError] = useState(false);
+    const [candidate, setCandidate] = useState<LocationState | null>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
     const [provinces, setProvinces] = useState<Region[]>([]);
@@ -572,7 +619,9 @@ function LocationStep({
                         place_id: place.place_id,
                     }, { showOverlay: false })
                         .then((preview) => {
-                            onResolved({
+                            // Don't resolve immediately — show it on a map first so the
+                            // user can confirm (or drag the pin to correct it).
+                            setCandidate({
                                 mode: 'google',
                                 place_id: place.place_id,
                                 location_name: place.name ?? place.formatted_address ?? '',
@@ -617,7 +666,7 @@ function LocationStep({
                 <p className="text-sm text-[color:var(--color-ink)]/55">Cari lewat Google Maps atau isi manual jika tidak ditemukan</p>
             </div>
 
-            {!location && (
+            {!location && !candidate && (
                 <>
                     <div className="grid gap-2">
                         <Label htmlFor="location-search">Cari perumahan Anda</Label>
@@ -711,6 +760,17 @@ function LocationStep({
                 </>
             )}
 
+            {!location && candidate && (
+                <MapConfirm
+                    candidate={candidate}
+                    onConfirm={(confirmed) => {
+                        setCandidate(null);
+                        onResolved(confirmed);
+                    }}
+                    onReject={() => setCandidate(null)}
+                />
+            )}
+
             {location && (
                 <div className="flex flex-col gap-4 duration-150 animate-in fade-in">
                     <div className="rounded-xl border border-[color:var(--color-ink)]/10 bg-[color:var(--color-bg)] p-4">
@@ -754,8 +814,9 @@ function LocationStep({
                         </div>
                     )}
 
-                    <Button type="button" className="w-full" disabled={role === 'pengelola' && !areaName.trim()} onClick={onContinue}>
-                        Lanjutkan
+                    <Button type="button" className="w-full" disabled={submitting || (role === 'pengelola' && !areaName.trim())} onClick={onContinue}>
+                        {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {isFinalStep ? 'Buat akun' : 'Lanjutkan'}
                     </Button>
 
                     <button
@@ -771,30 +832,121 @@ function LocationStep({
     );
 }
 
+/**
+ * Shows the resolved location on a map before it's accepted — the marker is
+ * draggable, so a slightly-off Google result can be nudged onto the right spot
+ * instead of forcing another search.
+ */
+function MapConfirm({
+    candidate,
+    onConfirm,
+    onReject,
+}: {
+    candidate: LocationState;
+    onConfirm: (l: LocationState) => void;
+    onReject: () => void;
+}) {
+    const mapDivRef = useRef<HTMLDivElement>(null);
+    const markerRef = useRef<google.maps.Marker | null>(null);
+    const [position, setPosition] = useState({ lat: candidate.latitude ?? 0, lng: candidate.longitude ?? 0 });
+    const [adjusted, setAdjusted] = useState(false);
+
+    useEffect(() => {
+        if (!mapDivRef.current || candidate.latitude == null || candidate.longitude == null) {
+            return;
+        }
+
+        const center = { lat: candidate.latitude, lng: candidate.longitude };
+
+        const map = new google.maps.Map(mapDivRef.current, {
+            center,
+            zoom: 16,
+            disableDefaultUI: true,
+            zoomControl: true,
+        });
+
+        const marker = new google.maps.Marker({
+            position: center,
+            map,
+            draggable: true,
+        });
+
+        markerRef.current = marker;
+
+        marker.addListener('dragend', () => {
+            const pos = marker.getPosition();
+
+            if (!pos) {
+                return;
+            }
+
+            setPosition({ lat: pos.lat(), lng: pos.lng() });
+            setAdjusted(true);
+        });
+
+        return () => {
+            google.maps.event.clearInstanceListeners(marker);
+            marker.setMap(null);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [candidate.place_id]);
+
+    return (
+        <div className="flex flex-col gap-4 duration-150 animate-in fade-in">
+            <div>
+                <p className="text-sm font-medium text-[color:var(--color-ink)]">{candidate.location_name}</p>
+                {candidate.formatted_address && <p className="text-xs text-[color:var(--color-ink)]/50">{candidate.formatted_address}</p>}
+            </div>
+
+            <div ref={mapDivRef} className="h-56 w-full overflow-hidden rounded-xl border border-[color:var(--color-ink)]/10 bg-[color:var(--color-bg)]" />
+
+            <div className="flex items-start gap-2 rounded-xl border border-[color:var(--color-sky)]/25 bg-[color:var(--color-sky)]/10 px-3 py-2 text-xs text-[color:var(--color-sky-deep)]">
+                <Navigation className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                    {adjusted
+                        ? 'Titik lokasi sudah disesuaikan.'
+                        : 'Geser pin di peta jika titik lokasinya kurang tepat.'}
+                </span>
+            </div>
+
+            <p className="text-sm text-[color:var(--color-ink)]/70">Apakah ini lokasi perumahan Anda?</p>
+
+            <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={onReject}>
+                    Cari lokasi lain
+                </Button>
+                <Button
+                    type="button"
+                    className="flex-1"
+                    onClick={() => onConfirm({ ...candidate, latitude: position.lat, longitude: position.lng })}
+                >
+                    Ya, ini lokasinya
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 function AccountStep({
     passwordRules,
-    fromGoogle,
+    mode,
     name,
     email,
     phone,
     password,
     passwordConfirmation,
     errors,
-    submitting,
-    isFinalStep,
     onChange,
     onContinue,
 }: {
     passwordRules: string;
-    fromGoogle?: boolean;
+    mode: 'normal' | 'google' | 'phone_quick';
     name: string;
     email: string;
     phone: string;
     password: string;
     passwordConfirmation: string;
     errors: Record<string, string>;
-    submitting: boolean;
-    isFinalStep: boolean;
     onChange: {
         name: (v: string) => void;
         email: (v: string) => void;
@@ -804,16 +956,18 @@ function AccountStep({
     };
     onContinue: () => void;
 }) {
+    const hidePassword = mode === 'google';
+
     return (
         <div className="flex flex-col gap-5">
             <div>
                 <h1 className="font-display text-lg font-semibold text-[color:var(--color-ink)]">Buat akun Anda</h1>
-                <p className="text-sm text-[color:var(--color-ink)]/55">Lengkapi nama, email, dan kata sandi untuk menyelesaikan pendaftaran</p>
+                <p className="text-sm text-[color:var(--color-ink)]/55">Lengkapi data berikut untuk memulai pendaftaran</p>
             </div>
 
-            {fromGoogle && (
+            {hidePassword && (
                 <p className="rounded-xl border border-[color:var(--color-sky)]/25 bg-[color:var(--color-sky)]/10 px-3 py-2 text-sm text-[color:var(--color-sky-deep)]">
-                    Nama dan email sudah terisi dari akun Google Anda. Lengkapi no. HP dan kata sandi untuk menyelesaikan pendaftaran.
+                    Nama dan email sudah terisi dari akun Google Anda. Lengkapi no. HP untuk melanjutkan — Anda akan masuk dengan akun Google ini, tanpa kata sandi.
                 </p>
             )}
 
@@ -836,33 +990,60 @@ function AccountStep({
                     <InputError message={errors.phone} />
                 </div>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="password">Kata sandi</Label>
-                    <PasswordInput
-                        id="password"
-                        value={password}
-                        onChange={(e) => onChange.password(e.target.value)}
-                        passwordrules={passwordRules}
-                    />
-                    <InputError message={errors.password} />
-                </div>
+                {!hidePassword && (
+                    <>
+                        <div className="grid gap-2">
+                            <Label htmlFor="password">Kata sandi</Label>
+                            <PasswordInput
+                                id="password"
+                                value={password}
+                                onChange={(e) => onChange.password(e.target.value)}
+                                passwordrules={passwordRules}
+                            />
+                            <InputError message={errors.password} />
+                        </div>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="password_confirmation">Konfirmasi kata sandi</Label>
-                    <PasswordInput
-                        id="password_confirmation"
-                        value={passwordConfirmation}
-                        onChange={(e) => onChange.passwordConfirmation(e.target.value)}
-                        passwordrules={passwordRules}
-                    />
-                    <InputError message={errors.password_confirmation} />
-                </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="password_confirmation">Konfirmasi kata sandi</Label>
+                            <PasswordInput
+                                id="password_confirmation"
+                                value={passwordConfirmation}
+                                onChange={(e) => onChange.passwordConfirmation(e.target.value)}
+                                passwordrules={passwordRules}
+                            />
+                            <InputError message={errors.password_confirmation} />
+                        </div>
+                    </>
+                )}
             </div>
 
-            <Button type="button" className="w-full" disabled={submitting} onClick={onContinue}>
-                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isFinalStep ? 'Buat akun' : 'Lanjutkan'}
+            <Button type="button" className="w-full" onClick={onContinue}>
+                Lanjutkan
             </Button>
+
+            {mode === 'normal' && (
+                <>
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-[color:var(--color-ink)]/10" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-[color:var(--color-surface)] px-2 text-[color:var(--color-ink)]/40">atau</span>
+                        </div>
+                    </div>
+
+                    <a href="/auth/google/redirect" className="block">
+                        <Button type="button" variant="outline" className="w-full">
+                            <GoogleIcon />
+                            Daftar dengan Google
+                        </Button>
+                    </a>
+                </>
+            )}
+
+            <p className="text-center text-sm text-[color:var(--color-ink)]/55">
+                Sudah punya akun? <TextLink href={login()}>Masuk</TextLink>
+            </p>
         </div>
     );
 }
