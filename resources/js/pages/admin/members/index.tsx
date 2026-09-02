@@ -4,6 +4,8 @@ import {
     ArrowUp,
     ArrowUpDown,
     CalendarDays,
+    ChevronLeft,
+    ChevronRight,
     Eye,
     Home,
     Loader2,
@@ -113,6 +115,8 @@ export default function MembersIndex({ members, areaName, canPromote }: Props) {
     const [target, setTarget] = useState<Member | null>(null);
     const [type, setType] = useState<'rt_rw' | 'developer' | ''>('');
     const [processing, setProcessing] = useState(false);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const stats = useMemo(() => {
         const admins = members.filter((m) => ADMIN_ROLES.has(m.role)).length;
@@ -152,6 +156,10 @@ export default function MembersIndex({ members, areaName, canPromote }: Props) {
         return sortDir === 'asc' ? sorted : sorted.reverse();
     }, [members, query, roleFilter, sortKey, sortDir]);
 
+    const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     function toggleSort(key: SortKey) {
         if (sortKey === key) {
             setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -160,6 +168,17 @@ export default function MembersIndex({ members, areaName, canPromote }: Props) {
 
         setSortKey(key);
         setSortDir('asc');
+        setPage(1);
+    }
+
+    function handleQueryChange(next: string) {
+        setQuery(next);
+        setPage(1);
+    }
+
+    function handleRoleFilterChange(next: RoleFilter) {
+        setRoleFilter(next);
+        setPage(1);
     }
 
     function sortIcon(key: SortKey) {
@@ -219,7 +238,7 @@ export default function MembersIndex({ members, areaName, canPromote }: Props) {
                             <button
                                 key={f.key}
                                 type="button"
-                                onClick={() => setRoleFilter(f.key)}
+                                onClick={() => handleRoleFilterChange(f.key)}
                                 className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
                                     roleFilter === f.key
                                         ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-sm'
@@ -236,7 +255,7 @@ export default function MembersIndex({ members, areaName, canPromote }: Props) {
                         <input
                             type="text"
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => handleQueryChange(e.target.value)}
                             placeholder="Cari anggota..."
                             className="w-full rounded-lg border border-[color:var(--color-ink)]/10 bg-[color:var(--color-bg)] py-1.5 pr-3 pl-8 text-sm text-[color:var(--color-ink)] outline-none placeholder:text-[color:var(--color-ink)]/40 focus:border-[color:var(--color-sky)]/50 focus:ring-2 focus:ring-[color:var(--color-sky)]/15"
                         />
@@ -270,7 +289,7 @@ export default function MembersIndex({ members, areaName, canPromote }: Props) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filtered.map((m) => {
+                        {paginated.map((m) => {
                             const style = roleStyle(m.role);
 
                             return (
@@ -333,6 +352,34 @@ export default function MembersIndex({ members, areaName, canPromote }: Props) {
                         <p className="text-sm text-[color:var(--color-ink)]/50">
                             {members.length === 0 ? 'Belum ada anggota terdaftar.' : 'Tidak ada anggota yang cocok dengan pencarian.'}
                         </p>
+                    </div>
+                )}
+
+                {filtered.length > 0 && pageCount > 1 && (
+                    <div className="flex items-center justify-between border-t border-[color:var(--color-ink)]/8 px-4 py-3">
+                        <p className="text-xs text-[color:var(--color-ink)]/45">
+                            Halaman {currentPage} dari {pageCount}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={currentPage <= 1}
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={currentPage >= pageCount}
+                                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                            >
+                                <ChevronRight className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
                     </div>
                 )}
             </section>

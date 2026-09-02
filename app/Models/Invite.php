@@ -55,10 +55,6 @@ class Invite extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /**
-     * A targeted, per-tenant invite (phone + unit) — as opposed to the generic
-     * shareable link used to hand off area admin to a future pengurus.
-     */
     public function isTenantInvite(): bool
     {
         return $this->unit_id !== null && $this->phone !== null;

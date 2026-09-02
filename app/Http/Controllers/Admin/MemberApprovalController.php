@@ -10,9 +10,6 @@ use Inertia\Response;
 
 class MemberApprovalController extends Controller
 {
-    /**
-     * GET /admin/members/pending
-     */
     public function index(Request $request): Response
     {
         $area = $request->attributes->get('adminArea');

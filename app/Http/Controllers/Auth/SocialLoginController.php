@@ -12,20 +12,11 @@ use Throwable;
 
 class SocialLoginController extends Controller
 {
-    /**
-     * GET /login/google/redirect
-     */
     public function redirect(): RedirectResponse
     {
         return Socialite::driver('google')->redirect();
     }
 
-    /**
-     * GET /login/google/callback — an existing account (matched by Google email) logs in
-     * directly. A brand-new email is never auto-created (registration always creates an
-     * area/unit alongside the user, so a bare account would be an orphan) — instead the
-     * profile is stashed in session and handed to /register to pre-fill name/email.
-     */
     public function callback(Request $request): RedirectResponse
     {
         try {

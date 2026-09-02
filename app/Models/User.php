@@ -66,10 +66,6 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * The area_members row the user last explicitly switched to (see MembershipContext)
-     * — restored automatically on their next login, since the session-based selection
-     * doesn't survive logout.
-     *
      * @return BelongsTo<AreaMember, $this>
      */
     public function lastMembership(): BelongsTo

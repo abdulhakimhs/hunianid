@@ -19,14 +19,6 @@ class RegistrationService
         private readonly UnitResolverService $unitResolver,
     ) {}
 
-    /**
-     * The whole registration wizard, submitted once, at the very end — creates the
-     * complex (if needed), the user, and the role-specific area/unit rows in one
-     * transaction. Nothing touches the database until this runs.
-     *
-     * @param  array<string, mixed>  $data  Validated payload from RegistrationController::complete()
-     * @param  'normal'|'google'|'phone_quick'  $mode
-     */
     public function register(array $data, string $mode = 'normal'): User
     {
         return DB::transaction(function () use ($data, $mode) {
@@ -43,11 +35,6 @@ class RegistrationService
         });
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     * @param  'normal'|'google'|'phone_quick'  $mode
-     * @return array<string, mixed>
-     */
     private function userAttributes(array $data, string $mode): array
     {
         if ($mode === 'phone_quick') {
@@ -112,9 +99,6 @@ class RegistrationService
         ]);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
     private function registerPenghuni(User $user, Complex $complex, array $data): void
     {
         $activeAreas = $this->complexResolver->activeAreas($complex);

@@ -12,9 +12,6 @@ use Illuminate\Validation\Rule;
 
 class AreaHandoverController extends Controller
 {
-    /**
-     * POST /admin/area/promote — only the area's `created_by` user may promote a member.
-     */
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -45,8 +42,6 @@ class AreaHandoverController extends Controller
             );
         });
 
-        // Not back() to /admin/members — promoting someone flips the area to active,
-        // which can revoke the acting user's own access if they weren't the one promoted.
         return redirect()->route('dashboard')->with('status', "Berhasil menyerahkan akses pengelola kepada {$target->user->name}.");
     }
 }

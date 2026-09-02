@@ -112,10 +112,11 @@ function buildNavGroups(adminAccess: AdminAccess) {
                 },
                 {
                     title: 'Pengaturan',
-                    href: '#',
+                    href: '/admin/settings',
                     icon: Settings2,
+                    requires: adminAccess.settings,
                 },
-            ],
+            ].filter((item) => item.requires ?? true),
         },
     ];
 }

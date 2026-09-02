@@ -22,12 +22,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Guidance is driven by whichever membership the user is currently viewing as (see
-     * MembershipContext) — switching area/role in the nav menu changes what shows here.
-     *
-     * @return array<string, mixed>|null
-     */
     private function guidanceFor(User $user, AreaMember $current): ?array
     {
         if ($user->profile_completed_at === null) {

@@ -9,12 +9,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
-/**
- * Creates and sends targeted, per-tenant invites (one phone number, one specific unit)
- * — as opposed to the generic shareable link used to hand off area admin. Shared between
- * InviteController (send now / save for later) and the scheduled-send console command,
- * so both go through the same WhatsApp delivery + status bookkeeping.
- */
 class TenantInviteService
 {
     public function __construct(private readonly WaBlastService $waBlast) {}
@@ -49,8 +43,11 @@ class TenantInviteService
         $unitLabel = trim(($invite->unit->block ?? '').' '.$invite->unit->unit_number);
         $complexName = $invite->area->complex->name;
 
-        $message = "Halo! Anda diundang bergabung sebagai warga {$complexName} untuk unit {$unitLabel}. ".
-            "Silakan daftar lewat tautan berikut: {$link}";
+        $message = strtr($invite->area->invitationMessageTemplate(), [
+            '{komplek}' => $complexName,
+            '{unit}' => $unitLabel,
+            '{link}' => $link,
+        ]);
 
         $result = $this->waBlast->send($invite->phone, $message);
 

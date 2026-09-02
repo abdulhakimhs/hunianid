@@ -19,29 +19,19 @@ class RegistrationController extends Controller
 {
     use PasswordValidationRules, ProfileValidationRules;
 
-    /**
-     * GET /register — the entire wizard is one page; steps live in client-side state.
-     */
     public function show(Request $request): Response
     {
         return Inertia::render('auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
-            // Set by SocialLoginController on an unmatched Google sign-in. Not pull()ed
-            // here — a reload mid-wizard shouldn't lose it; it's only cleared once the
-            // account is actually created.
+
             'googlePrefill' => $request->session()->get('google_prefill'),
-            // Set by PhoneLoginController when an OTP was requested for a number that
-            // isn't registered yet.
+
             'quickPhonePrefill' => $request->query('quick') === '1' && $request->query('phone')
                 ? ['phone' => $request->query('phone')]
                 : null,
         ]);
     }
 
-    /**
-     * POST /register/location/preview — read-only lookup for the "found: X — N
-     * RT/pengelola terdaftar" messaging shown while the wizard is still being filled in.
-     */
     public function previewLocation(Request $request, ComplexResolverService $resolver): JsonResponse
     {
         $data = $request->validate([
@@ -51,19 +41,9 @@ class RegistrationController extends Controller
         return response()->json($resolver->previewFromGooglePlaceId($data['place_id']));
     }
 
-    /**
-     * POST /register/complete — the one and only write. Everything collected across the
-     * wizard's steps is submitted together and created in a single transaction. Returns
-     * plain JSON (called via fetch, not Inertia's router) so a failed submission stays
-     * inline rather than looking like a page navigation. Logs the account in and sends
-     * the frontend straight to the dashboard.
-     */
     public function complete(Request $request, RegistrationService $registration): JsonResponse
     {
-        // 'google' skips the password requirement — only trusted if it actually matches
-        // the email SocialLoginController stashed in session, never the client's say-so
-        // alone. 'phone_quick' skips name/email/password entirely (phone-only signup
-        // triggered from an unregistered OTP login attempt).
+
         $mode = 'normal';
 
         if ($request->input('auth_provider') === 'google') {
@@ -96,9 +76,6 @@ class RegistrationController extends Controller
             'password' => $mode === 'normal' ? $this->passwordRules() : ['nullable'],
             'phone' => ['required', 'string', 'max:20', Rule::unique(User::class)],
 
-            // Only meaningful for Penghuni joining an existing (non-unclaimed) area —
-            // RegistrationService enforces the real requirement once it knows how many
-            // active areas the resolved complex actually has.
             'area_id' => ['nullable', 'integer'],
             'unit_number' => ['nullable', 'string', 'max:50'],
             'block' => ['nullable', 'string', 'max:50'],

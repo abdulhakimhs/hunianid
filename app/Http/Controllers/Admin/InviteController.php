@@ -23,10 +23,6 @@ use Inertia\Response;
 
 class InviteController extends Controller
 {
-    /**
-     * GET /admin/invites — the generic pengurus-handoff link (if any) plus the list of
-     * targeted per-tenant invites for this area.
-     */
     public function index(Request $request): Response
     {
         $area = $request->attributes->get('adminArea');
@@ -66,11 +62,6 @@ class InviteController extends Controller
         ]);
     }
 
-    /**
-     * POST /admin/invites — revokes any previously active generic link, creates a new
-     * one. Used only to invite a future pengurus (see task_unclaimed_area_handover.md) —
-     * unrelated to the per-tenant invites below.
-     */
     public function store(Request $request)
     {
         $area = $request->attributes->get('adminArea');
@@ -88,11 +79,6 @@ class InviteController extends Controller
         return redirect()->route('admin.invites.index');
     }
 
-    /**
-     * POST /admin/invites/tenant — creates a targeted invite for one phone number and
-     * one specific unit. Sends immediately unless a future `scheduled_at` is given, in
-     * which case `invites:send-scheduled` picks it up when due.
-     */
     public function storeTenant(Request $request, TenantInviteService $service)
     {
         $area = $request->attributes->get('adminArea');
@@ -114,10 +100,6 @@ class InviteController extends Controller
         return redirect()->route('admin.invites.index');
     }
 
-    /**
-     * POST /admin/invites/{invite}/revoke — works for both the generic link and
-     * targeted tenant invites.
-     */
     public function revoke(Request $request, Invite $invite)
     {
         $area = $request->attributes->get('adminArea');
@@ -128,9 +110,18 @@ class InviteController extends Controller
         return redirect()->route('admin.invites.index');
     }
 
-    /**
-     * GET /invite/{code} — public, validates the token before showing any form.
-     */
+    public function resend(Request $request, Invite $invite, TenantInviteService $service)
+    {
+        $area = $request->attributes->get('adminArea');
+        abort_unless($invite->area_id === $area->id, 403);
+        abort_unless($invite->isTenantInvite(), 404);
+        abort_unless($invite->status === 'active', 422);
+
+        $service->sendNow($invite);
+
+        return redirect()->route('admin.invites.index');
+    }
+
     public function show(string $code): Response
     {
         $invite = Invite::with('unit:id,unit_number,block')->where('code', $code)->first();
@@ -144,23 +135,17 @@ class InviteController extends Controller
         return Inertia::render('invite/show', [
             'valid' => true,
             'code' => $invite->code,
-            // An unclaimed area's `name` is just the internal placeholder ("Warga baru
-            // (belum ada pengurus)") — not fit to show anyone. The complex name (the
-            // actual perumahan) is what's meaningful here either way.
+
             'complexName' => $area->complex->name,
             'areaName' => $area->status === 'unclaimed' ? null : $area->name,
             'isUnclaimed' => $area->status === 'unclaimed',
-            // A targeted invite already knows the phone/unit — the accept form shows
-            // them read-only instead of asking again.
+
             'isTenantInvite' => $invite->isTenantInvite(),
             'phone' => $invite->phone,
             'unit' => $invite->unit ? trim(($invite->unit->block ?? '').' '.$invite->unit->unit_number) : null,
         ]);
     }
 
-    /**
-     * POST /invite/{code}/submit
-     */
     public function submit(Request $request, string $code, UnitResolverService $unitResolver)
     {
         $invite = Invite::with('unit')->where('code', $code)->first();
@@ -216,9 +201,7 @@ class InviteController extends Controller
                     ->first();
 
                 if (! $membership) {
-                    // A personal, targeted invite is itself the vetting step — always
-                    // active. The generic shareable link still respects the area's
-                    // normal approval setting.
+
                     $needsApproval = ! $isTenantInvite && $area->status !== 'unclaimed' && $area->require_approval;
 
                     $membership = AreaMember::create([
@@ -241,8 +224,6 @@ class InviteController extends Controller
 
         auth()->login($user);
 
-        // The area they just joined becomes "current", not whatever they had selected
-        // from a previous login.
         MembershipContext::select($request, $membership);
 
         return redirect()->route('dashboard');

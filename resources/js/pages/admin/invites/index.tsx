@@ -3,19 +3,23 @@ import {
     AlertCircle,
     Calendar,
     Check,
+    ChevronLeft,
+    ChevronRight,
     Clock,
     Copy,
     Link2,
     Loader2,
     MessageCircle,
     RefreshCw,
+    Search,
     Send,
     ShieldCheck,
     Users,
     X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import {
     Dialog,
     DialogContent,
@@ -24,13 +28,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type Invite = { id: number; code: string; status: string } | null;
@@ -359,6 +356,38 @@ function TenantInvitesPanel({
     const [scheduledAt, setScheduledAt] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [resendingId, setResendingId] = useState<number | null>(null);
+    const pageSize = 10;
+
+    function resend(invite: TenantInvite) {
+        setResendingId(invite.id);
+        router.post(
+            `/admin/invites/${invite.id}/resend`,
+            {},
+            { onFinish: () => setResendingId(null) },
+        );
+    }
+
+    const filteredInvites = useMemo(() => {
+        const q = search.trim().toLowerCase();
+
+        if (!q) {
+            return invites;
+        }
+
+        return invites.filter((inv) => `${inv.phone} ${inv.unit}`.toLowerCase().includes(q));
+    }, [invites, search]);
+
+    const pageCount = Math.max(1, Math.ceil(filteredInvites.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const paginatedInvites = filteredInvites.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    function handleSearchChange(next: string) {
+        setSearch(next);
+        setPage(1);
+    }
 
     function submit() {
         const next: Record<string, string> = {};
@@ -431,18 +460,15 @@ function TenantInvitesPanel({
 
                 <div className="grid gap-2">
                     <label className="text-sm font-medium text-[color:var(--color-ink)]">Unit</label>
-                    <Select value={unitId} onValueChange={setUnitId}>
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder={units.length === 0 ? 'Belum ada unit terdaftar' : 'Pilih unit'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {units.map((u) => (
-                                <SelectItem key={u.id} value={String(u.id)}>
-                                    {u.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        value={unitId}
+                        onValueChange={setUnitId}
+                        options={units.map((u) => ({ value: String(u.id), label: u.label }))}
+                        placeholder={units.length === 0 ? 'Belum ada unit terdaftar' : 'Pilih unit'}
+                        searchPlaceholder="Cari unit..."
+                        emptyText="Unit tidak ditemukan."
+                        disabled={units.length === 0}
+                    />
                     {errors.unit_id && <p className="text-sm text-[color:var(--color-coral)]">{errors.unit_id}</p>}
                 </div>
 
@@ -495,9 +521,20 @@ function TenantInvitesPanel({
             </section>
 
             <section className="overflow-hidden rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] shadow-elevated">
-                <div className="border-b border-[color:var(--color-ink)]/8 px-5 py-4">
-                    <p className="font-display text-base font-semibold text-[color:var(--color-ink)]">Riwayat undangan</p>
-                    <p className="text-xs text-[color:var(--color-ink)]/45">{invites.length} undangan tercatat</p>
+                <div className="flex flex-col gap-3 border-b border-[color:var(--color-ink)]/8 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="font-display text-base font-semibold text-[color:var(--color-ink)]">Riwayat undangan</p>
+                        <p className="text-xs text-[color:var(--color-ink)]/45">{filteredInvites.length} undangan tercatat</p>
+                    </div>
+                    <div className="relative sm:w-64">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[color:var(--color-ink)]/40" />
+                        <input
+                            value={search}
+                            onChange={(e) => handleSearchChange(e.target.value)}
+                            placeholder="Cari no. HP atau unit..."
+                            className="w-full rounded-xl border border-[color:var(--color-ink)]/12 bg-[color:var(--color-bg)] py-2 pr-3 pl-9 text-sm text-[color:var(--color-ink)] outline-none placeholder:text-[color:var(--color-ink)]/40 focus:border-[color:var(--color-sky)]/50 focus:ring-2 focus:ring-[color:var(--color-sky)]/20"
+                        />
+                    </div>
                 </div>
 
                 <Table>
@@ -511,7 +548,7 @@ function TenantInvitesPanel({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {invites.map((inv) => (
+                        {paginatedInvites.map((inv) => (
                             <TableRow key={inv.id} className="border-[color:var(--color-ink)]/6 last:border-0">
                                 <TableCell className="py-2.5 pl-5 text-sm font-medium text-[color:var(--color-ink)]">{inv.phone}</TableCell>
                                 <TableCell className="py-2.5 text-sm text-[color:var(--color-ink)]/60">{inv.unit}</TableCell>
@@ -527,23 +564,71 @@ function TenantInvitesPanel({
                                     {inv.sent_at ? formatDateTime(inv.sent_at) : formatDateTime(inv.scheduled_at)}
                                 </TableCell>
                                 <TableCell className="py-2.5 pr-5 text-right">
-                                    {inv.status === 'active' && (
-                                        <Button variant="ghost" size="sm" className="h-7 text-xs text-[color:var(--color-coral)]" onClick={() => onRevoke(inv)}>
-                                            Batalkan
-                                        </Button>
-                                    )}
+                                    <div className="flex justify-end gap-1">
+                                        {inv.status === 'active' && inv.send_status !== 'pending' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 text-xs text-[color:var(--color-sky-deep)]"
+                                                disabled={resendingId === inv.id}
+                                                onClick={() => resend(inv)}
+                                            >
+                                                {resendingId === inv.id ? (
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                ) : (
+                                                    <RefreshCw className="h-3.5 w-3.5" />
+                                                )}
+                                                Kirim ulang
+                                            </Button>
+                                        )}
+                                        {inv.status === 'active' && (
+                                            <Button variant="ghost" size="sm" className="h-7 text-xs text-[color:var(--color-coral)]" onClick={() => onRevoke(inv)}>
+                                                Batalkan
+                                            </Button>
+                                        )}
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
 
-                {invites.length === 0 && (
+                {filteredInvites.length === 0 && (
                     <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
                         <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-ink)]/5 text-[color:var(--color-ink)]/40">
                             <Users className="h-4.5 w-4.5" />
                         </span>
-                        <p className="text-sm text-[color:var(--color-ink)]/50">Belum ada undangan yang dikirim.</p>
+                        <p className="text-sm text-[color:var(--color-ink)]/50">
+                            {invites.length === 0 ? 'Belum ada undangan yang dikirim.' : 'Tidak ada undangan yang cocok dengan pencarian.'}
+                        </p>
+                    </div>
+                )}
+
+                {filteredInvites.length > 0 && pageCount > 1 && (
+                    <div className="flex items-center justify-between border-t border-[color:var(--color-ink)]/8 px-5 py-3">
+                        <p className="text-xs text-[color:var(--color-ink)]/45">
+                            Halaman {currentPage} dari {pageCount}
+                        </p>
+                        <div className="flex items-center gap-1.5">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={currentPage <= 1}
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={currentPage >= pageCount}
+                                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                            >
+                                <ChevronRight className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
                     </div>
                 )}
             </section>

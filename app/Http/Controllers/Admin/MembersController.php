@@ -10,10 +10,6 @@ use Inertia\Response;
 
 class MembersController extends Controller
 {
-    /**
-     * GET /admin/members — full member list. Only the area's `created_by` user sees the
-     * "Jadikan Pengurus" action, and only while the area is still unclaimed.
-     */
     public function index(Request $request): Response
     {
         $area = $request->attributes->get('adminArea');
