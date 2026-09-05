@@ -77,7 +77,7 @@ function buildNavGroups(adminAccess: AdminAccess) {
                 },
                 {
                     title: 'Unit / Rumah',
-                    href: '#',
+                    href: '/admin/units',
                     icon: Building2,
                 },
                 {
@@ -139,7 +139,11 @@ export function AppSidebar() {
     const mainNavGroups = buildNavGroups(auth.adminAccess);
 
     return (
-        <Sidebar collapsible="icon" variant="inset" className="border-r border-white/10 bg-(--color-ink) text-(--color-surface)">
+        <Sidebar
+            collapsible="icon"
+            variant="inset"
+            className="border-r border-white/10 bg-(--color-ink) text-(--color-surface)"
+        >
             <SidebarHeader className="border-b border-white/10 bg-(--color-ink)/95">
                 <SidebarMenu>
                     <SidebarMenuItem>
