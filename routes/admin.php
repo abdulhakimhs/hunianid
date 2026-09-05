@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AreaHandoverController;
 use App\Http\Controllers\Admin\InviteController;
 use App\Http\Controllers\Admin\MemberApprovalController;
 use App\Http\Controllers\Admin\MembersController;
+use App\Http\Controllers\Admin\UnitsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\UnitJoinController;
 use Illuminate\Support\Facades\Route;
@@ -39,6 +40,8 @@ Route::middleware(['auth'])->group(function () {
     // Members list and promoting stay founder-only — a deliberate one-shot handover.
     Route::middleware(['admin.role:superadmin,staff,unclaimed_creator'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('members', [MembersController::class, 'index'])->name('members.index');
+        //Route::get('units', [UnitsController::class, 'index'])->name('units.index');
+        Route::resource('units', UnitsController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::post('area/promote', [AreaHandoverController::class, 'store'])->name('area.promote');
     });
 });
