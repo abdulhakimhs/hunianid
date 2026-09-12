@@ -45,3 +45,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('area/promote', [AreaHandoverController::class, 'store'])->name('area.promote');
     });
 });
+Route::prefix('security')->name('security.')->group(function () {
+    Route::inertia('/', 'security/dashboard')->name('dashboard');
+    Route::inertia('/scan', 'security/scan')->name('scan');
+    Route::inertia('/history', 'security/history')->name('historys');
+    Route::inertia('/profile', 'security/profile')->name('profile');
+});

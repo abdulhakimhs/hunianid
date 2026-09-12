@@ -52,38 +52,13 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: false,
-            // No explicit outDir — inherit Vite's actual build.outDir (laravel-vite-plugin
-            // resolves that to `public/build`), matching the <link rel="manifest"
-            // href="/build/manifest.webmanifest"> reference in resources/views/app.blade.php.
-            // The previous `outDir: 'public'` wrote the manifest to `public/manifest.webmanifest`
-            // instead, which is why it always 404'd — even after a production build.
-            base: '/',
-            includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
-            manifest: {
-                name: 'HunianID',
-                short_name: 'HunianID',
-                description: 'Housing / residence management app',
-                theme_color: '#142033',
-                background_color: '#142033',
-                display: 'standalone',
-                start_url: '/',
-                scope: '/',
-                icons: [
-                    {
-                        src: '/icons/icon-192.png',
-                        sizes: '192x192',
-                        type: 'image/png',
-                    },
-                    {
-                        src: '/icons/icon-512.png',
-                        sizes: '512x512',
-                        type: 'image/png',
-                    },
-                ],
-            },
             workbox: {
-                globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+                globPatterns: ['**/*.{js,css,ico,png,svg}'],
+                navigateFallback: null,
+                runtimeCaching: [/* unchanged */],
             },
+            devOptions: { enabled: true },
+            // no `manifest` key — Blade handles that per-role now
         }),
     ],
 });

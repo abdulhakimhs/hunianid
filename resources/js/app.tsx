@@ -1,6 +1,4 @@
 import { createInertiaApp, router } from '@inertiajs/react';
-// @ts-expect-error -- virtual module injected by vite-plugin-pwa at build time
-import { registerSW } from 'virtual:pwa-register';
 import { LoadingOverlay } from '@/components/loading-overlay';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -9,6 +7,7 @@ import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { beginLoading, endLoading } from '@/lib/loading-overlay';
+import { initServiceWorker } from './lib/register-sw';
 
 // Drives the global loading overlay for Inertia visits. 'start'/'finish' also fire for
 // hover-triggered prefetches (sidebar links use `prefetch`), so skip those explicitly.
@@ -23,12 +22,6 @@ router.on('finish', (event) => {
     }
 });
 
-// Only register in production — under `npm run dev` a stale worker treats every dev
-// reload as a "new version" and force-reloads the page in a loop.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-    registerSW({ immediate: true });
-}
-
 const appName = import.meta.env.VITE_APP_NAME || 'HunianID';
 
 createInertiaApp({
@@ -41,6 +34,9 @@ createInertiaApp({
             case name.startsWith('auth/'):
             case name.startsWith('invite/'):
                 return AuthLayout;
+            case name.startsWith('security/'):
+            case name.startsWith('tenant/'):
+                return null;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
             default:
@@ -61,6 +57,8 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+
+initServiceWorker();
 
 // This will set light / dark mode on load...
 initializeTheme();
