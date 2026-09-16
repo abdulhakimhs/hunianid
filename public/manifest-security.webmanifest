@@ -1,0 +1,16 @@
+{
+  "id": "/security-app",
+  "name": "HunianID Security",
+  "short_name": "Security",
+  "description": "Scan visitor passes and manage gate access",
+  "start_url": "/login-security",
+  "scope": "/security/",
+  "display": "standalone",
+  "theme_color": "#142033",
+  "background_color": "#142033",
+  "icons": [
+    { "src": "/icons/security/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/security/icon-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/security/icon-maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
