@@ -10,15 +10,21 @@ import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { beginLoading, endLoading } from '@/lib/loading-overlay';
 
-// Drives the global loading overlay for Inertia visits. 'start'/'finish' also fire for
-// hover-triggered prefetches (sidebar links use `prefetch`), so skip those explicitly.
+// Drives the global loading overlay — only for GET page navigations. Hover-triggered
+// prefetches (sidebar links use `prefetch`) fire these too, so skip those; and skip
+// non-GET (form submit/save/delete) visits since their triggering button already
+// shows its own inline spinner — a second full-screen overlay would be redundant.
 router.on('start', (event) => {
-    if (!event.detail.visit.prefetch) {
+    const { visit } = event.detail;
+
+    if (!visit.prefetch && visit.method === 'get') {
         beginLoading();
     }
 });
 router.on('finish', (event) => {
-    if (!event.detail.visit.prefetch) {
+    const { visit } = event.detail;
+
+    if (!visit.prefetch && visit.method === 'get') {
         endLoading();
     }
 });
@@ -40,6 +46,8 @@ createInertiaApp({
                 return null;
             case name.startsWith('auth/'):
             case name.startsWith('invite/'):
+            case name.startsWith('security/'):
+            case name.startsWith('visitor-pass/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];

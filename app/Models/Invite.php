@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'area_id', 'unit_id', 'created_by', 'code', 'phone',
+    'area_id', 'type', 'unit_id', 'area_member_id', 'created_by', 'code', 'phone',
     'expires_at', 'scheduled_at', 'sent_at', 'status', 'send_status', 'send_error',
 ])]
 class Invite extends Model
@@ -55,8 +55,21 @@ class Invite extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * @return BelongsTo<AreaMember, $this>
+     */
+    public function areaMember(): BelongsTo
+    {
+        return $this->belongsTo(AreaMember::class);
+    }
+
     public function isTenantInvite(): bool
     {
         return $this->unit_id !== null && $this->phone !== null;
+    }
+
+    public function isSecurityInvite(): bool
+    {
+        return $this->type === 'security';
     }
 }
