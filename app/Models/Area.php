@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by', 'invitation_message'])]
+#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by', 'invitation_message', 'security_invitation_message'])]
 class Area extends Model
 {
     /** @use HasFactory<AreaFactory> */
@@ -18,6 +18,10 @@ class Area extends Model
 
     public const DEFAULT_INVITATION_MESSAGE = 'Halo! Anda diundang bergabung sebagai warga {komplek} untuk unit {unit}. '.
         'Silakan daftar lewat tautan berikut: {link}';
+
+    public const DEFAULT_SECURITY_INVITATION_MESSAGE = 'Halo {nama}! {komplek} telah membuat akun Security untuk Anda. '.
+        'Silakan buat kata sandi Anda lewat tautan berikut untuk mulai menggunakan aplikasi: {link}'.
+        "\n\nTautan ini bersifat pribadi, jangan bagikan ke orang lain.";
 
     /**
      * Get the attributes that should be cast.
@@ -34,6 +38,11 @@ class Area extends Model
     public function invitationMessageTemplate(): string
     {
         return $this->invitation_message ?: self::DEFAULT_INVITATION_MESSAGE;
+    }
+
+    public function securityInvitationMessageTemplate(): string
+    {
+        return $this->security_invitation_message ?: self::DEFAULT_SECURITY_INVITATION_MESSAGE;
     }
 
     /**

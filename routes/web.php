@@ -6,9 +6,12 @@ use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipSwitchController;
+use App\Http\Controllers\VisitorPassController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'landing')->name('home');
+
+Route::get('pass/{token}', [VisitorPassController::class, 'show'])->name('visitor-pass.show');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -35,3 +38,4 @@ Route::post('login/phone/verify', [PhoneLoginController::class, 'verify'])->midd
 Route::inertia('login-security', 'auth/login-security')->name('login-security');
 require __DIR__ . '/settings.php';
 require __DIR__ . '/admin.php';
+require __DIR__ . '/webhooks.php';

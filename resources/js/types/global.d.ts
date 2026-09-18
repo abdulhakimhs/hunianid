@@ -17,3 +17,11 @@ declare module '@inertiajs/core' {
         };
     }
 }
+
+declare global {
+    // Not part of lib.dom.d.ts — used by the PWA "Install App" prompt.
+    interface BeforeInstallPromptEvent extends Event {
+        prompt(): Promise<void>;
+        userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+    }
+}

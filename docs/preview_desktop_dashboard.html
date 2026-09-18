@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Preview — Dashboard Admin (Desktop)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F3FBF9; --ink:#142033; --brass:#2FC2E8; --hedge:#1FCB82; --brick:#FF6B57;
+    --paper-soft:#ECEDF5; --ink-soft:#22304A; --white:#FFFFFF; --text-muted:#6B7280;
+    --shadow-sm: 0 1px 2px rgba(20,32,51,0.06), 0 1px 1px rgba(20,32,51,0.04);
+    --shadow-md: 0 8px 20px rgba(20,32,51,0.10), 0 2px 6px rgba(20,32,51,0.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;background:var(--paper);color:var(--ink);}
+  .app{display:flex;min-height:100vh;}
+  .sidebar{width:240px;background:var(--ink);color:#E8E8F0;padding:24px 16px;flex-shrink:0;}
+  .logo{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:19px;color:var(--brass);margin-bottom:32px;padding:0 8px;}
+  .logo span{color:#E8E8F0;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:8px;font-size:14px;font-weight:500;color:#C7CBD1;margin-bottom:2px;cursor:default;}
+  .nav-item.active{background:rgba(47,194,232,0.18);color:var(--brass);}
+  .nav-item svg{flex-shrink:0;}
+  .main{flex:1;padding:32px 40px;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;}
+  .page-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:24px;}
+  .page-sub{color:var(--text-muted);font-size:14px;margin-top:2px;}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--brass);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;box-shadow:var(--shadow-sm);}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:28px;}
+  .stat-card{background:var(--white);border-radius:14px;padding:20px;box-shadow:var(--shadow-md);}
+  .stat-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .stat-value{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:26px;}
+  .stat-label{color:var(--text-muted);font-size:13px;margin-top:4px;}
+  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;}
+  .panel{background:var(--white);border-radius:14px;padding:22px;box-shadow:var(--shadow-md);}
+  .panel-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:16px;margin-bottom:16px;}
+  .activity-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #E8E9F0;}
+  .activity-row:last-child{border-bottom:none;}
+  .act-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .act-text{font-size:14px;font-weight:500;}
+  .act-sub{font-size:12.5px;color:var(--text-muted);margin-top:1px;}
+  .act-time{margin-left:auto;font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}
+  .approve-row{padding:12px 0;border-bottom:1px solid #E8E9F0;}
+  .approve-row:last-child{border-bottom:none;}
+  .approve-name{font-size:14px;font-weight:500;}
+  .approve-sub{font-size:12.5px;color:var(--text-muted);margin-top:1px;margin-bottom:10px;}
+  .btn-row{display:flex;gap:8px;}
+  .btn{font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:8px;border:none;cursor:default;}
+  .btn-approve{background:var(--hedge);color:#fff;}
+  .btn-reject{background:var(--paper-soft);color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">Tinggal<span>ku</span></div>
+    <div class="nav-item active">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg>
+      Warga &amp; Unit
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 13h4"/></svg>
+      Tagihan
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 2v4M16 2v4M4 10h16"/></svg>
+      Fasilitas
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h.01M14 8h6M8 12h.01M14 12h6M8 16h.01M14 16h6"/></svg>
+      Tamu
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.5 8.5 0 0 1-5-1.7L3 20l1.8-4.1a8.4 8.4 0 0 1-1.6-5A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></svg>
+      Komplain
+    </div>
+    <div class="nav-item">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+      Pengaturan
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Dashboard RT 05 Griya Asri</div>
+        <div class="page-sub">Kamis, 6 Agustus 2026</div>
+      </div>
+      <div class="avatar">BS</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(18,183,106,0.12);color:var(--hedge);">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.6.4 4.5 2.4 4.5 5.3"/></svg>
+        </div>
+        <div class="stat-value">248</div>
+        <div class="stat-label">Total warga aktif</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(255,107,87,0.12);color:var(--brick);">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 13h4"/></svg>
+        </div>
+        <div class="stat-value">17</div>
+        <div class="stat-label">Tagihan belum lunas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(47,194,232,0.15);color:var(--brass);">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h.01M14 8h6M8 12h.01M14 12h6M8 16h.01M14 16h6"/></svg>
+        </div>
+        <div class="stat-value">5</div>
+        <div class="stat-label">Tamu terdaftar hari ini</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(20,32,51,0.08);color:var(--ink);">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.5 8.5 0 0 1-5-1.7L3 20l1.8-4.1a8.4 8.4 0 0 1-1.6-5A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></svg>
+        </div>
+        <div class="stat-value">3</div>
+        <div class="stat-label">Komplain pending</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-title">Aktivitas terbaru</div>
+        <div class="activity-row">
+          <div class="act-icon" style="background:rgba(47,194,232,0.15);color:var(--brass);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h.01M14 8h6M8 12h.01M14 12h6M8 16h.01M14 16h6"/></svg>
+          </div>
+          <div>
+            <div class="act-text">Hakim Wijaya buat visitor pass</div>
+            <div class="act-sub">Tamu: Rian — Blok B No. 12</div>
+          </div>
+          <div class="act-time">10:42</div>
+        </div>
+        <div class="activity-row">
+          <div class="act-icon" style="background:rgba(18,183,106,0.12);color:var(--hedge);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 13h4"/></svg>
+          </div>
+          <div>
+            <div class="act-text">Budi Santoso bayar IPL Agustus</div>
+            <div class="act-sub">Rp185.000 — via QRIS</div>
+          </div>
+          <div class="act-time">09:15</div>
+        </div>
+        <div class="activity-row">
+          <div class="act-icon" style="background:rgba(255,107,87,0.12);color:var(--brick);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 8.5 8.5 0 0 1-5-1.7L3 20l1.8-4.1a8.4 8.4 0 0 1-1.6-5A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/></svg>
+          </div>
+          <div>
+            <div class="act-text">Laporan baru: keran air Blok C bocor</div>
+            <div class="act-sub">Dilaporkan oleh Andi Prasetyo</div>
+          </div>
+          <div class="act-time">08:03</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Menunggu persetujuan</div>
+        <div class="approve-row">
+          <div class="approve-name">Siti Hakim</div>
+          <div class="approve-sub">Bergabung ke Blok A No. 5 (keluarga Budi)</div>
+          <div class="btn-row">
+            <button class="btn btn-approve">Setujui</button>
+            <button class="btn btn-reject">Tolak</button>
+          </div>
+        </div>
+        <div class="approve-row">
+          <div class="approve-name">Rudi Hartono</div>
+          <div class="approve-sub">Daftar warga baru — Blok D No. 2</div>
+          <div class="btn-row">
+            <button class="btn btn-approve">Setujui</button>
+            <button class="btn btn-reject">Tolak</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

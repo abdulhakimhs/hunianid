@@ -7,8 +7,9 @@ import {
     Loader2,
     Plus,
     Search,
-    Users,
     SquarePen,
+    Trash2,
+    Users,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -37,11 +38,11 @@ import {
     TableRow,
 } from '@/components/ui/table';
 
-import type { Unit, User } from '@/types';
+import type { Area, Unit } from '@/types';
 
 type Props = {
     units: Unit[];
-    user: User;
+    area: Area;
 };
 
 type SortKey = 'unitNumber' | 'createdAt';
@@ -63,7 +64,7 @@ function formatDate(
     });
 }
 
-export default function UnitsIndex({ units, user }: Props) {
+export default function UnitsIndex({ units, area }: Props) {
     const [query, setQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<ActiveFilter>('all');
     const [sortKey, setSortKey] = useState<SortKey>('unitNumber');
@@ -76,8 +77,9 @@ export default function UnitsIndex({ units, user }: Props) {
         block: '',
         status: 'active',
     });
-    console.log('user', user);
     const [submitting, setSubmitting] = useState(false);
+    const [deletingUnit, setDeletingUnit] = useState<Unit | null>(null);
+    const [deletingBusy, setDeletingBusy] = useState(false);
 
     function resetForm() {
         setFormData({
@@ -160,6 +162,23 @@ export default function UnitsIndex({ units, user }: Props) {
         { key: 'active', label: 'Aktif', count: stats.active },
     ];
 
+    function confirmDelete() {
+        if (!deletingUnit) {
+            return;
+        }
+
+        setDeletingBusy(true);
+
+        router.delete(`/admin/units/${deletingUnit.id}`, {
+            onSuccess: () => {
+                setDeletingUnit(null);
+            },
+            onFinish: () => {
+                setDeletingBusy(false);
+            },
+        });
+    }
+
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-[2rem] bg-(--color-bg) p-4 sm:p-6 lg:p-8">
             <Head title="Unit" />
@@ -170,8 +189,7 @@ export default function UnitsIndex({ units, user }: Props) {
             </div>
             <div className="flex items-center justify-between">
                 <h1 className="font-display text-2xl font-bold tracking-tight text-(--color-ink) sm:text-3xl">
-                    Units in {user.last_membership?.area?.complex?.name}-
-                    {user.last_membership?.area?.name}
+                    Units in {area.complex?.name}-{area.name}
                 </h1>
                 <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="h-4 w-4" />
@@ -240,7 +258,9 @@ export default function UnitsIndex({ units, user }: Props) {
                                     Created at {sortIcon('createdAt')}
                                 </button>
                             </TableHead>
-                            <TableHead className="h-8 w-12 pr-4" />
+                            <TableHead className="h-8 w-40 pr-4 text-right text-[11px] font-medium text-(--color-ink)/40">
+                                Aksi
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -274,26 +294,38 @@ export default function UnitsIndex({ units, user }: Props) {
                                         </span>
                                     </TableCell>
                                     <TableCell className="py-2 pr-4">
-                                        <div className="flex justify-end gap-1.5">
+                                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                             <Button
                                                 variant="outline"
-                                                size="sm"
-                                                className="h-7 px-2.5 text-xs"
+                                                size="icon"
+                                                className="h-7 w-7"
+                                                title="Detail"
                                                 onClick={() => setDetail(m)}
                                             >
-                                                <Eye className="h-3.5 w-3.5" />{' '}
-                                                Detail
+                                                <Eye className="h-3.5 w-3.5" />
                                             </Button>
 
                                             <Button
-                                                size="sm"
-                                                className="h-7 bg-(--color-mint) px-2.5 text-xs text-white hover:bg-(--color-mint-deep)"
+                                                size="icon"
+                                                className="h-7 w-7 bg-(--color-mint) text-white hover:bg-(--color-mint-deep)"
+                                                title="Edit"
                                                 onClick={() =>
                                                     openEditDialog(m)
                                                 }
                                             >
-                                                <SquarePen className="h-3.5 w-3.5" />{' '}
-                                                Edit
+                                                <SquarePen className="h-3.5 w-3.5" />
+                                            </Button>
+
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-7 w-7 text-(--color-coral) hover:bg-(--color-coral)/10"
+                                                title="Hapus"
+                                                onClick={() =>
+                                                    setDeletingUnit(m)
+                                                }
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -529,6 +561,46 @@ export default function UnitsIndex({ units, user }: Props) {
                         >
                             <SquarePen className="h-3.5 w-3.5" />
                             Edit
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete confirmation */}
+            <Dialog
+                open={!!deletingUnit}
+                onOpenChange={(open) => !open && setDeletingUnit(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Hapus Unit</DialogTitle>
+                        <DialogDescription>
+                            Yakin ingin menghapus unit{' '}
+                            <span className="font-medium text-(--color-ink)">
+                                {deletingUnit?.unit_number}
+                            </span>
+                            ? Menghapus unit akan melepaskan semua anggota
+                            keluarga yang terhubung; data pengguna tetap ada.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeletingUnit(null)}
+                            disabled={deletingBusy}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                            disabled={deletingBusy}
+                        >
+                            {deletingBusy && (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
+                            Hapus
                         </Button>
                     </DialogFooter>
                 </DialogContent>

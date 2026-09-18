@@ -28,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // Wablas' incoming-message webhook is an external POST with no CSRF token —
+        // authenticity is instead verified via the `key` query param secret.
+        $middleware->validateCsrfTokens(except: ['webhooks/*']);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
