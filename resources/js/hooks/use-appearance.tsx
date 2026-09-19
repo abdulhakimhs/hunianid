@@ -12,14 +12,6 @@ export type UseAppearanceReturn = {
 const listeners = new Set<() => void>();
 let currentAppearance: Appearance = 'system';
 
-const prefersDark = (): boolean => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-};
-
 const setCookie = (name: string, value: string, days = 365): void => {
     if (typeof document === 'undefined') {
         return;
@@ -37,8 +29,12 @@ const getStoredAppearance = (): Appearance => {
     return (localStorage.getItem('appearance') as Appearance) || 'system';
 };
 
-const isDarkMode = (appearance: Appearance): boolean => {
-    return appearance === 'dark' || (appearance === 'system' && prefersDark());
+const isDarkMode = (): boolean => {
+    // Dark mode is intentionally disabled: the product's design system
+    // (landing_page_design_brief.md) only defines a light theme, and no
+    // page adapts its branded --color-* tokens for a dark variant — letting
+    // this follow the OS/toggle broke text contrast across the app.
+    return false;
 };
 
 const applyTheme = (appearance: Appearance): void => {
@@ -46,7 +42,7 @@ const applyTheme = (appearance: Appearance): void => {
         return;
     }
 
-    const isDark = isDarkMode(appearance);
+    const isDark = isDarkMode();
 
     document.documentElement.classList.toggle('dark', isDark);
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
@@ -94,7 +90,7 @@ export function useAppearance(): UseAppearanceReturn {
         () => 'system',
     );
 
-    const resolvedAppearance: ResolvedAppearance = isDarkMode(appearance)
+    const resolvedAppearance: ResolvedAppearance = isDarkMode()
         ? 'dark'
         : 'light';
 

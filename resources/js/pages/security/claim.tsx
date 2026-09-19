@@ -92,7 +92,7 @@ export default function SecurityClaim({
                             </p>
                         )}
                         <Button asChild variant="outline" className="w-full">
-                            <Link href="/dashboard">Lanjut ke Dashboard</Link>
+                            <Link href="/security">Lanjut ke Dashboard</Link>
                         </Button>
                     </div>
                 </div>

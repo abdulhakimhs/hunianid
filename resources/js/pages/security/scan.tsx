@@ -18,16 +18,11 @@ import { useEffect, useRef, useState } from 'react';
 // Vite needs the worker resolved as a URL asset, not bundled inline.
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { postJson } from '@/lib/api';
 
 QrScanner.WORKER_PATH = QrScannerWorkerPath;
 
-// Backend contract this page expects, once wired up:
-//   POST /security/scan/verify  { code: string }
-//   -> { status: 'valid' | 'invalid' | 'expired', visitor?: {...} }
-// For now, verifyPass() below fakes that response so the flow is testable
-// end-to-end with dummy data.
-
-type ScanStatus = 'valid' | 'invalid' | 'expired';
+type ScanStatus = 'valid' | 'invalid' | 'expired' | 'used';
 
 type VisitorResult = {
     status: ScanStatus;
@@ -40,29 +35,11 @@ type VisitorResult = {
 };
 
 function verifyPass(code: string): Promise<VisitorResult> {
-    // Dummy async "API call" — swap for a real postJson() call to
-    // /security/scan/verify once the backend endpoint exists.
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            const roll = Math.random();
+    return postJson<VisitorResult>('/security/scan/verify', { code });
+}
 
-            if (roll < 0.7) {
-                resolve({
-                    status: 'valid',
-                    visitor: {
-                        name: 'Andi Wijaya',
-                        unit: 'Blok C-12',
-                        purpose: 'Kunjungan keluarga',
-                        validUntil: 'Hari ini, 18:00',
-                    },
-                });
-            } else if (roll < 0.85) {
-                resolve({ status: 'expired' });
-            } else {
-                resolve({ status: 'invalid' });
-            }
-        }, 700);
-    });
+function confirmEntry(code: string): Promise<void> {
+    return postJson('/security/scan/confirm', { code });
 }
 
 type Phase = 'scanning' | 'processing' | 'result' | 'camera-error';
@@ -73,6 +50,8 @@ export default function SecurityScan() {
 
     const [phase, setPhase] = useState<Phase>('scanning');
     const [result, setResult] = useState<VisitorResult | null>(null);
+    const [scannedCode, setScannedCode] = useState<string | null>(null);
+    const [confirming, setConfirming] = useState(false);
     const [torchOn, setTorchOn] = useState(false);
     const [torchSupported, setTorchSupported] = useState(false);
     const [manualOpen, setManualOpen] = useState(false);
@@ -117,15 +96,33 @@ export default function SecurityScan() {
 
         scannerRef.current?.stop();
         setPhase('processing');
+        setScannedCode(code);
 
         if (navigator.vibrate) {
             navigator.vibrate(80);
         }
 
-        verifyPass(code).then((data) => {
-            setResult(data);
-            setPhase('result');
-        });
+        verifyPass(code)
+            .then((data) => {
+                setResult(data);
+                setPhase('result');
+            })
+            .catch(() => {
+                setResult({ status: 'invalid' });
+                setPhase('result');
+            });
+    }
+
+    function allowEntry() {
+        if (!scannedCode || confirming) {
+            return;
+        }
+
+        setConfirming(true);
+
+        confirmEntry(scannedCode)
+            .then(() => scanAgain())
+            .finally(() => setConfirming(false));
     }
 
     function submitManualCode() {
@@ -259,6 +256,9 @@ export default function SecurityScan() {
                             </p>
                             <Input
                                 autoFocus
+                                autoCapitalize="none"
+                                autoCorrect="off"
+                                spellCheck={false}
                                 placeholder="Masukkan kode pass"
                                 className="h-12 text-base"
                                 value={manualCode}
@@ -289,7 +289,12 @@ export default function SecurityScan() {
 
                 {/* Result sheet */}
                 {phase === 'result' && result && (
-                    <ResultSheet result={result} onScanAgain={scanAgain} />
+                    <ResultSheet
+                        result={result}
+                        onScanAgain={scanAgain}
+                        onAllowEntry={allowEntry}
+                        confirming={confirming}
+                    />
                 )}
             </div>
         </>
@@ -299,9 +304,13 @@ export default function SecurityScan() {
 function ResultSheet({
     result,
     onScanAgain,
+    onAllowEntry,
+    confirming,
 }: {
     result: VisitorResult;
     onScanAgain: () => void;
+    onAllowEntry: () => void;
+    confirming: boolean;
 }) {
     const config = {
         valid: {
@@ -314,6 +323,11 @@ function ResultSheet({
             icon: Clock,
             iconClass: 'text-amber-600 bg-amber-50',
             title: 'Pass Kedaluwarsa',
+        },
+        used: {
+            icon: XCircle,
+            iconClass: 'text-amber-600 bg-amber-50',
+            title: 'Pass Sudah Digunakan',
         },
         invalid: {
             icon: XCircle,
@@ -370,6 +384,12 @@ function ResultSheet({
                     </p>
                 )}
 
+                {result.status === 'used' && (
+                    <p className="mt-4 text-center text-sm text-(--color-ink)/55">
+                        Pass ini sudah pernah digunakan untuk masuk sebelumnya.
+                    </p>
+                )}
+
                 {result.status === 'invalid' && (
                     <p className="mt-4 text-center text-sm text-(--color-ink)/55">
                         Kode tidak dikenali. Pastikan QR berasal dari sistem
@@ -379,7 +399,14 @@ function ResultSheet({
 
                 <div className="mt-6 flex gap-2">
                     {result.status === 'valid' && (
-                        <Button className="h-12 flex-1 bg-(--color-mint-deep) hover:bg-(--color-mint-deep)/90">
+                        <Button
+                            className="h-12 flex-1 bg-(--color-mint-deep) hover:bg-(--color-mint-deep)/90"
+                            onClick={onAllowEntry}
+                            disabled={confirming}
+                        >
+                            {confirming && (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
                             Izinkan Masuk
                         </Button>
                     )}

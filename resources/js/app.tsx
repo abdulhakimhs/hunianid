@@ -39,9 +39,11 @@ createInertiaApp({
                 return null;
             case name.startsWith('auth/'):
             case name.startsWith('invite/'):
-            case name.startsWith('security/'):
             case name.startsWith('visitor-pass/'):
                 return AuthLayout;
+            // Security pages (dashboard/scan/history/profile) each build their own
+            // full-height mobile app shell — wrapping them in AuthLayout's centered,
+            // max-w-md login card squeezed the whole screen into a small padded box.
             case name.startsWith('security/'):
             case name.startsWith('tenant/'):
                 return null;
