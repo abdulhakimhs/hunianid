@@ -77,4 +77,23 @@ class PhoneLoginController extends Controller
 
         return response()->json(['redirect' => route('dashboard')]);
     }
+
+    public function loginWithPassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = User::where('phone', $data['phone'])->first();
+
+        if (! $user || ! $user->password || ! Hash::check($data['password'], $user->password)) {
+            throw ValidationException::withMessages(['password' => 'Nomor HP atau kata sandi salah.']);
+        }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        return response()->json(['redirect' => route('dashboard')]);
+    }
 }

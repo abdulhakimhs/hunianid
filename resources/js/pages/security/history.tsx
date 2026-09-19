@@ -4,146 +4,47 @@ import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import SecurityBottomNav from '@/components/security/bottom-nav';
 
-// Dummy data — swap for real props from GET /security/history once the
-// backend endpoint exists. Grouping-by-day logic below works the same
-// either way, as long as each entry has an ISO-ish `date` field.
-
-type ScanStatus = 'valid' | 'invalid' | 'expired';
+type ScanStatus = 'used' | 'cancelled' | 'expired';
 
 type ScanEntry = {
     id: number;
     visitor: string;
     unit: string;
     time: string;
-    date: string; // 'Hari ini' | 'Kemarin' | '10 September 2026' — pre-grouped for the dummy set
+    date: string;
     status: ScanStatus;
 };
 
-const dummyHistory: ScanEntry[] = [
-    {
-        id: 1,
-        visitor: 'Andi Wijaya',
-        unit: 'Blok C-12',
-        time: '10:42',
-        date: 'Hari ini',
-        status: 'valid',
-    },
-    {
-        id: 2,
-        visitor: 'Siti Rahma',
-        unit: 'Blok A-05',
-        time: '10:15',
-        date: 'Hari ini',
-        status: 'valid',
-    },
-    {
-        id: 3,
-        visitor: 'Unknown QR',
-        unit: '—',
-        time: '09:58',
-        date: 'Hari ini',
-        status: 'invalid',
-    },
-    {
-        id: 4,
-        visitor: 'Dewi Lestari',
-        unit: 'Blok B-08',
-        time: '09:20',
-        date: 'Hari ini',
-        status: 'expired',
-    },
-    {
-        id: 5,
-        visitor: 'Rudi Hartono',
-        unit: 'Blok C-01',
-        time: '08:47',
-        date: 'Hari ini',
-        status: 'valid',
-    },
-    {
-        id: 6,
-        visitor: 'Fajar Nugroho',
-        unit: 'Blok A-11',
-        time: '19:30',
-        date: 'Kemarin',
-        status: 'valid',
-    },
-    {
-        id: 7,
-        visitor: 'Maya Sari',
-        unit: 'Blok D-03',
-        time: '16:12',
-        date: 'Kemarin',
-        status: 'valid',
-    },
-    {
-        id: 8,
-        visitor: 'Unknown QR',
-        unit: '—',
-        time: '14:05',
-        date: 'Kemarin',
-        status: 'invalid',
-    },
-    {
-        id: 9,
-        visitor: 'Bambang Setiawan',
-        unit: 'Blok B-14',
-        time: '11:40',
-        date: 'Kemarin',
-        status: 'expired',
-    },
-    {
-        id: 10,
-        visitor: 'Nina Kartika',
-        unit: 'Blok C-07',
-        time: '09:02',
-        date: 'Kemarin',
-        status: 'valid',
-    },
-    {
-        id: 11,
-        visitor: 'Yusuf Ibrahim',
-        unit: 'Blok A-02',
-        time: '17:55',
-        date: '10 September 2026',
-        status: 'valid',
-    },
-    {
-        id: 12,
-        visitor: 'Lina Wati',
-        unit: 'Blok D-09',
-        time: '13:20',
-        date: '10 September 2026',
-        status: 'valid',
-    },
-];
+type Props = {
+    entries: ScanEntry[];
+};
 
 const filters: { key: 'all' | ScanStatus; label: string }[] = [
     { key: 'all', label: 'Semua' },
-    { key: 'valid', label: 'Valid' },
-    { key: 'invalid', label: 'Tidak valid' },
+    { key: 'used', label: 'Digunakan' },
     { key: 'expired', label: 'Kedaluwarsa' },
+    { key: 'cancelled', label: 'Dibatalkan' },
 ];
 
 const statusMeta: Record<
     ScanStatus,
     { icon: typeof CheckCircle2; className: string }
 > = {
-    valid: {
+    used: {
         icon: CheckCircle2,
         className:
             'text-[color:var(--color-mint-deep)] bg-[color:var(--color-mint)]/12',
     },
-    invalid: { icon: XCircle, className: 'text-red-600 bg-red-50' },
+    cancelled: { icon: XCircle, className: 'text-red-600 bg-red-50' },
     expired: { icon: Clock, className: 'text-amber-600 bg-amber-50' },
 };
 
-export default function SecurityHistory() {
+export default function SecurityHistory({ entries }: Props) {
     const [filter, setFilter] = useState<'all' | ScanStatus>('all');
     const [query, setQuery] = useState('');
 
     const filtered = useMemo(() => {
-        return dummyHistory.filter((entry) => {
+        return entries.filter((entry) => {
             const matchesFilter = filter === 'all' || entry.status === filter;
             const matchesQuery = entry.visitor
                 .toLowerCase()
@@ -151,7 +52,7 @@ export default function SecurityHistory() {
 
             return matchesFilter && matchesQuery;
         });
-    }, [filter, query]);
+    }, [entries, filter, query]);
 
     const grouped = useMemo(() => {
         const groups: Record<string, ScanEntry[]> = {};
@@ -164,7 +65,7 @@ export default function SecurityHistory() {
         return groups;
     }, [filtered]);
 
-    const dateOrder = Object.keys(grouped); // dummy data is already in a sensible order
+    const dateOrder = Object.keys(grouped);
 
     return (
         <>
@@ -177,7 +78,7 @@ export default function SecurityHistory() {
                         Riwayat Scan
                     </h1>
                     <p className="mt-0.5 text-sm text-(--color-ink)/50">
-                        {dummyHistory.length} total scan
+                        {entries.length} total scan
                     </p>
                 </div>
 

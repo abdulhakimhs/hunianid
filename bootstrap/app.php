@@ -24,6 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('invites:send-scheduled')->everyMinute()->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        // Nginx and any HTTPS-terminating proxy in front of it (cloudflared tunnel,
+        // Cloudflare, a load balancer) sit as an untrusted layer to Laravel by default,
+        // so without this every asset()/URL::to() call falls back to http:// and
+        // browsers block them as mixed content on an https:// page.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias(['admin.role' => EnsureAdminRole::class]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

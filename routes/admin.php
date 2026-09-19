@@ -9,6 +9,10 @@ use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\UnitsController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\FamilyController;
+use App\Http\Controllers\Security\DashboardController as SecurityDashboardController;
+use App\Http\Controllers\Security\HistoryController as SecurityHistoryController;
+use App\Http\Controllers\Security\ProfileController as SecurityProfileController;
+use App\Http\Controllers\Security\ScanController as SecurityScanController;
 use App\Http\Controllers\UnitJoinController;
 use Illuminate\Support\Facades\Route;
 
@@ -64,9 +68,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('area/promote', [AreaHandoverController::class, 'store'])->name('area.promote');
     });
 });
-Route::prefix('security')->name('security.')->group(function () {
-    Route::inertia('/', 'security/dashboard')->name('dashboard');
-    Route::inertia('/scan', 'security/scan')->name('scan');
-    Route::inertia('/history', 'security/history')->name('historys');
-    Route::inertia('/profile', 'security/profile')->name('profile');
+Route::middleware(['auth', 'admin.role:security'])->prefix('security')->name('security.')->group(function () {
+    Route::get('/', [SecurityDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/scan', [SecurityScanController::class, 'index'])->name('scan');
+    Route::post('/scan/verify', [SecurityScanController::class, 'verify'])->name('scan.verify');
+    Route::post('/scan/confirm', [SecurityScanController::class, 'confirm'])->name('scan.confirm');
+    Route::get('/history', [SecurityHistoryController::class, 'index'])->name('history');
+    Route::get('/profile', [SecurityProfileController::class, 'edit'])->name('profile');
+    Route::patch('/profile', [SecurityProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [SecurityProfileController::class, 'updatePassword'])->name('profile.password.update');
 });

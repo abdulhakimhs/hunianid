@@ -58,7 +58,40 @@ export default defineConfig({
                 runtimeCaching: [/* unchanged */],
             },
             devOptions: { enabled: true },
-            // no `manifest` key — Blade handles that per-role now
+            // Chrome/Android only offers the "Add to Home Screen" prompt when the
+            // manifest has name/short_name + real icons and start_url/scope cover
+            // the whole app — without this key, vite-plugin-pwa fell back to its
+            // own placeholder manifest (start_url/scope "/build/", no icons at
+            // all), which silently fails Chrome's installability check.
+            manifest: {
+                name: 'HunianID',
+                short_name: 'HunianID',
+                description: 'Aplikasi manajemen perumahan HunianID',
+                start_url: '/',
+                scope: '/',
+                display: 'standalone',
+                background_color: '#f3fbf9',
+                theme_color: '#142033',
+                lang: 'id',
+                icons: [
+                    {
+                        src: '/icons/icon-192x192.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/icons/icon-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/icons/icon-maskable-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'maskable',
+                    },
+                ],
+            },
         }),
     ],
 });

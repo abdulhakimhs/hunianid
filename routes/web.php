@@ -34,6 +34,7 @@ Route::get('auth/google/callback', [SocialLoginController::class, 'callback'])->
 
 Route::post('login/phone/request', [PhoneLoginController::class, 'request'])->middleware('throttle:otp-request')->name('login.phone.request');
 Route::post('login/phone/verify', [PhoneLoginController::class, 'verify'])->middleware('throttle:otp-verify')->name('login.phone.verify');
+Route::post('login/phone/password', [PhoneLoginController::class, 'loginWithPassword'])->middleware('throttle:otp-verify')->name('login.phone.password');
 
 Route::inertia('login-security', 'auth/login-security')->name('login-security');
 require __DIR__ . '/settings.php';
