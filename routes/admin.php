@@ -51,3 +51,14 @@ Route::prefix('security')->name('security.')->group(function () {
     Route::inertia('/history', 'security/history')->name('historys');
     Route::inertia('/profile', 'security/profile')->name('profile');
 });
+Route::prefix('tenant')->name('tenant.')->group(function () {
+    Route::inertia('/', 'tenant/dashboard')->name('dashboard');
+    Route::inertia('/visitor-pass', 'tenant/visitor-pass')->name('visitorpass');
+    Route::inertia('/bills', 'tenant/bills')->name('bills');
+    Route::inertia('/unit', 'tenant/unit')->name('unit');
+    Route::inertia('/profile', 'tenant/profile')->name('profile');
+    Route::inertia('/notifications', 'tenant/notifications')->name('notifications');
+    Route::inertia('/panic', 'tenant/panic')->name('panic');
+    Route::inertia('/tickets', 'tenant/tickets/index')->name('tickets');
+    Route::inertia('/tickets/{id}', 'tenant/tickets/show')->name('tickets.show');
+});

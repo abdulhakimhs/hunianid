@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import SecurityBottomNav from '@/components/security/bottom-nav';
+import PageHeader from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 
 // Dummy data — swap for real props from GET /security/profile once the
@@ -59,8 +60,9 @@ export default function SecurityProfile() {
         <>
             <Head title="Profil" />
 
-            <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-(--color-surface) pt-[env(safe-area-inset-top)]">
-                {/* Header */}
+            <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-(--color-surface)">
+                <PageHeader title="Profil" tone="security" />
+
                 <div className="flex flex-col items-center gap-3 px-5 pt-8 pb-6">
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-(--color-mint)/15 text-(--color-mint-deep)">
                         <ShieldCheck className="h-9 w-9" />

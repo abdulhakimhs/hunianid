@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import SecurityBottomNav from '@/components/security/bottom-nav';
+import PageHeader from '@/components/shared/page-header';
 import PanicAlertOverlay from '@/components/security/panic-alert-overlay';
 import type { PanicAlert } from '@/components/security/panic-alert-overlay';
 
@@ -130,33 +131,36 @@ export default function SecurityDashboard() {
         <>
             <Head title="Beranda" />
 
-            <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-(--color-surface) pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 pt-5 pb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-(--color-mint)/15 text-(--color-mint-deep)">
-                            <ShieldCheck className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-xs text-(--color-ink)/50">
-                                {greeting()},
-                            </p>
-                            <p className="text-sm font-semibold text-(--color-ink)">
-                                {dummyGuard.name}
-                            </p>
-                        </div>
-                    </div>
+            <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-(--color-surface) pb-[env(safe-area-inset-bottom)]">
+                <PageHeader
+                    title="Beranda"
+                    tone="security"
+                    rightSlot={
+                        <button
+                            type="button"
+                            className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
+                            aria-label="Keluar"
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </button>
+                    }
+                />
 
-                    <button
-                        type="button"
-                        className="flex h-9 w-9 items-center justify-center rounded-full text-(--color-ink)/40 hover:bg-(--color-ink)/5"
-                        aria-label="Keluar"
-                    >
-                        <LogOut className="h-4 w-4" />
-                    </button>
+                <div className="flex items-center gap-3 px-5 pt-4 pb-1">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-(--color-mint)/15 text-(--color-mint-deep)">
+                        <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <p className="text-xs text-(--color-ink)/50">
+                            {greeting()},
+                        </p>
+                        <p className="text-sm font-semibold text-(--color-ink)">
+                            {dummyGuard.name}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="px-5 pb-4">
+                <div className="px-5 pt-2 pb-4">
                     <div className="flex items-center gap-1.5 text-xs text-(--color-ink)/45">
                         <Clock className="h-3.5 w-3.5" />
                         {dummyGuard.shift}

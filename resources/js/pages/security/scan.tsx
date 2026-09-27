@@ -168,7 +168,7 @@ export default function SecurityScan() {
                 />
 
                 {/* Top bar */}
-                <div className="relative z-10 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
+                <div className="relative z-40 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)]">
                     <Link
                         href="/security"
                         className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
