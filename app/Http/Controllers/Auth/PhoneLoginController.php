@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\WaBlastService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 
 class PhoneLoginController extends Controller
 {
-    public function request(Request $request): JsonResponse
+    public function request(Request $request, WaBlastService $waBlast): JsonResponse
     {
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
@@ -29,10 +30,24 @@ class PhoneLoginController extends Controller
 
         $code = (string) random_int(100000, 999999);
 
-        $user->otpCodes()->create([
+        $otp = $user->otpCodes()->create([
             'code_hash' => Hash::make($code),
             'expires_at' => now()->addMinutes(5),
         ]);
+
+        $sent = $waBlast->send(
+            $data['phone'],
+            "Kode masuk HunianID Anda: {$code}. Berlaku 5 menit. Jangan bagikan kode ini kepada siapa pun.",
+        );
+
+        if (! $sent['ok']) {
+            $otp->delete();
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'Kode belum bisa dikirim lewat WhatsApp. Silakan coba lagi sebentar lagi.',
+            ], 503);
+        }
 
         return response()->json([
             'ok' => true,
