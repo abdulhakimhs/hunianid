@@ -11,7 +11,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Fortify\Features;
 
-class SecurityController extends Controller
+class AccountSecurityController extends Controller
 {
     /**
      * Show the user's security settings page.
@@ -47,7 +47,7 @@ class SecurityController extends Controller
             $props['requiresConfirmation'] = Features::optionEnabled(Features::twoFactorAuthentication(), 'confirm');
         }
 
-        return Inertia::render('settings/security', $props);
+        return Inertia::render('settings/account-security', $props);
     }
 
     /**

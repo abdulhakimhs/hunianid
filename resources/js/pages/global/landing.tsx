@@ -8,8 +8,8 @@ import {
     MockupBilling,
     MockupTicket,
     MockupBroadcast,
-} from '../components/mockups.jsx';
-import Reveal from '../components/reveal.jsx';
+} from '../../components/mockups.jsx';
+import Reveal from '../../components/reveal.jsx';
 import { login } from '@/routes';
 
 const NAV_LINKS = [

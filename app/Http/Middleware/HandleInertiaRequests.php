@@ -64,21 +64,21 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{members: bool, invites: bool, pendingApprovals: bool, settings: bool, families: bool, security: bool}
+     * @return array{members: bool, invites: bool, pendingApprovals: bool, settings: bool, families: bool, security: bool, units: bool}
      */
     private function adminAccess(?AreaMember $current): array
     {
-        $none = ['members' => false, 'invites' => false, 'pendingApprovals' => false, 'settings' => false, 'families' => false, 'security' => false];
+        $none = ['members' => false, 'invites' => false, 'pendingApprovals' => false, 'settings' => false, 'families' => false, 'security' => false, 'units' => false];
 
         if (! $current || $current->status !== 'active') {
             return $none;
         }
 
         if (in_array($current->role->key_name, ['superadmin', 'staff'], true)) {
-            return ['members' => true, 'invites' => true, 'pendingApprovals' => true, 'settings' => true, 'families' => true, 'security' => true];
+            return ['members' => true, 'invites' => true, 'pendingApprovals' => true, 'settings' => true, 'families' => true, 'security' => true, 'units' => true];
         }
 
-        // families/security mirror members: same admin.role gate (superadmin, staff, unclaimed_creator).
+        // families/security/units mirror members: same admin.role gate (superadmin, staff, unclaimed_creator).
         $isUnclaimedCreator = MembershipContext::isUnclaimedCreator($current);
 
         return [
@@ -88,6 +88,7 @@ class HandleInertiaRequests extends Middleware
             'settings' => false,
             'families' => $isUnclaimedCreator,
             'security' => $isUnclaimedCreator,
+            'units' => $isUnclaimedCreator,
         ];
     }
 }

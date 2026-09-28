@@ -39,7 +39,7 @@ class VisitorPassPublicPageTest extends TestCase
     {
         $this->get('/pass/does-not-exist')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('visitor-pass/show')->where('found', false));
+            ->assertInertia(fn ($page) => $page->component('global/visitor-pass/show')->where('found', false));
     }
 
     public function test_valid_pass_shows_qr(): void
@@ -48,7 +48,7 @@ class VisitorPassPublicPageTest extends TestCase
 
         $this->get("/pass/{$pass->token}")
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('visitor-pass/show')
+            ->assertInertia(fn ($page) => $page->component('global/visitor-pass/show')
                 ->where('found', true)
                 ->where('state', 'valid')
                 ->where('guestName', 'Budi')
@@ -61,7 +61,7 @@ class VisitorPassPublicPageTest extends TestCase
 
         $this->get("/pass/{$pass->token}")
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('visitor-pass/show')
+            ->assertInertia(fn ($page) => $page->component('global/visitor-pass/show')
                 ->where('state', 'used')
                 ->where('qrSvg', null));
     }
@@ -75,7 +75,7 @@ class VisitorPassPublicPageTest extends TestCase
 
         $this->get("/pass/{$pass->token}")
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('visitor-pass/show')->where('state', 'expired'));
+            ->assertInertia(fn ($page) => $page->component('global/visitor-pass/show')->where('state', 'expired'));
     }
 
     public function test_cancelled_pass_shows_cancelled_state(): void
@@ -84,6 +84,6 @@ class VisitorPassPublicPageTest extends TestCase
 
         $this->get("/pass/{$pass->token}")
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('visitor-pass/show')->where('state', 'cancelled'));
+            ->assertInertia(fn ($page) => $page->component('global/visitor-pass/show')->where('state', 'cancelled'));
     }
 }

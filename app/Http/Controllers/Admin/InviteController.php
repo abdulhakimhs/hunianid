@@ -138,12 +138,12 @@ class InviteController extends Controller
         $invite = Invite::with('unit:id,unit_number,block')->where('code', $code)->first();
 
         if (! $invite || $invite->status !== 'active') {
-            return Inertia::render('invite/show', ['valid' => false]);
+            return Inertia::render('global/invite/show', ['valid' => false]);
         }
 
         $area = $invite->area()->with('complex:id,name')->first();
 
-        return Inertia::render('invite/show', [
+        return Inertia::render('global/invite/show', [
             'valid' => true,
             'code' => $invite->code,
 
@@ -162,7 +162,7 @@ class InviteController extends Controller
         $invite = Invite::with('unit')->where('code', $code)->first();
 
         if (! $invite || $invite->status !== 'active') {
-            return Inertia::render('invite/show', ['valid' => false]);
+            return Inertia::render('global/invite/show', ['valid' => false]);
         }
 
         $isTenantInvite = $invite->isTenantInvite();

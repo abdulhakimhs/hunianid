@@ -21,7 +21,7 @@ use Inertia\Response;
  * resident invites, the invite here never creates the membership itself, it only lets
  * an already-existing account set a password.
  */
-class SecurityController extends Controller
+class SecurityGuardsController extends Controller
 {
     public function index(Request $request): Response
     {
@@ -43,7 +43,7 @@ class SecurityController extends Controller
                 'created_at' => $member->created_at?->toIso8601String(),
             ]);
 
-        return Inertia::render('admin/security/index', [
+        return Inertia::render('admin/security-guards/index', [
             'guards' => $guards,
             'area' => $area,
         ]);
@@ -135,7 +135,7 @@ class SecurityController extends Controller
                 ];
             });
 
-        return Inertia::render('admin/security/invites', [
+        return Inertia::render('admin/security-guards/invites', [
             'guards' => $guards,
             'area' => $area,
             'securityMessageTemplate' => $area->securityInvitationMessageTemplate(),

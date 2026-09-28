@@ -4,18 +4,18 @@ use App\Http\Controllers\Auth\PhoneLoginController;
 use App\Http\Controllers\Auth\RegionController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SocialLoginController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\MembershipSwitchController;
-use App\Http\Controllers\VisitorPassController;
+use App\Http\Controllers\Global\DashboardController;
+use App\Http\Controllers\Global\MembershipSwitchController;
+use App\Http\Controllers\Global\VisitorPassController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'landing')->name('home');
+Route::inertia('/', 'global/landing')->name('home');
 
 Route::get('pass/{token}', [VisitorPassController::class, 'show'])->name('visitor-pass.show');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
-    Route::inertia('units-map', 'units-map')->name('units-map');
+    Route::inertia('units-map', 'global/units-map')->name('units-map');
     Route::post('switch-membership', [MembershipSwitchController::class, 'store'])->name('switch-membership');
 });
 
@@ -36,7 +36,7 @@ Route::post('login/phone/request', [PhoneLoginController::class, 'request'])->mi
 Route::post('login/phone/verify', [PhoneLoginController::class, 'verify'])->middleware('throttle:otp-verify')->name('login.phone.verify');
 Route::post('login/phone/password', [PhoneLoginController::class, 'loginWithPassword'])->middleware('throttle:otp-verify')->name('login.phone.password');
 
-Route::inertia('login-security', 'auth/login-security')->name('login-security');
+Route::inertia('login-security', 'auth/security-login')->name('login-security');
 require __DIR__ . '/settings.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/webhooks.php';

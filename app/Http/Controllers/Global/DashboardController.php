@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Global;
 
+use App\Http\Controllers\Controller;
 use App\Models\AreaMember;
 use App\Models\User;
 use App\Services\MembershipContext;
@@ -21,7 +22,7 @@ class DashboardController extends Controller
             return redirect()->route('security.dashboard');
         }
 
-        return Inertia::render('dashboard', [
+        return Inertia::render('global/dashboard', [
             'guidance' => $current ? $this->guidanceFor($user, $current) : null,
             'status' => $request->session()->get('status'),
         ]);

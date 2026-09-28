@@ -5,15 +5,15 @@ use App\Http\Controllers\Admin\FamiliesController;
 use App\Http\Controllers\Admin\InviteController;
 use App\Http\Controllers\Admin\MemberApprovalController;
 use App\Http\Controllers\Admin\MembersController;
-use App\Http\Controllers\Admin\SecurityController;
+use App\Http\Controllers\Admin\SecurityGuardsController;
 use App\Http\Controllers\Admin\UnitsController;
 use App\Http\Controllers\Admin\SettingsController;
-use App\Http\Controllers\FamilyController;
 use App\Http\Controllers\Security\DashboardController as SecurityDashboardController;
 use App\Http\Controllers\Security\HistoryController as SecurityHistoryController;
 use App\Http\Controllers\Security\ProfileController as SecurityProfileController;
 use App\Http\Controllers\Security\ScanController as SecurityScanController;
-use App\Http\Controllers\UnitJoinController;
+use App\Http\Controllers\Tenant\FamilyController;
+use App\Http\Controllers\Tenant\UnitJoinController;
 use Illuminate\Support\Facades\Route;
 
 // Public invite routes — no invite, no way in.
@@ -21,8 +21,8 @@ Route::get('invite/{code}', [InviteController::class, 'show'])->name('invite.sho
 Route::post('invite/{code}/submit', [InviteController::class, 'submit'])->name('invite.submit');
 
 // Public Security claim-password routes — the WhatsApp invite link points here.
-Route::get('security/claim/{code}', [SecurityController::class, 'show'])->name('security.claim.show');
-Route::post('security/claim/{code}', [SecurityController::class, 'submit'])->name('security.claim.submit');
+Route::get('security/claim/{code}', [SecurityGuardsController::class, 'show'])->name('security.claim.show');
+Route::post('security/claim/{code}', [SecurityGuardsController::class, 'submit'])->name('security.claim.submit');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('unit/join-requests', [UnitJoinController::class, 'index'])->name('unit.join-requests.index');
@@ -61,10 +61,10 @@ Route::middleware(['auth'])->group(function () {
         // Read-only for admins — adding/editing/removing family members is the
         // resident's own call (see the top-level `family` routes above).
         Route::resource('families', FamiliesController::class)->only(['index']);
-        Route::resource('security', SecurityController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::get('security/invites', [SecurityController::class, 'invitesIndex'])->name('security.invites');
-        Route::post('security/invite-bulk', [SecurityController::class, 'bulkInvite'])->name('security.invite-bulk');
-        Route::post('security/{security}/invite', [SecurityController::class, 'invite'])->name('security.invite');
+        Route::resource('security', SecurityGuardsController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('security/invites', [SecurityGuardsController::class, 'invitesIndex'])->name('security.invites');
+        Route::post('security/invite-bulk', [SecurityGuardsController::class, 'bulkInvite'])->name('security.invite-bulk');
+        Route::post('security/{security}/invite', [SecurityGuardsController::class, 'invite'])->name('security.invite');
         Route::post('area/promote', [AreaHandoverController::class, 'store'])->name('area.promote');
     });
 });

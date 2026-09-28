@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Tenant;
 
+use App\Http\Controllers\Controller;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +26,7 @@ class UnitJoinController extends Controller
             ->select('unit_user.id', 'unit_user.unit_id', 'units.unit_number', 'units.block', 'users.name', 'users.email')
             ->get();
 
-        return Inertia::render('unit/join-request', ['requests' => $requests]);
+        return Inertia::render('tenant/unit/join-request', ['requests' => $requests]);
     }
 
     /**

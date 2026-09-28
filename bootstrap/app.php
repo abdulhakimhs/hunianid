@@ -64,7 +64,7 @@ return Application::configure(basePath: dirname(__DIR__))
             $brandedInProd = in_array($status, [500, 503], true) && ! app()->environment(['local', 'testing']);
 
             if ($alwaysBranded || $brandedInProd) {
-                return Inertia::render('errors/error', [
+                return Inertia::render('global/errors/error', [
                     'status' => $status,
                     'message' => $exception->getMessage() ?: null,
                 ])

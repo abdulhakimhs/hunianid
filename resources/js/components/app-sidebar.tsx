@@ -86,6 +86,7 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     title: 'Unit / Rumah',
                     href: '/admin/units',
                     icon: Building2,
+                    requires: adminAccess.units,
                 },
                 {
                     title: 'Security',

@@ -34,18 +34,17 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
-            case name === 'landing':
-            case name.startsWith('errors/'):
+            case name === 'global/landing':
+            case name.startsWith('global/errors/'):
                 return null;
             case name.startsWith('auth/'):
-            case name.startsWith('invite/'):
-            case name.startsWith('visitor-pass/'):
+            case name.startsWith('global/invite/'):
+            case name.startsWith('global/visitor-pass/'):
                 return AuthLayout;
             // Security pages (dashboard/scan/history/profile) each build their own
             // full-height mobile app shell — wrapping them in AuthLayout's centered,
             // max-w-md login card squeezed the whole screen into a small padded box.
             case name.startsWith('security/'):
-            case name.startsWith('tenant/'):
                 return null;
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];

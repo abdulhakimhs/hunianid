@@ -75,6 +75,7 @@ export type AdminAccess = {
     settings: boolean;
     families: boolean;
     security: boolean;
+    units: boolean;
 };
 
 export type Auth = {

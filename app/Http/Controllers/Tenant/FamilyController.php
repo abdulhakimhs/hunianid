@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Tenant;
 
+use App\Http\Controllers\Controller;
 use App\Models\UnitUser;
 use App\Models\User;
 use App\Support\PhoneNumber;
@@ -31,7 +32,7 @@ class FamilyController extends Controller
             ->latest()
             ->get();
 
-        return Inertia::render('family/index', [
+        return Inertia::render('tenant/family/index', [
             'families' => $families,
             'units' => $units,
         ]);

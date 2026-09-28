@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Global;
 
+use App\Http\Controllers\Controller;
 use App\Models\VisitorPass;
 use App\Services\QrCodeService;
 use Inertia\Inertia;
@@ -16,7 +17,7 @@ class VisitorPassController extends Controller
         $pass = VisitorPass::where('token', $token)->with(['unit', 'area.complex'])->first();
 
         if (! $pass) {
-            return Inertia::render('visitor-pass/show', ['found' => false]);
+            return Inertia::render('global/visitor-pass/show', ['found' => false]);
         }
 
         $state = match (true) {
@@ -26,7 +27,7 @@ class VisitorPassController extends Controller
             default => 'valid',
         };
 
-        return Inertia::render('visitor-pass/show', [
+        return Inertia::render('global/visitor-pass/show', [
             'found' => true,
             'state' => $state,
             'guestName' => $pass->guest_name,
