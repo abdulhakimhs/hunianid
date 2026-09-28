@@ -42,13 +42,16 @@ return [
     ],
 
     'wablas' => [
-        // Wablas devices are hosted on a per-account server cluster (e.g.
-        // https://tegal.wablas.com) — check the dashboard's own URL, not a generic
-        // wablas.com domain, or every request 400s with "token invalid or device
-        // expired" even with a correct token/secret.
         'base_url' => env('WABLAST_BASE_URL', 'https://wablas.com'),
         'token' => env('WABLAST_API_KEY'),
         'secret_key' => env('WABLAST_SECRET_KEY'),
+        'webhook_secret' => env('WABLAST_WEBHOOK_SECRET'),
+    ],
+
+    'deepseek' => [
+        'api_key' => env('DEEPSEEK_API_KEY'),
+        'base_url' => env('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
+        'model' => env('DEEPSEEK_MODEL', 'deepseek-chat'),
     ],
 
 ];

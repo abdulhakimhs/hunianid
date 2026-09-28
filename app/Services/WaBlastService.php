@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\PhoneNumber;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -30,7 +31,7 @@ class WaBlastService
             $response = Http::withHeaders(['Authorization' => $authorization])
                 ->asForm()
                 ->post("{$baseUrl}/api/send-message", [
-                    'phone' => $this->normalizePhone($phone),
+                    'phone' => PhoneNumber::normalize($phone),
                     'message' => $message,
                 ]);
 
@@ -44,12 +45,5 @@ class WaBlastService
 
             return ['ok' => false, 'error' => $e->getMessage()];
         }
-    }
-
-    private function normalizePhone(string $phone): string
-    {
-        $digits = preg_replace('/\D/', '', $phone) ?? $phone;
-
-        return str_starts_with($digits, '0') ? '62'.substr($digits, 1) : $digits;
     }
 }

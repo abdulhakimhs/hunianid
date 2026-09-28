@@ -1,8 +1,3 @@
-/**
- * Small JSON POST helper for calls that need a plain data round-trip rather than an
- * Inertia page visit.
- */
-
 import { beginLoading, endLoading } from '@/lib/loading-overlay';
 
 export class ApiValidationError extends Error {
@@ -16,12 +11,11 @@ export class ApiValidationError extends Error {
 }
 
 type PostJsonOptions = {
-    /** Show the global loading overlay for the duration of this call. Defaults to true. */
     showOverlay?: boolean;
 };
 
 export async function postJson<T>(url: string, body: unknown, options: PostJsonOptions = {}): Promise<T> {
-    const { showOverlay = true } = options;
+    const { showOverlay = false } = options;
 
     const xsrfToken = document.cookie
         .split('; ')

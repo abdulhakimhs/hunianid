@@ -10,9 +10,11 @@ import {
     ReceiptText,
     Send,
     Settings2,
+    ShieldCheck,
     Ticket,
     UserCheck,
     Users,
+    UsersRound,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -52,6 +54,11 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     href: '/units-map',
                     icon: MapPinned,
                 },
+                {
+                    title: 'Keluarga',
+                    href: '/family',
+                    icon: UsersRound,
+                },
             ],
         },
         {
@@ -79,6 +86,18 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     title: 'Unit / Rumah',
                     href: '/admin/units',
                     icon: Building2,
+                },
+                {
+                    title: 'Security',
+                    href: '/admin/security',
+                    icon: ShieldCheck,
+                    requires: adminAccess.security,
+                },
+                {
+                    title: 'Keluarga',
+                    href: '/admin/families',
+                    icon: UsersRound,
+                    requires: adminAccess.families,
                 },
                 {
                     title: 'Tiket & Komplain',

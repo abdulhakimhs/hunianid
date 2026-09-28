@@ -23,6 +23,7 @@ export default function SecurityBottomNav({ active }: { active: Tab }) {
                     <Link
                         key={key}
                         href={href}
+                        prefetch={['mount', 'hover']}
                         className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${
                             active === key
                                 ? 'text-(--color-mint-deep)'

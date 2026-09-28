@@ -5,16 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\AreaMember;
 use App\Models\User;
 use App\Services\MembershipContext;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
         $current = MembershipContext::current($user, $request);
+
+        if ($current && $current->role->key_name === 'security') {
+            return redirect()->route('security.dashboard');
+        }
 
         return Inertia::render('dashboard', [
             'guidance' => $current ? $this->guidanceFor($user, $current) : null,

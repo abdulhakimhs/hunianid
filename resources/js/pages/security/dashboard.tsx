@@ -4,7 +4,6 @@ import {
     CheckCircle2,
     ChevronRight,
     Clock,
-    LogOut,
     QrCode,
     ShieldCheck,
     XCircle,
@@ -14,58 +13,28 @@ import SecurityBottomNav from '@/components/security/bottom-nav';
 import PageHeader from '@/components/shared/page-header';
 import PanicAlertOverlay from '@/components/security/panic-alert-overlay';
 import type { PanicAlert } from '@/components/security/panic-alert-overlay';
+import HunianLogo from '@/components/hunian-logo';
 
-// Dummy data — swap for real props from the controller once the backend
-// endpoint exists (GET /security/dashboard).
+type ActivityStatus = 'valid' | 'invalid' | 'expired';
 
-const dummyGuard = {
-    name: 'Budi Santoso',
-    shift: 'Shift Pagi (06:00 – 14:00)',
+type ActivityItem = {
+    id: number;
+    visitor: string;
+    unit: string;
+    time: string;
+    status: ActivityStatus;
 };
 
-const dummyStats = {
-    scansToday: 42,
-    visitorsInside: 7,
-    pendingApproval: 2,
+type Props = {
+    guardName: string;
+    areaLabel: string;
+    stats: {
+        scansToday: number;
+        pendingToday: number;
+        totalToday: number;
+    };
+    activity: ActivityItem[];
 };
-
-const dummyActivity = [
-    {
-        id: 1,
-        visitor: 'Andi Wijaya',
-        unit: 'Blok C-12',
-        time: '10 menit lalu',
-        status: 'valid' as const,
-    },
-    {
-        id: 2,
-        visitor: 'Siti Rahma',
-        unit: 'Blok A-05',
-        time: '25 menit lalu',
-        status: 'valid' as const,
-    },
-    {
-        id: 3,
-        visitor: 'Unknown QR',
-        unit: '—',
-        time: '38 menit lalu',
-        status: 'invalid' as const,
-    },
-    {
-        id: 4,
-        visitor: 'Dewi Lestari',
-        unit: 'Blok B-08',
-        time: '1 jam lalu',
-        status: 'expired' as const,
-    },
-    {
-        id: 5,
-        visitor: 'Rudi Hartono',
-        unit: 'Blok C-01',
-        time: '1 jam lalu',
-        status: 'valid' as const,
-    },
-];
 
 function greeting() {
     const hour = new Date().getHours();
@@ -103,7 +72,12 @@ const statusMeta = {
     },
 };
 
-export default function SecurityDashboard() {
+export default function SecurityDashboard({
+    guardName,
+    areaLabel,
+    stats,
+    activity,
+}: Props) {
     const [activeAlert, setActiveAlert] = useState<PanicAlert | null>(null);
 
     function simulateAlert() {
@@ -162,8 +136,8 @@ export default function SecurityDashboard() {
 
                 <div className="px-5 pt-2 pb-4">
                     <div className="flex items-center gap-1.5 text-xs text-(--color-ink)/45">
-                        <Clock className="h-3.5 w-3.5" />
-                        {dummyGuard.shift}
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        {areaLabel}
                     </div>
                 </div>
 
@@ -191,16 +165,16 @@ export default function SecurityDashboard() {
                     <div className="grid grid-cols-3 gap-3">
                         <StatCard
                             label="Scan hari ini"
-                            value={dummyStats.scansToday}
+                            value={stats.scansToday}
                         />
                         <StatCard
-                            label="Tamu di dalam"
-                            value={dummyStats.visitorsInside}
-                        />
-                        <StatCard
-                            label="Perlu approval"
-                            value={dummyStats.pendingApproval}
+                            label="Belum discan"
+                            value={stats.pendingToday}
                             accent
+                        />
+                        <StatCard
+                            label="Total hari ini"
+                            value={stats.totalToday}
                         />
                     </div>
 
@@ -218,8 +192,14 @@ export default function SecurityDashboard() {
                             </Link>
                         </div>
 
+                        {activity.length === 0 && (
+                            <p className="text-center text-sm text-(--color-ink)/45">
+                                Belum ada aktivitas hari ini.
+                            </p>
+                        )}
+
                         <div className="space-y-2">
-                            {dummyActivity.map((item) => {
+                            {activity.map((item) => {
                                 const meta = statusMeta[item.status];
                                 const StatusIcon = meta.icon;
 

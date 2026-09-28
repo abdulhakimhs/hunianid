@@ -10,14 +10,12 @@ import { ApiValidationError, postJson } from '@/lib/api';
 
 // Simplified, phone-first login for staff (security) and, later, tenants.
 // No email/Google/passkey/register — those stay on the admin login page.
-// Backend routes below (/staff/login/*) are placeholders — align the
-// paths + response shape with whoever builds the controllers.
 
 type Method = 'password' | 'otp';
 type Phase = 'phone' | 'credential' | 'code';
 
 export default function StaffLogin() {
-    const [method, setMethod] = useState<Method>('password');
+    const [method, setMethod] = useState<Method>('otp');
     const [phase, setPhase] = useState<Phase>('phone');
     const [phone, setPhone] = useState('');
     const [password, setPassword] = useState('');
@@ -44,12 +42,18 @@ export default function StaffLogin() {
         setErrors({});
         setLoading(true);
 
-        postJson<{ dev_code?: string }>(
-            '/staff/login/otp/request',
+        postJson<{ registered?: boolean; dev_code?: string }>(
+            '/login/phone/request',
             { phone },
             { showOverlay: false },
         )
             .then((data) => {
+                if (data.registered === false) {
+                    setErrors({ phone: 'Nomor HP belum terdaftar.' });
+
+                    return;
+                }
+
                 setDevCode(data.dev_code ?? null);
                 setPhase('code');
             })
@@ -68,7 +72,7 @@ export default function StaffLogin() {
         setLoading(true);
 
         postJson<{ redirect: string }>(
-            '/staff/login/password',
+            '/login/phone/password',
             { phone, password },
             { showOverlay: false },
         )
@@ -90,7 +94,7 @@ export default function StaffLogin() {
         setLoading(true);
 
         postJson<{ redirect: string }>(
-            '/staff/login/otp/verify',
+            '/login/phone/verify',
             { phone, code },
             { showOverlay: false },
         )

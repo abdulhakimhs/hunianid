@@ -50,6 +50,7 @@ type Props = {
     frame?: 'pengelola' | 'resident' | null;
     tenantInvites: TenantInvite[];
     units: Unit[];
+    showPengurusTab: boolean;
 };
 
 type Tab = 'warga' | 'pengurus';
@@ -110,8 +111,8 @@ function StatusBadge({ invite }: { invite: TenantInvite }) {
     );
 }
 
-export default function InvitesIndex({ invite, areaName, frame, tenantInvites, units }: Props) {
-    const [tab, setTab] = useState<Tab>(frame === 'pengelola' ? 'pengurus' : 'warga');
+export default function InvitesIndex({ invite, areaName, frame, tenantInvites, units, showPengurusTab }: Props) {
+    const [tab, setTab] = useState<Tab>(frame === 'pengelola' && showPengurusTab ? 'pengurus' : 'warga');
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -176,28 +177,30 @@ export default function InvitesIndex({ invite, areaName, frame, tenantInvites, u
                 </h1>
             </div>
 
-            <div className="flex items-center gap-1 rounded-lg bg-[color:var(--color-ink)]/5 p-1 sm:w-fit">
-                <button
-                    type="button"
-                    onClick={() => setTab('warga')}
-                    className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
-                        tab === 'warga' ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-sm' : 'text-[color:var(--color-ink)]/55'
-                    }`}
-                >
-                    Undang Warga
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setTab('pengurus')}
-                    className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
-                        tab === 'pengurus' ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-sm' : 'text-[color:var(--color-ink)]/55'
-                    }`}
-                >
-                    Tautan Pengurus
-                </button>
-            </div>
+            {showPengurusTab && (
+                <div className="flex items-center gap-1 rounded-lg bg-[color:var(--color-ink)]/5 p-1 sm:w-fit">
+                    <button
+                        type="button"
+                        onClick={() => setTab('warga')}
+                        className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
+                            tab === 'warga' ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-sm' : 'text-[color:var(--color-ink)]/55'
+                        }`}
+                    >
+                        Undang Warga
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setTab('pengurus')}
+                        className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition sm:flex-none ${
+                            tab === 'pengurus' ? 'bg-[color:var(--color-surface)] text-[color:var(--color-ink)] shadow-sm' : 'text-[color:var(--color-ink)]/55'
+                        }`}
+                    >
+                        Tautan Pengurus
+                    </button>
+                </div>
+            )}
 
-            {tab === 'warga' ? (
+            {(!showPengurusTab || tab === 'warga') ? (
                 <TenantInvitesPanel units={units} invites={tenantInvites} onRevoke={setRevokeTarget} />
             ) : (
                 <div className="grid gap-4 lg:grid-cols-[1.3fr_0.9fr]">

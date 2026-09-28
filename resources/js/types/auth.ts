@@ -73,6 +73,8 @@ export type AdminAccess = {
     invites: boolean;
     pendingApprovals: boolean;
     settings: boolean;
+    families: boolean;
+    security: boolean;
 };
 
 export type Auth = {

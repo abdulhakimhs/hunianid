@@ -27,9 +27,10 @@ class InviteController extends Controller
     {
         $area = $request->attributes->get('adminArea');
 
-        $activeInvite = $area->invites()->whereNull('unit_id')->where('status', 'active')->latest()->first();
+        $activeInvite = $area->invites()->where('type', 'resident')->whereNull('unit_id')->where('status', 'active')->latest()->first();
 
         $tenantInvites = $area->invites()
+            ->where('type', 'resident')
             ->whereNotNull('unit_id')
             ->with('unit:id,unit_number,block')
             ->latest()
@@ -53,12 +54,21 @@ class InviteController extends Controller
             ->get(['id', 'unit_number', 'block'])
             ->map(fn (Unit $u) => ['id' => $u->id, 'label' => trim(($u->block ?? '').' '.$u->unit_number)]);
 
+        // The generic "Tautan Pengurus" link only makes sense while the area has no
+        // admin yet (the unclaimed-area handover on-ramp) — once it has one, showing
+        // it to that admin is just confusing (they'd be inviting a duplicate admin).
+        $hasAdmin = $area->areaMembers()
+            ->where('status', 'active')
+            ->whereHas('role', fn ($q) => $q->whereIn('key_name', ['superadmin', 'staff']))
+            ->exists();
+
         return Inertia::render('admin/invites/index', [
             'invite' => $activeInvite,
             'areaName' => $area->name,
             'frame' => $request->query('frame'),
             'tenantInvites' => $tenantInvites,
             'units' => $units,
+            'showPengurusTab' => ! $hasAdmin,
         ]);
     }
 
@@ -67,9 +77,10 @@ class InviteController extends Controller
         $area = $request->attributes->get('adminArea');
 
         DB::transaction(function () use ($area, $request) {
-            $area->invites()->whereNull('unit_id')->where('status', 'active')->update(['status' => 'revoked']);
+            $area->invites()->where('type', 'resident')->whereNull('unit_id')->where('status', 'active')->update(['status' => 'revoked']);
 
             $area->invites()->create([
+                'type' => 'resident',
                 'created_by' => $request->user()->id,
                 'code' => Str::random(32),
                 'status' => 'active',
