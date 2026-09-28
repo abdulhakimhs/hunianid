@@ -1,8 +1,9 @@
 import { Head } from '@inertiajs/react';
 import { CheckCircle2, Clock, Search, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Input } from '@/components/ui/input';
 import SecurityBottomNav from '@/components/security/bottom-nav';
+import PageHeader from '@/components/shared/page-header';
+import { Input } from '@/components/ui/input';
 
 type ScanStatus = 'used' | 'cancelled' | 'expired';
 
@@ -32,8 +33,7 @@ const statusMeta: Record<
 > = {
     used: {
         icon: CheckCircle2,
-        className:
-            'text-[color:var(--color-mint-deep)] bg-[color:var(--color-mint)]/12',
+        className: 'text-(--color-mint-deep) bg-(--color-mint)/12',
     },
     cancelled: { icon: XCircle, className: 'text-red-600 bg-red-50' },
     expired: { icon: Clock, className: 'text-amber-600 bg-amber-50' },
@@ -71,16 +71,12 @@ export default function SecurityHistory({ entries }: Props) {
         <>
             <Head title="Riwayat" />
 
-            <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-(--color-surface) pt-[env(safe-area-inset-top)]">
-                {/* Header */}
-                <div className="px-5 pt-5 pb-4">
-                    <h1 className="text-lg font-semibold text-(--color-ink)">
-                        Riwayat Scan
-                    </h1>
-                    <p className="mt-0.5 text-sm text-(--color-ink)/50">
-                        {entries.length} total scan
-                    </p>
-                </div>
+            <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-(--color-surface)">
+                <PageHeader title="Riwayat Scan" tone="security" />
+
+                <p className="px-5 pt-4 text-sm text-(--color-ink)/50">
+                    {entries.length} total scan
+                </p>
 
                 {/* Search */}
                 <div className="px-5 pb-3">

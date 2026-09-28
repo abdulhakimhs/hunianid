@@ -78,3 +78,14 @@ Route::middleware(['auth', 'admin.role:security'])->prefix('security')->name('se
     Route::patch('/profile', [SecurityProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [SecurityProfileController::class, 'updatePassword'])->name('profile.password.update');
 });
+Route::prefix('tenant')->name('tenant.')->group(function () {
+    Route::inertia('/', 'tenant/dashboard')->name('dashboard');
+    Route::inertia('/visitor-pass', 'tenant/visitor-pass')->name('visitorpass');
+    Route::inertia('/bills', 'tenant/bills')->name('bills');
+    Route::inertia('/unit', 'tenant/unit')->name('unit');
+    Route::inertia('/profile', 'tenant/profile')->name('profile');
+    Route::inertia('/notifications', 'tenant/notifications')->name('notifications');
+    Route::inertia('/panic', 'tenant/panic')->name('panic');
+    Route::inertia('/tickets', 'tenant/tickets/index')->name('tickets');
+    Route::inertia('/tickets/{id}', 'tenant/tickets/show')->name('tickets.show');
+});
