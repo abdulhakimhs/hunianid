@@ -1,10 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
-    BookOpen,
     Building2,
     CircleDollarSign,
-    FolderGit2,
-    Home,
     LayoutGrid,
     MapPinned,
     ReceiptText,
@@ -44,20 +41,15 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     href: dashboard(),
                     icon: LayoutGrid,
                 },
-                {
-                    title: 'Ringkasan Komplek',
-                    href: '#',
-                    icon: Home,
-                },
+                // {
+                //     title: 'Ringkasan Komplek',
+                //     href: '#',
+                //     icon: Home,
+                // },
                 {
                     title: 'Peta Unit',
                     href: '/units-map',
                     icon: MapPinned,
-                },
-                {
-                    title: 'Keluarga',
-                    href: '/family',
-                    icon: UsersRound,
                 },
             ],
         },
@@ -69,19 +61,22 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     href: '/admin/members',
                     icon: Users,
                     requires: adminAccess.members,
+                    items: [
+                        {
+                            title: 'Undangan',
+                            href: '/admin/invites',
+                            icon: Send,
+                            requires: adminAccess.invites,
+                        },
+                        {
+                            title: 'Menunggu Persetujuan',
+                            href: '/admin/members/pending',
+                            icon: UserCheck,
+                            requires: adminAccess.pendingApprovals,
+                        },
+                    ],
                 },
-                {
-                    title: 'Undangan',
-                    href: '/admin/invites',
-                    icon: Send,
-                    requires: adminAccess.invites,
-                },
-                {
-                    title: 'Menunggu Persetujuan',
-                    href: '/admin/members/pending',
-                    icon: UserCheck,
-                    requires: adminAccess.pendingApprovals,
-                },
+
                 {
                     title: 'Unit / Rumah',
                     href: '/admin/units',
@@ -93,12 +88,12 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     icon: ShieldCheck,
                     requires: adminAccess.security,
                 },
-                {
-                    title: 'Keluarga',
-                    href: '/admin/families',
-                    icon: UsersRound,
-                    requires: adminAccess.families,
-                },
+                // {
+                //     title: 'Keluarga',
+                //     href: '/admin/families',
+                //     icon: UsersRound,
+                //     requires: adminAccess.families,
+                // },
                 {
                     title: 'Tiket & Komplain',
                     href: '#',
@@ -141,16 +136,16 @@ function buildNavGroups(adminAccess: AdminAccess) {
 }
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
+    // {
+    //     title: 'Repository',
+    //     href: 'https://github.com/laravel/react-starter-kit',
+    //     icon: FolderGit2,
+    // },
+    // {
+    //     title: 'Documentation',
+    //     href: 'https://laravel.com/docs/starter-kits#react',
+    //     icon: BookOpen,
+    // },
 ];
 
 export function AppSidebar() {
