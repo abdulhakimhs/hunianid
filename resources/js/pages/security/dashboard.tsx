@@ -4,15 +4,16 @@ import {
     CheckCircle2,
     ChevronRight,
     Clock,
+    LogOut,
     QrCode,
     ShieldCheck,
     XCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import SecurityBottomNav from '@/components/security/bottom-nav';
-import PageHeader from '@/components/shared/page-header';
-import PanicAlertOverlay from '@/components/security/panic-alert-overlay';
 import type { PanicAlert } from '@/components/security/panic-alert-overlay';
+import PanicAlertOverlay from '@/components/security/panic-alert-overlay';
+import PageHeader from '@/components/shared/page-header';
 import HunianLogo from '@/components/hunian-logo';
 
 type ActivityStatus = 'valid' | 'invalid' | 'expired';
@@ -129,7 +130,7 @@ export default function SecurityDashboard({
                             {greeting()},
                         </p>
                         <p className="text-sm font-semibold text-(--color-ink)">
-                            {dummyGuard.name}
+                            {guardName}
                         </p>
                     </div>
                 </div>

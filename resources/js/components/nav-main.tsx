@@ -5,6 +5,9 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarMenuSub,
+    SidebarMenuSubButton,
+    SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
@@ -38,6 +41,33 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
                                         <span>{item.title}</span>
                                     </Link>
                                 </SidebarMenuButton>
+                                {item.items?.length ? (
+                                    <SidebarMenuSub>
+                                        {item.items.map((item) => (
+                                            <SidebarMenuSubItem
+                                                key={item.title}
+                                            >
+                                                <SidebarMenuSubButton
+                                                    asChild
+                                                    isActive={item.isActive}
+                                                >
+                                                    <Link
+                                                        prefetch
+                                                        href={item.href}
+                                                        title={item.title}
+                                                    >
+                                                        {item.icon && (
+                                                            <item.icon />
+                                                        )}
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    </Link>
+                                                </SidebarMenuSubButton>
+                                            </SidebarMenuSubItem>
+                                        ))}
+                                    </SidebarMenuSub>
+                                ) : null}
                             </SidebarMenuItem>
                         ))}
                     </SidebarMenu>
