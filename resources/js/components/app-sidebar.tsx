@@ -1,9 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
-    BookOpen,
     Building2,
     CircleDollarSign,
-    FolderGit2,
     LayoutGrid,
     MapPinned,
     Megaphone,
@@ -34,11 +32,6 @@ import {
 import { dashboard } from '@/routes';
 import type { AdminAccess, NavItem } from '@/types';
 
-// Items gated by an admin capability (or by tenant-vs-admin role) declare it via
-// `requires`, filtered against auth.adminAccess so users don't see links they'd
-// just 403 on. Groups that end up with zero visible items are dropped entirely —
-// otherwise a role with no access to anything in a group would still see its
-// floating, empty header.
 function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
     const isAdminSide = !isTenant;
 
@@ -57,10 +50,6 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
                     icon: MapPinned,
                 },
                 {
-                    // Manages the tenant's own household (/family, FamilyController) —
-                    // admin/staff manage families area-wide via "Keluarga Warga" below,
-                    // so they don't need this one. Labelled "Saya" to disambiguate from
-                    // that area-wide admin list, since both used to be called "Keluarga".
                     title: 'Keluarga Saya',
                     href: '/family',
                     icon: UsersRound,
@@ -76,23 +65,23 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
                     href: '/admin/members',
                     icon: Users,
                     requires: adminAccess.members,
+                    items: [
+                        {
+                            title: 'Undangan',
+                            href: '/admin/invites',
+                            icon: Send,
+                            requires: adminAccess.invites,
+                        },
+                        {
+                            title: 'Menunggu Persetujuan',
+                            href: '/admin/members/pending',
+                            icon: UserCheck,
+                            requires: adminAccess.pendingApprovals,
+                        },
+                    ],
                 },
+
                 {
-                    title: 'Undangan',
-                    href: '/admin/invites',
-                    icon: Send,
-                    requires: adminAccess.invites,
-                },
-                {
-                    title: 'Menunggu Persetujuan',
-                    href: '/admin/members/pending',
-                    icon: UserCheck,
-                    requires: adminAccess.pendingApprovals,
-                },
-                {
-                    // Same permission tier as "Kepemilikan & Warga" (both routes sit in
-                    // the admin.role:superadmin,staff,unclaimed_creator group) — reuse
-                    // `members` rather than adding a dedicated backend flag just for this.
                     title: 'Unit / Rumah',
                     href: '/admin/units',
                     icon: Building2,
@@ -116,8 +105,6 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
                     requires: adminAccess.staffManagement,
                 },
                 {
-                    // Admin's view of all visitor passes for the area — distinct from a
-                    // tenant's own visitor-pass creation flow, which lives under /tenant.
                     title: 'Pengunjung',
                     href: '/admin/visitor-passes',
                     icon: Users,
@@ -182,16 +169,16 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
 }
 
 const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
+    // {
+    //     title: 'Repository',
+    //     href: 'https://github.com/laravel/react-starter-kit',
+    //     icon: FolderGit2,
+    // },
+    // {
+    //     title: 'Documentation',
+    //     href: 'https://laravel.com/docs/starter-kits#react',
+    //     icon: BookOpen,
+    // },
 ];
 
 export function AppSidebar() {
