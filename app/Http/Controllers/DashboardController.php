@@ -21,8 +21,18 @@ class DashboardController extends Controller
             return redirect()->route('security.dashboard');
         }
 
+        $guidance = $current ? $this->guidanceFor($user, $current) : null;
+
+        // A resident with nothing pending (profile complete, approved, unit
+        // confirmed) belongs on the tenant PWA, not the pengelola-oriented
+        // admin dashboard. Residents who still have something to resolve
+        // stay here, since the tenant PWA has no wiring yet for those states.
+        if ($current && $current->role->key_name === 'resident' && ($guidance['type'] ?? null) === 'penghuni_active') {
+            return redirect()->route('tenant.dashboard');
+        }
+
         return Inertia::render('dashboard', [
-            'guidance' => $current ? $this->guidanceFor($user, $current) : null,
+            'guidance' => $guidance,
             'status' => $request->session()->get('status'),
         ]);
     }
@@ -77,6 +87,6 @@ class DashboardController extends Controller
             return ['type' => 'penghuni_pending_unit', 'areaId' => $area->id, 'areaName' => $area->name];
         }
 
-        return null;
+        return ['type' => 'penghuni_active', 'areaId' => $area->id, 'areaName' => $area->name];
     }
 }

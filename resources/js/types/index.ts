@@ -60,3 +60,39 @@ export type SecurityInviteGuard = {
     claim_link: string | null;
     invites: SecurityInviteLog[];
 };
+
+export type StaffMember = {
+    id: number;
+    user_id: number;
+    name: string;
+    phone: string;
+    email: string | null;
+    status: 'active' | 'suspended';
+    claimed: boolean;
+    created_at?: string;
+};
+
+export type StaffInviteMember = {
+    id: number;
+    name: string;
+    phone: string;
+    claimed: boolean;
+    claim_link: string | null;
+    invites: SecurityInviteLog[];
+};
+
+export type VisitorPassAdmin = {
+    id: number;
+    guestName: string;
+    guestPhone: string | null;
+    vehicleInfo: string | null;
+    purpose: string | null;
+    unit: string;
+    resident: string;
+    source: string;
+    status: 'pending' | 'used' | 'cancelled' | 'expired';
+    validFrom: string | null;
+    validUntil: string | null;
+    usedAt: string | null;
+    createdAt: string | null;
+};

@@ -1,35 +1,23 @@
-import { Head } from '@inertiajs/react';
-import { Building2, Mail, Phone, User, Users } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Building2, ChevronRight, Mail, Phone, User, Users } from 'lucide-react';
 import PageHeader from '@/components/shared/page-header';
 import TenantBottomNav from '@/components/tenant/bottom-nav';
 
-// Dummy data — swap for real props from GET /tenant/unit once the backend
-// endpoint exists.
-
-const dummyUnit = {
-    number: 'B-08',
-    area: 'Cluster Melati',
-    type: 'Pemilik',
+type FamilyMember = {
+    id: number;
+    name: string;
+    phone: string | null;
 };
 
-const dummyResident = {
-    name: 'Dewi Lestari',
-    phone: '0812-3456-7890',
-    email: 'dewi.lestari@email.com',
+type Props = {
+    unit: { number: string | null; area: string | null; type: string };
+    resident: { name: string; phone: string | null; email: string };
+    familyMembers: FamilyMember[];
+    familyMembersTotal: number;
+    management: { phone: string; email: string; hours: string };
 };
 
-const dummyFamilyMembers = [
-    { id: 1, name: 'Andi Lestari', relation: 'Suami' },
-    { id: 2, name: 'Kirana Lestari', relation: 'Anak' },
-];
-
-const dummyManagement = {
-    phone: '021-5551234',
-    email: 'pengelola@hunianid.com',
-    hours: 'Senin–Sabtu, 08:00–17:00',
-};
-
-export default function TenantUnit() {
+export default function TenantUnit({ unit, resident, familyMembers, familyMembersTotal, management }: Props) {
     return (
         <>
             <Head title="Unit Saya" />
@@ -46,16 +34,16 @@ export default function TenantUnit() {
                             </div>
                             <div>
                                 <p className="text-lg font-bold">
-                                    Unit {dummyUnit.number}
+                                    Unit {unit.number}
                                 </p>
                                 <p className="text-xs text-white/60">
-                                    {dummyUnit.area}
+                                    {unit.area}
                                 </p>
                             </div>
                         </div>
 
                         <span className="mt-3 inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-medium">
-                            {dummyUnit.type}
+                            {unit.type}
                         </span>
                     </div>
 
@@ -64,29 +52,29 @@ export default function TenantUnit() {
                         <InfoRow
                             icon={User}
                             label="Nama"
-                            value={dummyResident.name}
+                            value={resident.name}
                         />
                         <InfoRow
                             icon={Phone}
                             label="No. HP"
-                            value={dummyResident.phone}
+                            value={resident.phone ?? '-'}
                         />
                         <InfoRow
                             icon={Mail}
                             label="Email"
-                            value={dummyResident.email}
+                            value={resident.email}
                         />
                     </Section>
 
                     {/* Family members */}
                     <Section title="Anggota Keluarga" icon={Users}>
-                        {dummyFamilyMembers.length === 0 ? (
+                        {familyMembers.length === 0 ? (
                             <p className="text-sm text-(--color-ink)/40">
                                 Belum ada anggota keluarga terdaftar.
                             </p>
                         ) : (
                             <div className="space-y-3">
-                                {dummyFamilyMembers.map((member) => (
+                                {familyMembers.map((member) => (
                                     <div
                                         key={member.id}
                                         className="flex items-center gap-3"
@@ -98,20 +86,33 @@ export default function TenantUnit() {
                                             <p className="truncate text-sm font-medium text-(--color-ink)">
                                                 {member.name}
                                             </p>
-                                            <p className="text-xs text-(--color-ink)/45">
-                                                {member.relation}
+                                            <p className="truncate text-xs text-(--color-ink)/45">
+                                                {member.phone ?? '—'}
                                             </p>
                                         </div>
                                     </div>
                                 ))}
+                                {familyMembersTotal > familyMembers.length && (
+                                    <p className="text-xs text-(--color-ink)/40">
+                                        +{familyMembersTotal - familyMembers.length} anggota lainnya
+                                    </p>
+                                )}
                             </div>
                         )}
+
+                        <Link
+                            href="/tenant/family"
+                            className="mt-3 flex items-center justify-between rounded-xl bg-(--color-sky)/8 px-3 py-2.5 text-sm font-medium text-(--color-sky-deep)"
+                        >
+                            Kelola Keluarga
+                            <ChevronRight className="h-4 w-4" />
+                        </Link>
                     </Section>
 
                     {/* Management contact */}
                     <Section title="Kontak Pengelola" icon={Phone}>
                         <a
-                            href={`tel:${dummyManagement.phone}`}
+                            href={`tel:${management.phone}`}
                             className="flex items-center gap-3"
                         >
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-(--color-mint)/12 text-(--color-mint-deep)">
@@ -119,10 +120,10 @@ export default function TenantUnit() {
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium text-(--color-ink)">
-                                    {dummyManagement.phone}
+                                    {management.phone}
                                 </p>
                                 <p className="text-xs text-(--color-ink)/45">
-                                    {dummyManagement.hours}
+                                    {management.hours}
                                 </p>
                             </div>
                         </a>
@@ -132,7 +133,7 @@ export default function TenantUnit() {
                                 <Mail className="h-4 w-4 text-(--color-ink)/50" />
                             </div>
                             <p className="truncate text-sm text-(--color-ink)/70">
-                                {dummyManagement.email}
+                                {management.email}
                             </p>
                         </div>
                     </Section>

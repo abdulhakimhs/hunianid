@@ -10,18 +10,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by', 'invitation_message', 'security_invitation_message'])]
+#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by', 'invitation_message', 'security_invitation_message', 'reminder_days_before_due'])]
 class Area extends Model
 {
     /** @use HasFactory<AreaFactory> */
     use HasFactory;
 
-    public const DEFAULT_INVITATION_MESSAGE = 'Halo! Anda diundang bergabung sebagai warga {komplek} untuk unit {unit}. '.
+    public const DEFAULT_INVITATION_MESSAGE = 'Halo {nama}! Anda diundang bergabung sebagai warga {komplek} untuk unit {unit}. '.
         'Silakan daftar lewat tautan berikut: {link}';
 
     public const DEFAULT_SECURITY_INVITATION_MESSAGE = 'Halo {nama}! {komplek} telah membuat akun Security untuk Anda. '.
         'Silakan buat kata sandi Anda lewat tautan berikut untuk mulai menggunakan aplikasi: {link}'.
         "\n\nTautan ini bersifat pribadi, jangan bagikan ke orang lain.";
+
+    public const DEFAULT_REMINDER_DAYS_BEFORE_DUE = 3;
 
     /**
      * Get the attributes that should be cast.
@@ -43,6 +45,11 @@ class Area extends Model
     public function securityInvitationMessageTemplate(): string
     {
         return $this->security_invitation_message ?: self::DEFAULT_SECURITY_INVITATION_MESSAGE;
+    }
+
+    public function reminderDaysBeforeDue(): int
+    {
+        return $this->reminder_days_before_due ?? self::DEFAULT_REMINDER_DAYS_BEFORE_DUE;
     }
 
     /**
@@ -85,6 +92,30 @@ class Area extends Model
     public function invites(): HasMany
     {
         return $this->hasMany(Invite::class);
+    }
+
+    /**
+     * @return HasMany<Invoice, $this>
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * @return HasMany<InvoiceTemplate, $this>
+     */
+    public function invoiceTemplates(): HasMany
+    {
+        return $this->hasMany(InvoiceTemplate::class);
+    }
+
+    /**
+     * @return HasMany<InvoiceCategory, $this>
+     */
+    public function invoiceCategories(): HasMany
+    {
+        return $this->hasMany(InvoiceCategory::class);
     }
 
     /**

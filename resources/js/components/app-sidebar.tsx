@@ -4,15 +4,17 @@ import {
     Building2,
     CircleDollarSign,
     FolderGit2,
-    Home,
     LayoutGrid,
     MapPinned,
+    Megaphone,
     ReceiptText,
     Send,
     Settings2,
     ShieldCheck,
+    Tags,
     Ticket,
     UserCheck,
+    UserCog,
     Users,
     UsersRound,
 } from 'lucide-react';
@@ -32,9 +34,14 @@ import {
 import { dashboard } from '@/routes';
 import type { AdminAccess, NavItem } from '@/types';
 
-// 'Manajemen' items gated by an admin capability declare it via `requires`, filtered
-// against auth.adminAccess so users don't see links they'd just 403 on.
-function buildNavGroups(adminAccess: AdminAccess) {
+// Items gated by an admin capability (or by tenant-vs-admin role) declare it via
+// `requires`, filtered against auth.adminAccess so users don't see links they'd
+// just 403 on. Groups that end up with zero visible items are dropped entirely —
+// otherwise a role with no access to anything in a group would still see its
+// floating, empty header.
+function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
+    const isAdminSide = !isTenant;
+
     return [
         {
             label: 'Utama',
@@ -45,24 +52,24 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     icon: LayoutGrid,
                 },
                 {
-                    title: 'Ringkasan Komplek',
-                    href: '#',
-                    icon: Home,
-                },
-                {
                     title: 'Peta Unit',
                     href: '/units-map',
                     icon: MapPinned,
                 },
                 {
-                    title: 'Keluarga',
+                    // Manages the tenant's own household (/family, FamilyController) —
+                    // admin/staff manage families area-wide via "Keluarga Warga" below,
+                    // so they don't need this one. Labelled "Saya" to disambiguate from
+                    // that area-wide admin list, since both used to be called "Keluarga".
+                    title: 'Keluarga Saya',
                     href: '/family',
                     icon: UsersRound,
+                    requires: isTenant,
                 },
-            ],
+            ].filter((item) => item.requires ?? true),
         },
         {
-            label: 'Manajemen',
+            label: 'Warga',
             items: [
                 {
                     title: 'Kepemilikan & Warga',
@@ -83,10 +90,19 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     requires: adminAccess.pendingApprovals,
                 },
                 {
+                    // Same permission tier as "Kepemilikan & Warga" (both routes sit in
+                    // the admin.role:superadmin,staff,unclaimed_creator group) — reuse
+                    // `members` rather than adding a dedicated backend flag just for this.
                     title: 'Unit / Rumah',
                     href: '/admin/units',
                     icon: Building2,
+                    requires: adminAccess.members,
                 },
+            ].filter((item) => item.requires ?? true),
+        },
+        {
+            label: 'Staf & Keamanan',
+            items: [
                 {
                     title: 'Security',
                     href: '/admin/security',
@@ -94,15 +110,37 @@ function buildNavGroups(adminAccess: AdminAccess) {
                     requires: adminAccess.security,
                 },
                 {
-                    title: 'Keluarga',
-                    href: '/admin/families',
-                    icon: UsersRound,
-                    requires: adminAccess.families,
+                    title: 'Staff RT',
+                    href: '/admin/staff',
+                    icon: UserCog,
+                    requires: adminAccess.staffManagement,
                 },
                 {
+                    // Admin's view of all visitor passes for the area — distinct from a
+                    // tenant's own visitor-pass creation flow, which lives under /tenant.
+                    title: 'Pengunjung',
+                    href: '/admin/visitor-passes',
+                    icon: Users,
+                    requires: adminAccess.visitorPasses,
+                },
+            ].filter((item) => item.requires ?? true),
+        },
+        {
+            label: 'Komunikasi',
+            items: [
+                {
+                    title: 'Pengumuman',
+                    href: '/admin/announcements',
+                    icon: Megaphone,
+                    requires: adminAccess.announcements,
+                },
+                {
+                    // Admin-side complaint/ticket triage — a tenant's own tickets live
+                    // under /tenant/tickets, outside this sidebar entirely.
                     title: 'Tiket & Komplain',
                     href: '#',
                     icon: Ticket,
+                    requires: isAdminSide,
                 },
             ].filter((item) => item.requires ?? true),
         },
@@ -111,24 +149,27 @@ function buildNavGroups(adminAccess: AdminAccess) {
             items: [
                 {
                     title: 'Tagihan',
-                    href: '#',
+                    href: '/admin/invoices',
                     icon: ReceiptText,
+                    requires: adminAccess.invoices,
                 },
                 {
                     title: 'Pembayaran',
-                    href: '#',
+                    href: '/admin/invoices?tab=history',
                     icon: CircleDollarSign,
+                    requires: adminAccess.invoices,
                 },
-            ],
+                {
+                    title: 'Kategori Tagihan',
+                    href: '/admin/invoice-categories',
+                    icon: Tags,
+                    requires: adminAccess.invoices,
+                },
+            ].filter((item) => item.requires ?? true),
         },
         {
             label: 'Lainnya',
             items: [
-                {
-                    title: 'Pengunjung',
-                    href: '#',
-                    icon: Users,
-                },
                 {
                     title: 'Pengaturan',
                     href: '/admin/settings',
@@ -137,7 +178,7 @@ function buildNavGroups(adminAccess: AdminAccess) {
                 },
             ].filter((item) => item.requires ?? true),
         },
-    ];
+    ].filter((group) => group.items.length > 0);
 }
 
 const footerNavItems: NavItem[] = [
@@ -155,7 +196,9 @@ const footerNavItems: NavItem[] = [
 
 export function AppSidebar() {
     const { auth } = usePage().props;
-    const mainNavGroups = buildNavGroups(auth.adminAccess);
+    const currentMembership = auth.memberships.find((m) => m.id === auth.currentMembershipId);
+    const isTenant = currentMembership?.roleKey === 'resident';
+    const mainNavGroups = buildNavGroups(auth.adminAccess, isTenant);
 
     return (
         <Sidebar

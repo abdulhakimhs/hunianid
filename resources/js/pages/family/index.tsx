@@ -12,6 +12,7 @@ import {
     Users,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { DataTablePagination } from '@/components/data-table-pagination';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -88,6 +89,8 @@ export default function FamilyIndex({ families, units }: Props) {
     const [formData, setFormData] = useState({ ...emptyForm });
     const [submitting, setSubmitting] = useState(false);
     const [deletingBusy, setDeletingBusy] = useState(false);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     function resetForm() {
         setFormData({ ...emptyForm, unit_id: units.length === 1 ? String(units[0].id) : '' });
@@ -126,6 +129,15 @@ export default function FamilyIndex({ families, units }: Props) {
 
         return sortDir === 'asc' ? sorted : sorted.reverse();
     }, [families, query, sortKey, sortDir]);
+
+    const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    function handleQueryChange(next: string) {
+        setQuery(next);
+        setPage(1);
+    }
 
     function toggleSort(key: SortKey) {
         if (sortKey === key) {
@@ -231,7 +243,7 @@ export default function FamilyIndex({ families, units }: Props) {
                         <input
                             type="text"
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => handleQueryChange(e.target.value)}
                             placeholder="Cari nama atau nomor WA..."
                             className="w-full rounded-lg border border-(--color-ink)/10 bg-(--color-bg) py-1.5 pr-3 pl-8 text-sm text-(--color-ink) outline-none placeholder:text-(--color-ink)/40 focus:border-(--color-sky)/50 focus:ring-2 focus:ring-(--color-sky)/15"
                         />
@@ -271,7 +283,7 @@ export default function FamilyIndex({ families, units }: Props) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filtered.map((m) => {
+                        {paginated.map((m) => {
                             return (
                                 <TableRow
                                     key={m.id}
@@ -354,6 +366,8 @@ export default function FamilyIndex({ families, units }: Props) {
                         </p>
                     </div>
                 )}
+
+                <DataTablePagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
             </section>
 
             <Dialog

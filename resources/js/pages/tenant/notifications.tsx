@@ -1,87 +1,19 @@
-import { Head, Link } from '@inertiajs/react';
-import {
-    AlertOctagon,
-    Bell,
-    CreditCard,
-    MessageSquare,
-    QrCode,
-} from 'lucide-react';
+import { Head } from '@inertiajs/react';
+import { Bell, Megaphone } from 'lucide-react';
 import PageHeader from '@/components/shared/page-header';
 import PushNotificationPrompt from '@/components/shared/push-notification-prompt';
 import TenantBottomNav from '@/components/tenant/bottom-nav';
 
-type NotificationType =
-    'ticket_reply' | 'bill_due' | 'visitor_used' | 'panic_ack';
-
-type AppNotification = {
+type Announcement = {
     id: number;
-    type: NotificationType;
     title: string;
     body: string;
-    href: string;
-    createdAt: string;
-    read: boolean;
+    areaName: string;
+    createdAt: string | null;
 };
 
-const dummyNotifications: AppNotification[] = [
-    {
-        id: 1,
-        type: 'ticket_reply',
-        title: 'Balasan Tiket',
-        body: 'Pak Joko membalas tiket "AC unit tidak dingin"',
-        href: '/tenant/tickets/1',
-        createdAt: '2026-09-16T14:20:00',
-        read: false,
-    },
-    {
-        id: 2,
-        type: 'bill_due',
-        title: 'Tagihan Jatuh Tempo',
-        body: 'Tagihan utilitas Rp 185.000 jatuh tempo 10 Sep',
-        href: '/tenant/bills',
-        createdAt: '2026-09-15T08:00:00',
-        read: false,
-    },
-    {
-        id: 3,
-        type: 'visitor_used',
-        title: 'Pass Tamu Digunakan',
-        body: 'Andi Wijaya telah masuk melalui gerbang utama',
-        href: '/tenant/visitor-pass',
-        createdAt: '2026-09-14T10:42:00',
-        read: true,
-    },
-    {
-        id: 4,
-        type: 'panic_ack',
-        title: 'Sinyal Darurat Direspon',
-        body: 'Budi Santoso merespon sinyal darurat Anda',
-        href: '/tenant',
-        createdAt: '2026-09-10T21:15:00',
-        read: true,
-    },
-];
-
-const typeMeta: Record<
-    NotificationType,
-    { icon: typeof Bell; className: string }
-> = {
-    ticket_reply: {
-        icon: MessageSquare,
-        className: 'bg-(--color-sky)/15 text-(--color-sky-deep)',
-    },
-    bill_due: {
-        icon: CreditCard,
-        className: 'bg-amber-100 text-amber-600',
-    },
-    visitor_used: {
-        icon: QrCode,
-        className: 'bg-violet-100 text-violet-600',
-    },
-    panic_ack: {
-        icon: AlertOctagon,
-        className: 'bg-red-100 text-red-600',
-    },
+type Props = {
+    announcements: Announcement[];
 };
 
 function timeAgo(iso: string) {
@@ -101,8 +33,8 @@ function timeAgo(iso: string) {
     return `${days} hari lalu`;
 }
 
-export default function TenantNotifications() {
-    const hasAny = dummyNotifications.length > 0;
+export default function TenantNotifications({ announcements }: Props) {
+    const hasAny = announcements.length > 0;
 
     return (
         <>
@@ -118,13 +50,13 @@ export default function TenantNotifications() {
                         <div className="flex flex-col items-center gap-2 pt-16 text-center">
                             <Bell className="h-8 w-8 text-(--color-ink)/25" />
                             <p className="text-sm text-(--color-ink)/45">
-                                Belum ada notifikasi.
+                                Belum ada pengumuman.
                             </p>
                         </div>
                     )}
 
-                    {dummyNotifications.map((notif) => (
-                        <NotificationItem key={notif.id} notif={notif} />
+                    {announcements.map((announcement) => (
+                        <AnnouncementItem key={announcement.id} announcement={announcement} />
                     ))}
                 </div>
 
@@ -134,43 +66,26 @@ export default function TenantNotifications() {
     );
 }
 
-function NotificationItem({ notif }: { notif: AppNotification }) {
-    const meta = typeMeta[notif.type];
-    const Icon = meta.icon;
-
+function AnnouncementItem({ announcement }: { announcement: Announcement }) {
     return (
-        <Link href={notif.href} className="block">
-            <div
-                className={`flex items-start gap-3 rounded-2xl border p-3.5 ${
-                    notif.read
-                        ? 'border-(--color-ink)/8 bg-(--color-surface)'
-                        : 'border-(--color-sky)/25 bg-(--color-sky)/5'
-                }`}
-            >
-                <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${meta.className}`}
-                >
-                    <Icon className="h-4 w-4" />
-                </div>
-
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-medium text-(--color-ink)">
-                            {notif.title}
-                        </p>
-                        {!notif.read && (
-                            <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-(--color-sky-deep)" />
-                        )}
-                    </div>
-                    <p className="mt-0.5 text-xs text-(--color-ink)/55">
-                        {notif.body}
-                    </p>
-                    <p className="mt-1 text-[11px] text-(--color-ink)/35">
-                        {timeAgo(notif.createdAt)}
-                    </p>
-                </div>
+        <div className="flex items-start gap-3 rounded-2xl border border-(--color-ink)/8 bg-(--color-surface) p-3.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--color-sky)/15 text-(--color-sky-deep)">
+                <Megaphone className="h-4 w-4" />
             </div>
-        </Link>
+
+            <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-(--color-ink)">
+                    {announcement.title}
+                </p>
+                <p className="mt-0.5 text-xs text-(--color-ink)/55">
+                    {announcement.body}
+                </p>
+                <p className="mt-1 text-[11px] text-(--color-ink)/35">
+                    {announcement.areaName}
+                    {announcement.createdAt ? ` · ${timeAgo(announcement.createdAt)}` : ''}
+                </p>
+            </div>
+        </div>
     );
 }
 

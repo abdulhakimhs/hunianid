@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { Loader2, MessageCircle, RotateCcw, Save } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -10,9 +11,12 @@ type Props = {
     defaultInvitationMessage: string;
     securityInvitationMessage: string | null;
     defaultSecurityInvitationMessage: string;
+    reminderDaysBeforeDue: number | null;
+    defaultReminderDaysBeforeDue: number;
 };
 
 const PLACEHOLDERS = [
+    { token: '{nama}', description: 'Nama warga (jika diisi admin saat membuat undangan)' },
     { token: '{komplek}', description: 'Nama komplek/perumahan' },
     { token: '{unit}', description: 'Nomor & blok unit warga' },
     { token: '{link}', description: 'Tautan pendaftaran undangan' },
@@ -26,6 +30,7 @@ const SECURITY_PLACEHOLDERS = [
 
 function renderPreview(template: string): string {
     return template
+        .replaceAll('{nama}', 'Pak Budi')
         .replaceAll('{komplek}', 'Griya Asri')
         .replaceAll('{unit}', 'A1 12')
         .replaceAll('{link}', `${window.location.origin}/invite/abc123`);
@@ -124,6 +129,8 @@ export default function SettingsIndex({
     defaultInvitationMessage,
     securityInvitationMessage,
     defaultSecurityInvitationMessage,
+    reminderDaysBeforeDue,
+    defaultReminderDaysBeforeDue,
 }: Props) {
     const [message, setMessage] = useState(invitationMessage ?? defaultInvitationMessage);
     const [submitting, setSubmitting] = useState(false);
@@ -181,6 +188,29 @@ export default function SettingsIndex({
         setSecurityMessage(defaultSecurityInvitationMessage);
     }
 
+    const [reminderDays, setReminderDays] = useState(
+        String(reminderDaysBeforeDue ?? defaultReminderDaysBeforeDue),
+    );
+    const [reminderSubmitting, setReminderSubmitting] = useState(false);
+    const [reminderSaved, setReminderSaved] = useState(false);
+
+    function saveReminderSettings() {
+        setReminderSubmitting(true);
+        setReminderSaved(false);
+
+        router.put(
+            '/admin/settings/reminder',
+            { reminder_days_before_due: reminderDays },
+            {
+                onFinish: () => setReminderSubmitting(false),
+                onSuccess: () => {
+                    setReminderSaved(true);
+                    setTimeout(() => setReminderSaved(false), 2500);
+                },
+            },
+        );
+    }
+
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-[2rem] bg-[color:var(--color-bg)] p-4 sm:p-6 lg:p-8">
             <Head title="Pengaturan" />
@@ -198,6 +228,7 @@ export default function SettingsIndex({
                 <TabsList>
                     <TabsTrigger value="template-pesan-wa">Template Pesan Warga</TabsTrigger>
                     <TabsTrigger value="template-pesan-security">Template Pesan Security</TabsTrigger>
+                    <TabsTrigger value="pengingat-tagihan">Pengingat Tagihan</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="template-pesan-wa" className="flex flex-col gap-4">
@@ -247,6 +278,35 @@ export default function SettingsIndex({
                         placeholders={SECURITY_PLACEHOLDERS}
                         preview={renderSecurityPreview(securityMessage)}
                     />
+                </TabsContent>
+
+                <TabsContent value="pengingat-tagihan" className="flex flex-col gap-4">
+                    <p className="max-w-2xl text-sm leading-relaxed text-[color:var(--color-ink)]/55">
+                        Pengingat tagihan dikirim lewat WhatsApp sejumlah hari sebelum tanggal jatuh tempo, untuk
+                        semua tagihan di area ini.
+                    </p>
+
+                    <div className="flex max-w-xs flex-col gap-2 rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-6 shadow-elevated">
+                        <label className="text-sm font-medium text-[color:var(--color-ink)]" htmlFor="reminder-days">
+                            Kirim pengingat (hari sebelum jatuh tempo)
+                        </label>
+                        <Input
+                            id="reminder-days"
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={reminderDays}
+                            onChange={(e) => setReminderDays(e.target.value)}
+                        />
+                        <Button
+                            className="mt-2"
+                            disabled={reminderSubmitting}
+                            onClick={saveReminderSettings}
+                        >
+                            {reminderSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {reminderSaved ? 'Tersimpan' : 'Simpan perubahan'}
+                        </Button>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>

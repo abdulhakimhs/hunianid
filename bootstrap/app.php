@@ -22,6 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Requires `php artisan schedule:run` to actually be invoked once a minute —
         // see the `scheduler` service in docker-compose.yml.
         $schedule->command('invites:send-scheduled')->everyMinute()->withoutOverlapping();
+
+        // No queue worker runs in this project, so recurring invoice generation and
+        // reminders run synchronously inside these scheduled commands.
+        $schedule->command('invoices:generate-recurring')->dailyAt('01:00')->withoutOverlapping();
+        $schedule->command('invoices:flip-overdue')->dailyAt('01:05')->withoutOverlapping();
+        $schedule->command('invoices:send-reminders')->dailyAt('08:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Nginx and any HTTPS-terminating proxy in front of it (cloudflared tunnel,

@@ -80,4 +80,14 @@ class AreaMember extends Model
     {
         return $this->hasMany(Invite::class)->where('type', 'security')->latest();
     }
+
+    /**
+     * Full log of staff-claim invite attempts for this membership, newest first.
+     *
+     * @return HasMany<Invite, $this>
+     */
+    public function staffInvites(): HasMany
+    {
+        return $this->hasMany(Invite::class)->where('type', 'staff')->latest();
+    }
 }

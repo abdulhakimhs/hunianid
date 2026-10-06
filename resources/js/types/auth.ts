@@ -75,6 +75,10 @@ export type AdminAccess = {
     settings: boolean;
     families: boolean;
     security: boolean;
+    invoices: boolean;
+    announcements: boolean;
+    staffManagement: boolean;
+    visitorPasses: boolean;
 };
 
 export type Auth = {
