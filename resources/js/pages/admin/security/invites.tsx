@@ -15,6 +15,7 @@ import {
     X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { DataTablePagination } from '@/components/data-table-pagination';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -148,6 +149,8 @@ export default function SecurityInvitesIndex({ guards, area, securityMessageTemp
     const [bulkSending, setBulkSending] = useState(false);
     const [historyGuard, setHistoryGuard] = useState<SecurityInviteGuard | null>(null);
     const [copiedId, setCopiedId] = useState<number | null>(null);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const stats = useMemo(() => {
         const notInvited = guards.filter((g) => guardStatus(g) === 'not_invited').length;
@@ -175,6 +178,20 @@ export default function SecurityInvitesIndex({ guards, area, securityMessageTemp
 
         return rows;
     }, [guards, query, statusFilter]);
+
+    const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    function handleQueryChange(next: string) {
+        setQuery(next);
+        setPage(1);
+    }
+
+    function handleStatusFilterChange(next: StatusFilter) {
+        setStatusFilter(next);
+        setPage(1);
+    }
 
     const FILTERS: { key: StatusFilter; label: string; count: number }[] = [
         { key: 'all', label: 'Semua', count: stats.total },
@@ -286,7 +303,7 @@ export default function SecurityInvitesIndex({ guards, area, securityMessageTemp
                             <button
                                 key={f.key}
                                 type="button"
-                                onClick={() => setStatusFilter(f.key)}
+                                onClick={() => handleStatusFilterChange(f.key)}
                                 className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
                                     statusFilter === f.key
                                         ? 'bg-(--color-surface) text-(--color-ink) shadow-sm'
@@ -306,7 +323,7 @@ export default function SecurityInvitesIndex({ guards, area, securityMessageTemp
                         <input
                             type="text"
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => handleQueryChange(e.target.value)}
                             placeholder="Cari nama atau nomor WA..."
                             className="w-full rounded-lg border border-(--color-ink)/10 bg-(--color-bg) py-1.5 pr-3 pl-8 text-sm text-(--color-ink) outline-none placeholder:text-(--color-ink)/40 focus:border-(--color-sky)/50 focus:ring-2 focus:ring-(--color-sky)/15"
                         />
@@ -368,7 +385,7 @@ export default function SecurityInvitesIndex({ guards, area, securityMessageTemp
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filtered.map((g) => {
+                        {paginated.map((g) => {
                             const lastLog = g.invites[0] ?? null;
 
                             return (
@@ -478,6 +495,8 @@ export default function SecurityInvitesIndex({ guards, area, securityMessageTemp
                         </p>
                     </div>
                 )}
+
+                <DataTablePagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
             </section>
 
             <Dialog

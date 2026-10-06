@@ -13,13 +13,14 @@ type Props = {
     areaName?: string | null;
     isUnclaimed?: boolean;
     isTenantInvite?: boolean;
+    name?: string | null;
     phone?: string | null;
     unit?: string | null;
 };
 
-export default function InviteShow({ valid, code, complexName, areaName, isUnclaimed, isTenantInvite, phone, unit }: Props) {
+export default function InviteShow({ valid, code, complexName, areaName, isUnclaimed, isTenantInvite, name, phone, unit }: Props) {
     const { data, setData, post, processing, errors } = useForm({
-        name: '',
+        name: name ?? '',
         email: '',
         password: '',
         phone: phone ?? '',

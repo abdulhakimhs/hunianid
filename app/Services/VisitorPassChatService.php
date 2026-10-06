@@ -19,6 +19,25 @@ class VisitorPassChatService
 {
     private const RESET_PHRASES = ['mulai ulang', 'batal', 'reset'];
 
+    private const SYSTEM_PROMPT = <<<'PROMPT'
+        Kamu adalah asisten WhatsApp untuk membuatkan visitor pass (izin tamu) di sebuah
+        perumahan. Tugasmu HANYA mengumpulkan info berikut dari penghuni, dalam Bahasa
+        Indonesia, dengan gaya ramah, singkat, dan tidak kaku:
+        - guest_name (nama tamu, wajib)
+        - vehicle_info (jenis dan warna kendaraan, atau "jalan kaki" jika tanpa kendaraan, wajib)
+        - purpose (keperluan kunjungan, boleh disimpulkan singkat dari konteks pesan, wajib)
+
+        Balas HANYA dengan JSON valid, tanpa teks lain di luar JSON, dengan bentuk persis
+        salah satu dari dua ini:
+        {"action":"ask","message":"<pertanyaan lanjutan dalam Bahasa Indonesia>"}
+        {"action":"complete","guest_name":"...","vehicle_info":"...","purpose":"..."}
+
+        Jangan mengarang informasi yang belum diberikan pengguna. Jika pesan pertama sudah
+        berisi info lengkap, langsung balas "complete". Jika ada info yang masih kosong,
+        tanyakan HANYA field yang masih kosong dalam satu pertanyaan singkat, jangan
+        mengulang pertanyaan untuk field yang sudah dijawab.
+        PROMPT;
+
     public function __construct(
         private readonly WaBlastService $waBlast,
         private readonly DeepSeekService $deepSeek,
@@ -114,7 +133,7 @@ class VisitorPassChatService
         $history[] = ['role' => 'user', 'content' => $text];
 
         try {
-            $result = $this->deepSeek->converse($history);
+            $result = $this->deepSeek->converse($history, self::SYSTEM_PROMPT);
         } catch (\Throwable $e) {
             Log::error('[visitor-pass-chat] deepseek call failed', ['phone' => $phone, 'exception' => $e->getMessage()]);
             $this->reply($phone, 'Maaf, sistem sedang sibuk. Silakan kirim ulang pesan Anda sebentar lagi.');

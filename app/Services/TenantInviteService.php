@@ -13,14 +13,15 @@ class TenantInviteService
 {
     public function __construct(private readonly WaBlastService $waBlast) {}
 
-    public function create(Area $area, User $creator, int $unitId, string $phone, ?Carbon $scheduledAt): Invite
+    public function create(Area $area, User $creator, int $unitId, string $phone, ?string $name, ?Carbon $scheduledAt): Invite
     {
-        $invite = DB::transaction(function () use ($area, $creator, $unitId, $phone, $scheduledAt) {
+        $invite = DB::transaction(function () use ($area, $creator, $unitId, $phone, $name, $scheduledAt) {
             return Invite::create([
                 'area_id' => $area->id,
                 'unit_id' => $unitId,
                 'created_by' => $creator->id,
                 'code' => Str::random(32),
+                'name' => $name,
                 'phone' => $phone,
                 'status' => 'active',
                 'send_status' => 'pending',
@@ -44,6 +45,7 @@ class TenantInviteService
         $complexName = $invite->area->complex->name;
 
         $message = strtr($invite->area->invitationMessageTemplate(), [
+            '{nama}' => $invite->name ?: 'Warga',
             '{komplek}' => $complexName,
             '{unit}' => $unitLabel,
             '{link}' => $link,

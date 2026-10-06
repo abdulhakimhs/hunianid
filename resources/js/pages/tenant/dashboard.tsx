@@ -11,23 +11,37 @@ import {
 import PageHeader from '@/components/shared/page-header';
 import TenantBottomNav from '@/components/tenant/bottom-nav';
 
-// Dummy data — swap for real props from GET /tenant once the backend
-// endpoint exists.
+function formatCurrency(amount: number) {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(amount);
+}
 
-const dummyResident = {
-    name: 'Dewi Lestari',
-    unit: 'Blok B-08',
+function formatDate(date: string | null) {
+    if (!date) {
+        return '-';
+    }
+
+    return new Date(date).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+}
+
+type Props = {
+    resident: {
+        name: string;
+        unit: string | null;
+    };
+    nextBill: {
+        amount: number;
+        dueDate: string | null;
+    } | null;
+    isFirstTimeTenant: boolean;
 };
-
-const dummyBill = {
-    amount: 'Rp 850.000',
-    dueDate: '20 Sep 2026',
-};
-
-// Dummy — swap for a real check like "user has zero bills, zero tickets,
-// and zero visitor passes ever created" once the backend exists. Toggle
-// this to false locally to preview the returning-tenant view.
-const isFirstTimeTenant = true;
 
 type Tile = {
     key: string;
@@ -63,7 +77,7 @@ const tiles: Tile[] = [
     // as a fourth tile once that feature is ready.
 ];
 
-export default function TenantDashboard() {
+export default function TenantDashboard({ resident, nextBill, isFirstTimeTenant }: Props) {
     return (
         <>
             <Head title="Beranda" />
@@ -84,13 +98,14 @@ export default function TenantDashboard() {
                         Selamat datang,
                     </p>
                     <p className="text-sm font-semibold text-(--color-ink)">
-                        {dummyResident.name} · {dummyResident.unit}
+                        {resident.name}
+                        {resident.unit ? ` · ${resident.unit}` : ''}
                     </p>
                 </div>
 
                 <div className="flex-1 space-y-6 overflow-y-auto px-5 pt-3 pb-28">
-                    {isFirstTimeTenant ? (
-                        <OnboardingCard name={dummyResident.name} />
+                    {isFirstTimeTenant || !nextBill ? (
+                        <OnboardingCard name={resident.name} />
                     ) : (
                         <Link href="/tenant/bills" className="block">
                             <div className="flex items-center gap-3 rounded-2xl border border-(--color-ink)/8 bg-(--color-surface) px-4 py-3.5">
@@ -99,10 +114,10 @@ export default function TenantDashboard() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium text-(--color-ink)">
-                                        Tagihan {dummyBill.amount}
+                                        Tagihan {formatCurrency(nextBill.amount)}
                                     </p>
                                     <p className="text-xs text-(--color-ink)/45">
-                                        Jatuh tempo {dummyBill.dueDate}
+                                        Jatuh tempo {formatDate(nextBill.dueDate)}
                                     </p>
                                 </div>
                                 <ChevronRight className="h-4 w-4 shrink-0 text-(--color-ink)/30" />
@@ -147,7 +162,7 @@ export default function TenantDashboard() {
                     </span>
                 </Link>
 
-                <TenantBottomNav active="home" unreadCount={2} />
+                <TenantBottomNav active="home" />
             </div>
         </>
     );

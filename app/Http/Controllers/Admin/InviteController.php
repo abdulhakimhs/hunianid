@@ -37,6 +37,7 @@ class InviteController extends Controller
             ->get()
             ->map(fn (Invite $i) => [
                 'id' => $i->id,
+                'name' => $i->name,
                 'phone' => $i->phone,
                 'unit' => trim(($i->unit->block ?? '').' '.$i->unit->unit_number),
                 'status' => $i->status,
@@ -96,6 +97,7 @@ class InviteController extends Controller
 
         $data = $request->validate([
             'unit_id' => ['required', 'integer', Rule::exists('units', 'id')->where('area_id', $area->id)],
+            'name' => ['nullable', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:20'],
             'scheduled_at' => ['nullable', 'date', 'after:now'],
         ]);
@@ -105,6 +107,7 @@ class InviteController extends Controller
             $request->user(),
             (int) $data['unit_id'],
             $data['phone'],
+            $data['name'] ?? null,
             isset($data['scheduled_at']) ? Carbon::parse($data['scheduled_at']) : null,
         );
 
@@ -152,6 +155,7 @@ class InviteController extends Controller
             'isUnclaimed' => $area->status === 'unclaimed',
 
             'isTenantInvite' => $invite->isTenantInvite(),
+            'name' => $invite->name,
             'phone' => $invite->phone,
             'unit' => $invite->unit ? trim(($invite->unit->block ?? '').' '.$invite->unit->unit_number) : null,
         ]);
@@ -193,6 +197,7 @@ class InviteController extends Controller
                 'email' => $data['email'],
                 'phone' => $data['phone'] ?? null,
                 'password' => Hash::make($data['password']),
+                'profile_completed_at' => now(),
             ]);
         }
 

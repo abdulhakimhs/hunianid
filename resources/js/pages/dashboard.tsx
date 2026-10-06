@@ -6,6 +6,7 @@ import {
     CircleDollarSign,
     Clock,
     Home,
+    MessageCircle,
     Send,
     ShieldCheck,
     UserCircle,
@@ -22,7 +23,8 @@ type Guidance =
               | 'penghuni_unclaimed_and_pending_unit'
               | 'penghuni_pending_approval'
               | 'penghuni_pending_unit'
-              | 'penghuni_pending_both';
+              | 'penghuni_pending_both'
+              | 'penghuni_active';
           areaId: number;
           areaName: string;
       }
@@ -138,6 +140,34 @@ return null;
                     <p className="text-sm text-[color:var(--color-ink,#142033)]">
                         Menunggu konfirmasi dari penghuni yang sudah terdaftar di rumah ini sebelum akses Anda aktif.
                     </p>
+                </section>
+            )}
+
+            {guidance.type === 'penghuni_active' && (
+                <section className="flex items-start gap-3 rounded-[1.5rem] border border-[color:var(--color-sky,#2FC2E8)]/25 bg-[color:var(--color-sky,#2FC2E8)]/10 p-5 shadow-elevated">
+                    <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-sky-deep,#1aa3c9)]" />
+                    <div className="flex-1">
+                        <h2 className="font-display text-lg font-semibold text-[color:var(--color-ink,#142033)]">
+                            Akun Anda sudah aktif
+                        </h2>
+                        <p className="mt-1 text-sm text-[color:var(--color-ink,#142033)]/70">
+                            Anda terdaftar sebagai warga {guidance.areaName}. Selain lewat aplikasi ini, Anda juga bisa
+                            mengobrol langsung dengan asisten WhatsApp kami untuk:
+                        </p>
+                        <ul className="mt-3 space-y-1.5 text-sm text-[color:var(--color-ink,#142033)]/70">
+                            <li className="flex items-start gap-2">
+                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)]" />
+                                Membuat izin tamu hanya dengan mengetik nama tamu, kendaraan, dan tujuan kunjungan.
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)]" />
+                                Menambah atau melihat anggota keluarga yang terdaftar di rumah Anda.
+                            </li>
+                        </ul>
+                        <p className="mt-3 text-sm text-[color:var(--color-ink,#142033)]/70">
+                            Cukup kirim pesan ke WhatsApp yang terdaftar untuk akun Anda — tidak perlu membuka aplikasi.
+                        </p>
+                    </div>
                 </section>
             )}
         </div>

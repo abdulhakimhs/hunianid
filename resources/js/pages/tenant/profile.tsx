@@ -1,37 +1,48 @@
-import { Head } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Bell,
     Building2,
+    Check,
     ChevronRight,
     HelpCircle,
     KeyRound,
     Loader2,
     LogOut,
+    MapPin,
 } from 'lucide-react';
 import { useState } from 'react';
 import PageHeader from '@/components/shared/page-header';
 import TenantBottomNav from '@/components/tenant/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { postJson } from '@/lib/api';
+import { logout } from '@/routes';
+import type { Membership } from '@/types';
 
-const dummyResident = {
-    name: 'Dewi Lestari',
-    unit: 'Blok B-08',
-    phone: '0812-3456-7890',
+type Props = {
+    resident: {
+        name: string;
+        unit: string | null;
+        phone: string | null;
+    };
 };
 
-export default function TenantProfile() {
+export default function TenantProfile({ resident }: Props) {
+    const { auth } = usePage().props;
     const [loggingOut, setLoggingOut] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [switchOpen, setSwitchOpen] = useState(false);
     const push = usePushNotifications();
+
+    // Every area this resident is an active member of — a person can be
+    // registered in more than one area (different unit/complex), so they
+    // switch between them here, same idea as the security guard's "Ganti
+    // Kompleks" switcher.
+    const residentMemberships = auth.memberships.filter((m) => m.roleKey === 'resident');
 
     function confirmLogout() {
         setLoggingOut(true);
-
-        // Dummy delay — swap for a real POST /logout call once wired up.
-        setTimeout(() => {
-            window.location.href = '/login-tenant';
-        }, 600);
+        router.post(logout.url(), {}, { onFinish: () => setLoggingOut(false) });
     }
 
     function togglePush() {
@@ -57,15 +68,31 @@ export default function TenantProfile() {
                     </div>
                     <div className="text-center">
                         <p className="text-base font-semibold text-(--color-ink)">
-                            {dummyResident.name}
+                            {resident.name}
                         </p>
                         <p className="text-sm text-(--color-ink)/50">
-                            {dummyResident.unit} · {dummyResident.phone}
+                            {[resident.unit, resident.phone].filter(Boolean).join(' · ')}
                         </p>
                     </div>
                 </div>
 
                 <div className="mx-5 overflow-hidden rounded-2xl border border-(--color-ink)/8">
+                    {residentMemberships.length > 1 && (
+                        <button
+                            type="button"
+                            onClick={() => setSwitchOpen(true)}
+                            className="flex w-full items-center gap-3 border-b border-(--color-ink)/6 px-4 py-3.5 text-left"
+                        >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--color-ink)/5">
+                                <MapPin className="h-4 w-4 text-(--color-ink)/60" />
+                            </div>
+                            <span className="flex-1 text-sm font-medium text-(--color-ink)">
+                                Ganti Area
+                            </span>
+                            <ChevronRight className="h-4 w-4 text-(--color-ink)/30" />
+                        </button>
+                    )}
+
                     <button
                         type="button"
                         className="flex w-full items-center gap-3 border-b border-(--color-ink)/6 px-4 py-3.5 text-left"
@@ -144,6 +171,14 @@ export default function TenantProfile() {
                     onConfirm={confirmLogout}
                 />
             )}
+
+            {switchOpen && (
+                <SwitchAreaSheet
+                    areas={residentMemberships}
+                    currentMembershipId={auth.currentMembershipId}
+                    onClose={() => setSwitchOpen(false)}
+                />
+            )}
         </>
     );
 }
@@ -180,6 +215,95 @@ function PushToggle({
                 }`}
             />
         </button>
+    );
+}
+
+function SwitchAreaSheet({
+    areas,
+    currentMembershipId,
+    onClose,
+}: {
+    areas: Membership[];
+    currentMembershipId: number | null;
+    onClose: () => void;
+}) {
+    const [switching, setSwitching] = useState<number | null>(null);
+
+    function switchTo(membershipId: number) {
+        if (membershipId === currentMembershipId || switching !== null) {
+            return;
+        }
+
+        setSwitching(membershipId);
+
+        // Hard redirect, not an Inertia visit — the whole point is that the
+        // session's active area changes, so a stale prefetch-cached response
+        // for the area just switched away from must not be served.
+        postJson<{ redirect: string }>('/switch-membership', {
+            membership_id: membershipId,
+        })
+            .then((data) => {
+                window.location.href = data.redirect;
+            })
+            .catch(() => setSwitching(null));
+    }
+
+    return (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50">
+            <div className="w-full max-w-sm rounded-t-3xl bg-(--color-surface) p-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--color-ink)/15" />
+
+                <p className="mb-4 text-center text-base font-semibold text-(--color-ink)">
+                    Ganti Area
+                </p>
+
+                <div className="space-y-1.5">
+                    {areas.map((area) => {
+                        const isActive = area.id === currentMembershipId;
+
+                        return (
+                            <button
+                                key={area.id}
+                                type="button"
+                                disabled={switching !== null}
+                                onClick={() => switchTo(area.id)}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition ${
+                                    isActive
+                                        ? 'bg-(--color-sky)/10'
+                                        : 'hover:bg-(--color-ink)/5'
+                                }`}
+                            >
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--color-ink)/5">
+                                    <Building2 className="h-4 w-4 text-(--color-ink)/60" />
+                                </div>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm font-medium text-(--color-ink)">
+                                        {area.complexName}
+                                    </span>
+                                    <span className="block truncate text-xs text-(--color-ink)/45">
+                                        {area.areaName}
+                                    </span>
+                                </span>
+                                {switching === area.id ? (
+                                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-(--color-ink)/40" />
+                                ) : isActive ? (
+                                    <Check className="h-4 w-4 shrink-0 text-(--color-sky-deep)" />
+                                ) : null}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <Button
+                    variant="outline"
+                    className="mt-5 h-12 w-full"
+                    onClick={onClose}
+                    disabled={switching !== null}
+                >
+                    Batal
+                </Button>
+            </div>
+        </div>
     );
 }
 

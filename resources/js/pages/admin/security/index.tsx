@@ -13,6 +13,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { DataTablePagination } from '@/components/data-table-pagination';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -77,6 +78,8 @@ export default function SecurityIndex({ guards, area }: Props) {
     const [createForm, setCreateForm] = useState({ name: '', phone: '', email: '' });
     const [editForm, setEditForm] = useState({ name: '', email: '', status: 'active' });
     const [submitting, setSubmitting] = useState(false);
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
     const stats = useMemo(() => {
         const active = guards.filter((g) => g.status === 'active').length;
@@ -112,6 +115,20 @@ export default function SecurityIndex({ guards, area }: Props) {
 
         return sortDir === 'asc' ? sorted : sorted.reverse();
     }, [guards, query, statusFilter, sortKey, sortDir]);
+
+    const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const currentPage = Math.min(page, pageCount);
+    const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    function handleQueryChange(next: string) {
+        setQuery(next);
+        setPage(1);
+    }
+
+    function handleStatusFilterChange(next: StatusFilter) {
+        setStatusFilter(next);
+        setPage(1);
+    }
 
     function toggleSort(key: SortKey) {
         if (sortKey === key) {
@@ -209,7 +226,7 @@ export default function SecurityIndex({ guards, area }: Props) {
                             <button
                                 key={f.key}
                                 type="button"
-                                onClick={() => setStatusFilter(f.key)}
+                                onClick={() => handleStatusFilterChange(f.key)}
                                 className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
                                     statusFilter === f.key
                                         ? 'bg-(--color-surface) text-(--color-ink) shadow-sm'
@@ -229,7 +246,7 @@ export default function SecurityIndex({ guards, area }: Props) {
                         <input
                             type="text"
                             value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                            onChange={(e) => handleQueryChange(e.target.value)}
                             placeholder="Cari nama atau nomor WA..."
                             className="w-full rounded-lg border border-(--color-ink)/10 bg-(--color-bg) py-1.5 pr-3 pl-8 text-sm text-(--color-ink) outline-none placeholder:text-(--color-ink)/40 focus:border-(--color-sky)/50 focus:ring-2 focus:ring-(--color-sky)/15"
                         />
@@ -272,7 +289,7 @@ export default function SecurityIndex({ guards, area }: Props) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filtered.map((g) => (
+                        {paginated.map((g) => (
                             <TableRow
                                 key={g.id}
                                 className="hover:bg-(--color-ink)/0.02 border-(--color-ink)/6 transition-colors last:border-0"
@@ -355,6 +372,8 @@ export default function SecurityIndex({ guards, area }: Props) {
                         </p>
                     </div>
                 )}
+
+                <DataTablePagination page={currentPage} pageCount={pageCount} onPageChange={setPage} />
             </section>
 
             <Dialog

@@ -19,6 +19,8 @@ class SettingsController extends Controller
             'defaultInvitationMessage' => Area::DEFAULT_INVITATION_MESSAGE,
             'securityInvitationMessage' => $area->security_invitation_message,
             'defaultSecurityInvitationMessage' => Area::DEFAULT_SECURITY_INVITATION_MESSAGE,
+            'reminderDaysBeforeDue' => $area->reminder_days_before_due,
+            'defaultReminderDaysBeforeDue' => Area::DEFAULT_REMINDER_DAYS_BEFORE_DUE,
         ]);
     }
 
@@ -51,6 +53,25 @@ class SettingsController extends Controller
 
         $area->update([
             'security_invitation_message' => $data['security_invitation_message'] ?: null,
+        ]);
+
+        return redirect()->route('admin.settings.index');
+    }
+
+    /**
+     * PUT /admin/settings/reminder — how many days before due date the WhatsApp
+     * reminder goes out for every invoice/template in this area.
+     */
+    public function updateReminderSettings(Request $request)
+    {
+        $area = $request->attributes->get('adminArea');
+
+        $data = $request->validate([
+            'reminder_days_before_due' => ['nullable', 'integer', 'min:1', 'max:30'],
+        ]);
+
+        $area->update([
+            'reminder_days_before_due' => $data['reminder_days_before_due'] ?? null,
         ]);
 
         return redirect()->route('admin.settings.index');

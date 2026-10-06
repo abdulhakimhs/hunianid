@@ -4,6 +4,7 @@ import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegi
 import Heading from '@/components/heading';
 import PasskeyItem from '@/components/passkey-item';
 import PasskeyRegistration from '@/components/passkey-register';
+import { Card, CardContent } from '@/components/ui/card';
 import type { Passkey } from '@/types/auth';
 
 export type Props = {
@@ -17,9 +18,10 @@ const EmptyState = () => {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
                 <KeyRound className="h-7 w-7 text-muted-foreground" />
             </div>
-            <p className="font-medium">No passkeys yet</p>
+            <p className="font-medium">Belum ada passkey</p>
             <p className="mt-1 text-sm text-muted-foreground">
-                Add a passkey to sign in without a password
+                Tambahkan passkey untuk login tanpa kata sandi (misalnya dengan sidik jari atau
+                Face ID)
             </p>
         </div>
     );
@@ -47,25 +49,29 @@ export default function ManagePasskeys(props: Props) {
         <div className="space-y-6">
             <Heading
                 variant="small"
-                title="Passkeys"
-                description="Manage your passkeys for passwordless sign-in"
+                title="Passkey"
+                description="Login tanpa kata sandi menggunakan sidik jari, Face ID, atau PIN perangkat Anda."
             />
 
-            <div className="overflow-hidden rounded-lg border border-border">
-                {passkeys.length > 0 ? (
-                    passkeys.map((passkey) => (
-                        <PasskeyItem
-                            key={passkey.id}
-                            passkey={passkey}
-                            onDelete={handleDelete}
-                        />
-                    ))
-                ) : (
-                    <EmptyState />
-                )}
-            </div>
+            <Card>
+                <CardContent className="space-y-6 pt-6">
+                    <div className="overflow-hidden rounded-lg border border-border">
+                        {passkeys.length > 0 ? (
+                            passkeys.map((passkey) => (
+                                <PasskeyItem
+                                    key={passkey.id}
+                                    passkey={passkey}
+                                    onDelete={handleDelete}
+                                />
+                            ))
+                        ) : (
+                            <EmptyState />
+                        )}
+                    </div>
 
-            <PasskeyRegistration onSuccess={handleRegisterSuccess} />
+                    <PasskeyRegistration onSuccess={handleRegisterSuccess} />
+                </CardContent>
+            </Card>
         </div>
     );
 }

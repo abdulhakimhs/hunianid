@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'area_id', 'type', 'unit_id', 'area_member_id', 'created_by', 'code', 'phone',
+    'area_id', 'type', 'unit_id', 'name', 'area_member_id', 'created_by', 'code', 'phone',
     'expires_at', 'scheduled_at', 'sent_at', 'status', 'send_status', 'send_error',
 ])]
 class Invite extends Model
@@ -71,5 +71,10 @@ class Invite extends Model
     public function isSecurityInvite(): bool
     {
         return $this->type === 'security';
+    }
+
+    public function isStaffInvite(): bool
+    {
+        return $this->type === 'staff';
     }
 }

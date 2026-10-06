@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
-use App\Services\VisitorPassChatService;
-use Illuminate\Http\Request;
+use App\Services\WablasMessageRouter;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class WablasWebhookController extends Controller
 {
-    public function incoming(Request $request, VisitorPassChatService $service): JsonResponse
+    public function incoming(Request $request, WablasMessageRouter $router): JsonResponse
     {
         $expectedSecret = config('services.wablas.webhook_secret');
 
@@ -24,7 +24,7 @@ class WablasWebhookController extends Controller
             return response()->json(['ok' => false, 'error' => 'missing phone/message'], 422);
         }
 
-        $service->handleIncomingMessage((string) $phone, (string) $text);
+        $router->route((string) $phone, (string) $text);
 
         return response()->json(['ok' => true]);
     }

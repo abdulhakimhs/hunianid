@@ -34,6 +34,7 @@ type Invite = { id: number; code: string; status: string } | null;
 type Unit = { id: number; label: string };
 type TenantInvite = {
     id: number;
+    name: string | null;
     phone: string;
     unit: string;
     status: 'active' | 'expired' | 'revoked' | 'accepted';
@@ -353,6 +354,7 @@ function TenantInvitesPanel({
     invites: TenantInvite[];
     onRevoke: (invite: TenantInvite) => void;
 }) {
+    const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [unitId, setUnitId] = useState('');
     const [scheduleMode, setScheduleMode] = useState<'now' | 'later'>('now');
@@ -380,7 +382,7 @@ function TenantInvitesPanel({
             return invites;
         }
 
-        return invites.filter((inv) => `${inv.phone} ${inv.unit}`.toLowerCase().includes(q));
+        return invites.filter((inv) => `${inv.name ?? ''} ${inv.phone} ${inv.unit}`.toLowerCase().includes(q));
     }, [invites, search]);
 
     const pageCount = Math.max(1, Math.ceil(filteredInvites.length / pageSize));
@@ -419,6 +421,7 @@ function TenantInvitesPanel({
         router.post(
             '/admin/invites/tenant',
             {
+                name: name.trim() || undefined,
                 phone,
                 unit_id: unitId,
                 scheduled_at: scheduleMode === 'later' ? scheduledAt : undefined,
@@ -426,6 +429,7 @@ function TenantInvitesPanel({
             {
                 onFinish: () => setSubmitting(false),
                 onSuccess: () => {
+                    setName('');
                     setPhone('');
                     setUnitId('');
                     setScheduleMode('now');
@@ -444,6 +448,21 @@ function TenantInvitesPanel({
                     <p className="mt-1 text-sm text-[color:var(--color-ink)]/55">
                         Masukkan no. HP dan pilih unitnya — undangan akan langsung aktif begitu mereka mendaftar, tanpa perlu persetujuan.
                     </p>
+                </div>
+
+                <div className="grid gap-2">
+                    <label className="text-sm font-medium text-[color:var(--color-ink)]" htmlFor="tenant-name">
+                        Nama warga <span className="text-[color:var(--color-ink)]/40">(opsional)</span>
+                    </label>
+                    <input
+                        id="tenant-name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Nama lengkap"
+                        className="rounded-xl border border-[color:var(--color-ink)]/12 bg-[color:var(--color-bg)] px-3.5 py-2 text-sm text-[color:var(--color-ink)] outline-none placeholder:text-[color:var(--color-ink)]/40 focus:border-[color:var(--color-sky)]/50 focus:ring-2 focus:ring-[color:var(--color-sky)]/20"
+                    />
+                    {errors.name && <p className="text-sm text-[color:var(--color-coral)]">{errors.name}</p>}
                 </div>
 
                 <div className="grid gap-2">
@@ -534,7 +553,7 @@ function TenantInvitesPanel({
                         <input
                             value={search}
                             onChange={(e) => handleSearchChange(e.target.value)}
-                            placeholder="Cari no. HP atau unit..."
+                            placeholder="Cari nama, no. HP, atau unit..."
                             className="w-full rounded-xl border border-[color:var(--color-ink)]/12 bg-[color:var(--color-bg)] py-2 pr-3 pl-9 text-sm text-[color:var(--color-ink)] outline-none placeholder:text-[color:var(--color-ink)]/40 focus:border-[color:var(--color-sky)]/50 focus:ring-2 focus:ring-[color:var(--color-sky)]/20"
                         />
                     </div>
@@ -543,7 +562,8 @@ function TenantInvitesPanel({
                 <Table>
                     <TableHeader>
                         <TableRow className="border-[color:var(--color-ink)]/8 hover:bg-transparent">
-                            <TableHead className="h-8 pl-5 text-[11px] font-medium text-[color:var(--color-ink)]/40">No. HP</TableHead>
+                            <TableHead className="h-8 pl-5 text-[11px] font-medium text-[color:var(--color-ink)]/40">Nama</TableHead>
+                            <TableHead className="h-8 text-[11px] font-medium text-[color:var(--color-ink)]/40">No. HP</TableHead>
                             <TableHead className="h-8 text-[11px] font-medium text-[color:var(--color-ink)]/40">Unit</TableHead>
                             <TableHead className="h-8 text-[11px] font-medium text-[color:var(--color-ink)]/40">Status</TableHead>
                             <TableHead className="h-8 text-[11px] font-medium text-[color:var(--color-ink)]/40">Jadwal / Terkirim</TableHead>
@@ -553,7 +573,8 @@ function TenantInvitesPanel({
                     <TableBody>
                         {paginatedInvites.map((inv) => (
                             <TableRow key={inv.id} className="border-[color:var(--color-ink)]/6 last:border-0">
-                                <TableCell className="py-2.5 pl-5 text-sm font-medium text-[color:var(--color-ink)]">{inv.phone}</TableCell>
+                                <TableCell className="py-2.5 pl-5 text-sm font-medium text-[color:var(--color-ink)]">{inv.name || '—'}</TableCell>
+                                <TableCell className="py-2.5 text-sm text-[color:var(--color-ink)]/60">{inv.phone}</TableCell>
                                 <TableCell className="py-2.5 text-sm text-[color:var(--color-ink)]/60">{inv.unit}</TableCell>
                                 <TableCell className="py-2.5">
                                     <StatusBadge invite={inv} />
