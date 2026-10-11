@@ -8,6 +8,7 @@ use App\Models\InvoiceTemplate;
 use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -71,19 +72,31 @@ class InvoiceService
 
     private function create(Area $area, Unit $unit, User $tenant, array $attrs, ?InvoiceTemplate $template = null): Invoice
     {
-        return Invoice::create([
-            'area_id' => $area->id,
-            'unit_id' => $unit->id,
-            'user_id' => $tenant->id,
-            'invoice_template_id' => $template?->id,
-            'invoice_number' => $this->generateInvoiceNumber($area),
-            'invoice_date' => Carbon::today(),
-            'due_date' => $attrs['due_date'] ?? null,
-            'amount' => $attrs['amount'],
-            'status' => 'unpaid',
-            'memo' => $attrs['memo'] ?? null,
-            'invoice_category_id' => $attrs['invoice_category_id'],
-        ]);
+        $maxAttempts = 5;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                return Invoice::create([
+                    'area_id' => $area->id,
+                    'unit_id' => $unit->id,
+                    'user_id' => $tenant->id,
+                    'invoice_template_id' => $template?->id,
+                    'invoice_number' => $this->generateInvoiceNumber($area),
+                    'invoice_date' => Carbon::today(),
+                    'due_date' => $attrs['due_date'] ?? null,
+                    'amount' => $attrs['amount'],
+                    'status' => 'unpaid',
+                    'memo' => $attrs['memo'] ?? null,
+                    'invoice_category_id' => $attrs['invoice_category_id'],
+                ]);
+            } catch (QueryException $e) {
+                if ((int) ($e->errorInfo[1] ?? 0) !== 1062 || $attempt === $maxAttempts) {
+                    throw $e;
+                }
+            }
+        }
+
+        throw new \RuntimeException('Failed to generate a unique invoice number after '.$maxAttempts.' attempts.');
     }
 
     public function generateInvoiceNumber(Area $area): string
