@@ -14,8 +14,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
     ->withSchedule(function (Schedule $schedule): void {
@@ -36,6 +36,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // browsers block them as mixed content on an https:// page.
         $middleware->trustProxies(at: '*');
 
+        $middleware->redirectGuestsTo(fn(Request $request) => $request->is('security', 'security/*')
+            ? route('login-security')
+            : route('login'));
+
         $middleware->alias(['admin.role' => EnsureAdminRole::class]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
@@ -52,7 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn(Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
         // Renders a branded error page instead of Laravel's default view, for both hard

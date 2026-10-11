@@ -51,7 +51,7 @@ class SecurityScanTest extends TestCase
 
     public function test_unauthenticated_guest_cannot_access_security_pages(): void
     {
-        $this->get('/security')->assertRedirect('/login');
+        $this->get('/security')->assertRedirect('/login-security');
     }
 
     public function test_non_security_role_is_forbidden(): void
@@ -79,7 +79,7 @@ class SecurityScanTest extends TestCase
         $this->actingAs($guard)
             ->get('/security')
             ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('security/dashboard')
+            ->assertInertia(fn($page) => $page->component('security/dashboard')
                 ->where('stats.scansToday', 1));
     }
 
