@@ -7,7 +7,9 @@ use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipSwitchController;
 use App\Http\Controllers\VisitorPassController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::inertia('/', 'landing')->name('home');
 
@@ -36,7 +38,13 @@ Route::post('login/phone/request', [PhoneLoginController::class, 'request'])->mi
 Route::post('login/phone/verify', [PhoneLoginController::class, 'verify'])->middleware('throttle:otp-verify')->name('login.phone.verify');
 Route::post('login/phone/password', [PhoneLoginController::class, 'loginWithPassword'])->middleware('throttle:otp-verify')->name('login.phone.password');
 
-Route::inertia('login-security', 'auth/login-security')->name('login-security');
+Route::get('login-security', function (Request $request) {
+    if ($request->user()) {
+        return redirect()->route('dashboard');
+    }
+
+    return Inertia::render('auth/login-security');
+})->name('login-security');
 require __DIR__ . '/settings.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/webhooks.php';
