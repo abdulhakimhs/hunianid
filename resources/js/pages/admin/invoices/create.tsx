@@ -51,7 +51,7 @@ type TenantRow = {
 export default function InvoicesCreate({ units, categories }: Props) {
     const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>([]);
     const [amount, setAmount] = useState('');
-    const [categoryId, setCategoryId] = useState<string>(categories[0] ? String(categories[0].id) : '');
+    const [categoryId, setCategoryId] = useState<string>('');
     const [memo, setMemo] = useState('');
     const [dueDate, setDueDate] = useState('');
     const [saveAsTemplate, setSaveAsTemplate] = useState(false);
@@ -243,7 +243,7 @@ export default function InvoicesCreate({ units, categories }: Props) {
                         ) : (
                             <Select value={categoryId} onValueChange={selectCategory}>
                                 <SelectTrigger className="w-full">
-                                    <SelectValue />
+                                    <SelectValue placeholder="Pilih kategori" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {categories.map((c) => (
