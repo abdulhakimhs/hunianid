@@ -169,10 +169,6 @@ export default function InvoicesCreate({ units, categories }: Props) {
                         </div>
                     </div>
 
-                    {errors.tenant_ids && (
-                        <p className="px-4 pt-3 text-sm text-(--color-coral)">{errors.tenant_ids}</p>
-                    )}
-
                     <Table className="w-full table-fixed">
                         <TableHeader>
                             <TableRow className="border-(--color-ink)/8 hover:bg-transparent">
