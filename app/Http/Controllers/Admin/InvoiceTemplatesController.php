@@ -58,11 +58,16 @@ class InvoiceTemplatesController extends Controller
         $data = $request->validate([
             'title' => ['sometimes', 'string', 'max:255'],
             'amount' => ['sometimes', 'numeric', 'min:1'],
+            'invoice_category_id' => ['sometimes', Rule::exists('invoice_categories', 'id')->where('area_id', $area->id)],
             'memo' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'day_of_month' => ['sometimes', 'integer', 'min:1', 'max:28'],
             'due_in_days' => ['sometimes', 'integer', 'min:1', 'max:60'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
+
+        if (isset($data['day_of_month']) && $data['day_of_month'] !== $template->day_of_month) {
+            $data['next_run_date'] = $this->nextRunDate($data['day_of_month']);
+        }
 
         $template->update($data);
 

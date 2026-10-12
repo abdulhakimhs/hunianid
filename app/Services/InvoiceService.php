@@ -8,8 +8,10 @@ use App\Models\InvoiceTemplate;
 use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class InvoiceService
 {
@@ -32,6 +34,8 @@ class InvoiceService
             $tenants = User::whereIn('id', $tenantUserIds)
                 ->with(['units' => fn ($q) => $q->wherePivot('status', 'active')->where('area_id', $area->id)])
                 ->get();
+
+            $this->assertNoDuplicatesForPeriod($area, $tenants, $attrs['invoice_category_id']);
 
             return $tenants->map(function (User $tenant) use ($area, $attrs) {
                 $unit = $tenant->units->first();
@@ -69,21 +73,64 @@ class InvoiceService
         });
     }
 
+    /**
+     * Block billing the same tenant twice for the same category within the same
+     * calendar month (the "period" for a manually-created invoice is the month it's
+     * created in, since there's no period picker on the create form).
+     *
+     * @param  Collection<int, User>  $tenants
+     */
+    private function assertNoDuplicatesForPeriod(Area $area, Collection $tenants, int $invoiceCategoryId): void
+    {
+        $today = Carbon::today();
+
+        $duplicateTenantIds = Invoice::where('area_id', $area->id)
+            ->where('invoice_category_id', $invoiceCategoryId)
+            ->whereIn('user_id', $tenants->pluck('id'))
+            ->whereIn('status', ['unpaid', 'overdue', 'paid'])
+            ->whereYear('invoice_date', $today->year)
+            ->whereMonth('invoice_date', $today->month)
+            ->pluck('user_id')
+            ->unique();
+
+        if ($duplicateTenantIds->isEmpty()) {
+            return;
+        }
+
+        $names = $tenants->whereIn('id', $duplicateTenantIds)->pluck('name')->implode(', ');
+
+        throw ValidationException::withMessages([
+            'tenant_ids' => "Sudah ada tagihan dengan kategori ini bulan ini untuk: {$names}.",
+        ]);
+    }
+
     private function create(Area $area, Unit $unit, User $tenant, array $attrs, ?InvoiceTemplate $template = null): Invoice
     {
-        return Invoice::create([
-            'area_id' => $area->id,
-            'unit_id' => $unit->id,
-            'user_id' => $tenant->id,
-            'invoice_template_id' => $template?->id,
-            'invoice_number' => $this->generateInvoiceNumber($area),
-            'invoice_date' => Carbon::today(),
-            'due_date' => $attrs['due_date'] ?? null,
-            'amount' => $attrs['amount'],
-            'status' => 'unpaid',
-            'memo' => $attrs['memo'] ?? null,
-            'invoice_category_id' => $attrs['invoice_category_id'],
-        ]);
+        $maxAttempts = 5;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                return Invoice::create([
+                    'area_id' => $area->id,
+                    'unit_id' => $unit->id,
+                    'user_id' => $tenant->id,
+                    'invoice_template_id' => $template?->id,
+                    'invoice_number' => $this->generateInvoiceNumber($area),
+                    'invoice_date' => Carbon::today(),
+                    'due_date' => $attrs['due_date'] ?? null,
+                    'amount' => $attrs['amount'],
+                    'status' => 'unpaid',
+                    'memo' => $attrs['memo'] ?? null,
+                    'invoice_category_id' => $attrs['invoice_category_id'],
+                ]);
+            } catch (QueryException $e) {
+                if ((int) ($e->errorInfo[1] ?? 0) !== 1062 || $attempt === $maxAttempts) {
+                    throw $e;
+                }
+            }
+        }
+
+        throw new \RuntimeException('Failed to generate a unique invoice number after '.$maxAttempts.' attempts.');
     }
 
     public function generateInvoiceNumber(Area $area): string

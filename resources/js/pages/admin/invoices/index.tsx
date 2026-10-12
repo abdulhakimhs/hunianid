@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Ban, CircleCheck, ListFilter, Loader2, Plus, Repeat, Search, Trash2, X } from 'lucide-react';
+import { Ban, CircleCheck, ListFilter, Loader2, Pencil, Plus, Repeat, Search, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { Button } from '@/components/ui/button';
@@ -166,6 +166,17 @@ export default function InvoicesIndex({ invoices, templates, categories, reminde
     });
     const [templateSubmitting, setTemplateSubmitting] = useState(false);
     const [deletingTemplate, setDeletingTemplate] = useState<TemplateRow | null>(null);
+    const [editingTemplate, setEditingTemplate] = useState<TemplateRow | null>(null);
+    const [editTemplateForm, setEditTemplateForm] = useState({
+        title: '',
+        amount: '',
+        invoice_category_id: '',
+        memo: '',
+        day_of_month: '1',
+        due_in_days: '14',
+    });
+    const [editTemplateSubmitting, setEditTemplateSubmitting] = useState(false);
+    const [markingPaidId, setMarkingPaidId] = useState<number | null>(null);
     const [cancellingInvoice, setCancellingInvoice] = useState<InvoiceRow | null>(null);
     const [cancelling, setCancelling] = useState(false);
     const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
@@ -250,7 +261,14 @@ export default function InvoicesIndex({ invoices, templates, categories, reminde
     }
 
     function markPaid(invoice: InvoiceRow) {
-        router.post(`/admin/invoices/${invoice.id}/mark-paid`, {});
+        setMarkingPaidId(invoice.id);
+        router.post(
+            `/admin/invoices/${invoice.id}/mark-paid`,
+            {},
+            {
+                onFinish: () => setMarkingPaidId(null),
+            },
+        );
     }
 
     function confirmCancelInvoice() {
@@ -332,6 +350,38 @@ export default function InvoicesIndex({ invoices, templates, categories, reminde
 
     function toggleTemplateActive(template: TemplateRow) {
         router.put(`/admin/invoice-templates/${template.id}`, { is_active: !template.isActive });
+    }
+
+    function openEditTemplate(template: TemplateRow) {
+        setEditingTemplate(template);
+        setEditTemplateForm({
+            title: template.title,
+            amount: String(template.amount),
+            invoice_category_id: String(template.invoiceCategory.id),
+            memo: template.memo ?? '',
+            day_of_month: String(template.dayOfMonth),
+            due_in_days: String(template.dueInDays),
+        });
+    }
+
+    function selectEditTemplateCategory(id: string) {
+        setEditTemplateForm((prev) => ({ ...prev, invoice_category_id: id }));
+    }
+
+    function submitEditTemplate() {
+        if (!editingTemplate) {
+            return;
+        }
+
+        setEditTemplateSubmitting(true);
+        router.put(
+            `/admin/invoice-templates/${editingTemplate.id}`,
+            editTemplateForm,
+            {
+                onSuccess: () => setEditingTemplate(null),
+                onFinish: () => setEditTemplateSubmitting(false),
+            },
+        );
     }
 
     function confirmDeleteTemplate() {
@@ -511,15 +561,21 @@ return;
                                                 <Button
                                                     size="sm"
                                                     className="h-8 gap-1.5 rounded-full bg-(--color-mint) px-3 text-white shadow-sm hover:bg-(--color-mint-deep)"
+                                                    disabled={markingPaidId === invoice.id}
                                                     onClick={() => markPaid(invoice)}
                                                 >
-                                                    <CircleCheck className="h-3.5 w-3.5" />
+                                                    {markingPaidId === invoice.id ? (
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    ) : (
+                                                        <CircleCheck className="h-3.5 w-3.5" />
+                                                    )}
                                                     Lunas
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     className="h-8 gap-1.5 rounded-full px-3 text-(--color-coral) hover:bg-(--color-coral)/10 hover:text-(--color-coral)"
+                                                    disabled={markingPaidId === invoice.id}
                                                     onClick={() => setCancellingInvoice(invoice)}
                                                 >
                                                     <Ban className="h-3.5 w-3.5" />
@@ -594,6 +650,14 @@ return;
                                     onClick={() => toggleTemplateActive(template)}
                                 >
                                     {template.isActive ? 'Aktif' : 'Nonaktif'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => openEditTemplate(template)}
+                                >
+                                    <Pencil className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -757,6 +821,104 @@ return;
                         >
                             {templateSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                             Buat Template
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit template dialog */}
+            <Dialog open={!!editingTemplate} onOpenChange={(open) => !open && setEditingTemplate(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Template Tagihan Berulang</DialogTitle>
+                        <DialogDescription>
+                            Perubahan hanya berlaku untuk tagihan yang dibuat setelah ini — tagihan yang sudah ada
+                            tidak berubah.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-(--color-ink)">Judul</label>
+                            <Input
+                                value={editTemplateForm.title}
+                                placeholder="Contoh: IPL Perumahan"
+                                onChange={(e) => setEditTemplateForm({ ...editTemplateForm, title: e.target.value })}
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-(--color-ink)">Nominal</label>
+                            <CurrencyInput
+                                value={editTemplateForm.amount}
+                                onValueChange={(v) => setEditTemplateForm({ ...editTemplateForm, amount: v })}
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-(--color-ink)">Kategori</label>
+                            <Select value={editTemplateForm.invoice_category_id} onValueChange={selectEditTemplateCategory}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {categories.map((c) => (
+                                        <SelectItem key={c.id} value={String(c.id)}>
+                                            {c.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <label className="text-sm font-medium text-(--color-ink)">Tanggal dibuat</label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={28}
+                                    value={editTemplateForm.day_of_month}
+                                    onChange={(e) => setEditTemplateForm({ ...editTemplateForm, day_of_month: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <label className="text-sm font-medium text-(--color-ink)">Jatuh tempo (hari)</label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={60}
+                                    value={editTemplateForm.due_in_days}
+                                    onChange={(e) => setEditTemplateForm({ ...editTemplateForm, due_in_days: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-(--color-ink)">Catatan (opsional)</label>
+                            <Textarea
+                                rows={2}
+                                value={editTemplateForm.memo}
+                                onChange={(e) => setEditTemplateForm({ ...editTemplateForm, memo: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditingTemplate(null)} disabled={editTemplateSubmitting}>
+                            Batal
+                        </Button>
+                        <Button
+                            disabled={
+                                !editTemplateForm.title ||
+                                !editTemplateForm.amount ||
+                                !editTemplateForm.invoice_category_id ||
+                                editTemplateSubmitting
+                            }
+                            onClick={submitEditTemplate}
+                        >
+                            {editTemplateSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Simpan Perubahan
                         </Button>
                     </DialogFooter>
                 </DialogContent>
