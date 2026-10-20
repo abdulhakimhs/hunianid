@@ -35,7 +35,10 @@ class MembersController extends Controller
                     'joinedAt' => $m->created_at?->toIso8601String(),
                     'unit' => $unit ? trim(($unit->block ?? '').' '.$unit->unit_number) : null,
                 ];
-            });
+            })
+            // Hired security isn't a resident — only list them if they also live here.
+            ->reject(fn ($m) => $m['role'] === 'security' && $m['unit'] === null)
+            ->values();
 
         return Inertia::render('admin/members/index', [
             'members' => $members,

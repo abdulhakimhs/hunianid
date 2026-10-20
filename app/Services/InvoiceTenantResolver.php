@@ -34,7 +34,7 @@ class InvoiceTenantResolver
     private function resolveAreaAllUnits(Area $area): Collection
     {
         return $area->units()
-            ->with(['residents' => fn ($q) => $q->wherePivot('status', 'active')])
+            ->with(['residents' => fn ($q) => $q->wherePivot('status', 'active')->activeMemberOf($area)])
             ->get()
             ->flatMap(fn (Unit $unit) => $unit->residents->map(fn ($user) => ['user' => $user, 'unit' => $unit]));
     }

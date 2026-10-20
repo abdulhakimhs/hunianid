@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\MembersController;
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\Admin\TicketsController as AdminTicketsController;
 use App\Http\Controllers\Admin\UnitsController;
 use App\Http\Controllers\Admin\VisitorPassesController;
 use App\Http\Controllers\AnnouncementsController as TenantAnnouncementsController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Security\ProfileController as SecurityProfileController
 use App\Http\Controllers\Security\ScanController as SecurityScanController;
 use App\Http\Controllers\TenantDashboardController;
 use App\Http\Controllers\TenantProfileController;
+use App\Http\Controllers\TicketsController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitJoinController;
 use Illuminate\Support\Facades\Route;
@@ -57,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('settings', [SettingsController::class, 'update'])->name('settings.update');
         Route::put('settings/security-message', [SettingsController::class, 'updateSecurityMessage'])->name('settings.security-message.update');
         Route::put('settings/reminder', [SettingsController::class, 'updateReminderSettings'])->name('settings.reminder.update');
+        Route::put('settings/ticket-escalation', [SettingsController::class, 'updateTicketEscalationSettings'])->name('settings.ticket-escalation.update');
 
         // Invoicing touches money and payment status, so it stays out of the broader
         // unclaimed_creator/area_without_admin groups below — only a fully-approved
@@ -67,7 +70,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('invoices/mark-paid-bulk', [InvoicesController::class, 'markPaidBulk'])->name('invoices.mark-paid-bulk');
         Route::post('invoices/cancel-bulk', [InvoicesController::class, 'cancelBulk'])->name('invoices.cancel-bulk');
         Route::post('invoices/{invoice}/mark-paid', [InvoicesController::class, 'markPaid'])->name('invoices.mark-paid');
+        Route::get('invoices/{invoice}/payment-proof', [InvoicesController::class, 'paymentProof'])->name('invoices.payment-proof');
         Route::post('invoices/{invoice}/cancel', [InvoicesController::class, 'cancel'])->name('invoices.cancel');
+
+        Route::get('tickets', [AdminTicketsController::class, 'index'])->name('tickets.index');
+        Route::get('tickets/{ticket}', [AdminTicketsController::class, 'show'])->name('tickets.show');
+        Route::patch('tickets/{ticket}/status', [AdminTicketsController::class, 'updateStatus'])->name('tickets.status');
+        Route::post('tickets/{ticket}/update', [AdminTicketsController::class, 'sendUpdate'])->name('tickets.send-update');
+        Route::patch('tickets/{ticket}/assign', [AdminTicketsController::class, 'assign'])->name('tickets.assign');
+        Route::patch('tickets/{ticket}/priority', [AdminTicketsController::class, 'setPriority'])->name('tickets.priority');
+        Route::post('tickets/{ticket}/notes', [AdminTicketsController::class, 'addNote'])->name('tickets.notes');
+        Route::get('tickets/{ticket}/messages/{message}/photo', [AdminTicketsController::class, 'photo'])->name('tickets.photo');
 
         Route::post('invoice-templates', [InvoiceTemplatesController::class, 'store'])->name('invoice-templates.store');
         Route::put('invoice-templates/{template}', [InvoiceTemplatesController::class, 'update'])->name('invoice-templates.update');
@@ -120,20 +133,25 @@ Route::middleware(['auth', 'admin.role:security'])->prefix('security')->name('se
     Route::get('/scan', [SecurityScanController::class, 'index'])->name('scan');
     Route::post('/scan/verify', [SecurityScanController::class, 'verify'])->name('scan.verify');
     Route::post('/scan/confirm', [SecurityScanController::class, 'confirm'])->name('scan.confirm');
+    Route::post('/scan/exit', [SecurityScanController::class, 'exit'])->name('scan.exit');
     Route::get('/history', [SecurityHistoryController::class, 'index'])->name('history');
     Route::get('/profile', [SecurityProfileController::class, 'edit'])->name('profile');
     Route::patch('/profile', [SecurityProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [SecurityProfileController::class, 'updatePassword'])->name('profile.password.update');
 });
-Route::prefix('tenant')->name('tenant.')->group(function () {
-    Route::get('/', [TenantDashboardController::class, 'index'])->middleware('auth')->name('dashboard');
+Route::prefix('tenant')->name('tenant.')->middleware(['auth', 'pending.approval'])->group(function () {
+    Route::get('/', [TenantDashboardController::class, 'index'])->name('dashboard');
     Route::inertia('/visitor-pass', 'tenant/visitor-pass')->name('visitorpass');
-    Route::get('/bills', [BillsController::class, 'index'])->middleware('auth')->name('bills');
-    Route::get('/unit', [UnitController::class, 'show'])->middleware('auth')->name('unit');
-    Route::get('/family', [FamilyController::class, 'tenantIndex'])->middleware('auth')->name('family');
-    Route::get('/profile', [TenantProfileController::class, 'edit'])->middleware('auth')->name('profile');
-    Route::get('/notifications', [TenantAnnouncementsController::class, 'index'])->middleware('auth')->name('notifications');
+    Route::get('/bills', [BillsController::class, 'index'])->name('bills');
+    Route::get('/bills/{invoice}/payment-proof', [BillsController::class, 'paymentProof'])->name('bills.payment-proof');
+    Route::get('/unit', [UnitController::class, 'show'])->name('unit');
+    Route::get('/family', [FamilyController::class, 'tenantIndex'])->name('family');
+    Route::get('/profile', [TenantProfileController::class, 'edit'])->name('profile');
+    Route::get('/notifications', [TenantAnnouncementsController::class, 'index'])->name('notifications');
     Route::inertia('/panic', 'tenant/panic')->name('panic');
-    Route::inertia('/tickets', 'tenant/tickets/index')->name('tickets');
-    Route::inertia('/tickets/{id}', 'tenant/tickets/show')->name('tickets.show');
+    Route::get('/tickets', [TicketsController::class, 'index'])->name('tickets');
+    Route::post('/tickets', [TicketsController::class, 'store'])->name('tickets.store');
+    Route::get('/tickets/{ticket}', [TicketsController::class, 'show'])->name('tickets.show');
+    Route::patch('/tickets/{ticket}/close', [TicketsController::class, 'close'])->name('tickets.close');
+    Route::get('/tickets/{ticket}/messages/{message}/photo', [TicketsController::class, 'photo'])->name('tickets.photo');
 });

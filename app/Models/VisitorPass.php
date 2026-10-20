@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'area_id', 'unit_id', 'user_id', 'guest_name', 'guest_phone', 'vehicle_info',
     'purpose', 'token', 'status', 'valid_from', 'valid_until', 'source', 'raw_input',
-    'used_at', 'used_by',
+    'used_at', 'used_by', 'exited_at', 'exited_by',
 ])]
 class VisitorPass extends Model
 {
@@ -27,6 +27,7 @@ class VisitorPass extends Model
             'valid_from' => 'datetime',
             'valid_until' => 'datetime',
             'used_at' => 'datetime',
+            'exited_at' => 'datetime',
         ];
     }
 
@@ -48,6 +49,11 @@ class VisitorPass extends Model
     public function usedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'used_by');
+    }
+
+    public function exitedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'exited_by');
     }
 
     public function isExpired(): bool

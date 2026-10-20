@@ -9,8 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
-import { postJson } from '@/lib/api';
-import { membershipSubtitle } from '@/lib/membership';
+import { membershipSubtitle, switchMembership } from '@/lib/membership';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
 import type { Membership, User } from '@/types';
@@ -41,13 +40,7 @@ export function UserMenuContent({ user, memberships, currentMembershipId }: Prop
 
         setSwitching(membershipId);
 
-        // Hard redirect, not an Inertia visit — avoids serving a stale prefetch-cached
-        // response for the area just switched away from.
-        postJson<{ redirect: string }>('/switch-membership', { membership_id: membershipId })
-            .then((data) => {
-                window.location.href = data.redirect;
-            })
-            .catch(() => setSwitching(null));
+        switchMembership(membershipId).catch(() => setSwitching(null));
     }
 
     const handleLogout = () => {

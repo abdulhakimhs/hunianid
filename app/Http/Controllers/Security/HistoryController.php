@@ -27,7 +27,7 @@ class HistoryController extends Controller
                 'time' => ($pass->used_at ?? $pass->created_at)->translatedFormat('H:i'),
                 'date' => ($pass->used_at ?? $pass->created_at)->translatedFormat('d M Y'),
                 'status' => match (true) {
-                    $pass->status === 'used' => 'used',
+                    $pass->status === 'used', $pass->status === 'exited' => 'used',
                     $pass->status === 'cancelled' => 'cancelled',
                     $pass->isExpired() => 'expired',
                     default => 'expired',

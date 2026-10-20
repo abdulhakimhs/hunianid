@@ -35,6 +35,7 @@ createInertiaApp({
     layout: (name) => {
         switch (true) {
             case name === 'landing':
+            case name === 'pending-approval':
             case name.startsWith('errors/'):
                 return null;
             case name.startsWith('auth/'):

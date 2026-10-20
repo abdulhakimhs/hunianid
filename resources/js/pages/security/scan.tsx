@@ -22,7 +22,7 @@ import { postJson } from '@/lib/api';
 
 QrScanner.WORKER_PATH = QrScannerWorkerPath;
 
-type ScanStatus = 'valid' | 'invalid' | 'expired' | 'used';
+type ScanStatus = 'valid' | 'invalid' | 'expired' | 'used' | 'exited';
 
 type VisitorResult = {
     status: ScanStatus;
@@ -30,7 +30,8 @@ type VisitorResult = {
         name: string;
         unit: string;
         purpose: string;
-        validUntil: string;
+        validUntil?: string;
+        enteredAt?: string;
     };
 };
 
@@ -40,6 +41,10 @@ function verifyPass(code: string): Promise<VisitorResult> {
 
 function confirmEntry(code: string): Promise<void> {
     return postJson('/security/scan/confirm', { code });
+}
+
+function confirmExit(code: string): Promise<void> {
+    return postJson('/security/scan/exit', { code });
 }
 
 type Phase = 'scanning' | 'processing' | 'result' | 'camera-error';
@@ -121,6 +126,18 @@ export default function SecurityScan() {
         setConfirming(true);
 
         confirmEntry(scannedCode)
+            .then(() => scanAgain())
+            .finally(() => setConfirming(false));
+    }
+
+    function allowExit() {
+        if (!scannedCode || confirming) {
+            return;
+        }
+
+        setConfirming(true);
+
+        confirmExit(scannedCode)
             .then(() => scanAgain())
             .finally(() => setConfirming(false));
     }
@@ -293,6 +310,7 @@ export default function SecurityScan() {
                         result={result}
                         onScanAgain={scanAgain}
                         onAllowEntry={allowEntry}
+                        onAllowExit={allowExit}
                         confirming={confirming}
                     />
                 )}
@@ -305,11 +323,13 @@ function ResultSheet({
     result,
     onScanAgain,
     onAllowEntry,
+    onAllowExit,
     confirming,
 }: {
     result: VisitorResult;
     onScanAgain: () => void;
     onAllowEntry: () => void;
+    onAllowExit: () => void;
     confirming: boolean;
 }) {
     const config = {
@@ -325,9 +345,15 @@ function ResultSheet({
             title: 'Pass Kedaluwarsa',
         },
         used: {
+            icon: CheckCircle2,
+            iconClass:
+                'text-[color:var(--color-sky-deep)] bg-[color:var(--color-sky)]/15',
+            title: 'Tamu Sedang Di Dalam',
+        },
+        exited: {
             icon: XCircle,
             iconClass: 'text-amber-600 bg-amber-50',
-            title: 'Pass Sudah Digunakan',
+            title: 'Tamu Sudah Keluar',
         },
         invalid: {
             icon: XCircle,
@@ -369,7 +395,7 @@ function ResultSheet({
                         <InfoRow
                             icon={Clock}
                             label="Berlaku hingga"
-                            value={result.visitor.validUntil}
+                            value={result.visitor.validUntil ?? '—'}
                         />
                         <p className="pt-1 text-center text-xs text-(--color-ink)/45">
                             {result.visitor.purpose}
@@ -384,9 +410,33 @@ function ResultSheet({
                     </p>
                 )}
 
-                {result.status === 'used' && (
+                {result.status === 'used' && result.visitor && (
+                    <div className="mt-5 space-y-3 rounded-2xl bg-(--color-ink)/3 p-4">
+                        <InfoRow
+                            icon={User}
+                            label="Nama"
+                            value={result.visitor.name}
+                        />
+                        <InfoRow
+                            icon={User}
+                            label="Unit tujuan"
+                            value={result.visitor.unit}
+                        />
+                        <InfoRow
+                            icon={Clock}
+                            label="Masuk pukul"
+                            value={result.visitor.enteredAt ?? '—'}
+                        />
+                        <p className="pt-1 text-center text-xs text-(--color-ink)/45">
+                            Scan lagi untuk mencatat tamu ini keluar perumahan.
+                        </p>
+                    </div>
+                )}
+
+                {result.status === 'exited' && (
                     <p className="mt-4 text-center text-sm text-(--color-ink)/55">
-                        Pass ini sudah pernah digunakan untuk masuk sebelumnya.
+                        Kunjungan tamu ini sudah selesai — pass sudah tercatat
+                        masuk dan keluar.
                     </p>
                 )}
 
@@ -408,6 +458,18 @@ function ResultSheet({
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             )}
                             Izinkan Masuk
+                        </Button>
+                    )}
+                    {result.status === 'used' && (
+                        <Button
+                            className="h-12 flex-1 bg-(--color-sky-deep) hover:bg-(--color-sky-deep)/90"
+                            onClick={onAllowExit}
+                            disabled={confirming}
+                        >
+                            {confirming && (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
+                            Catat Keluar
                         </Button>
                     )}
                     <Button

@@ -11,6 +11,7 @@ use App\Services\InvoiceNotificationService;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,6 +39,8 @@ class InvoicesController extends Controller
                 'dueDate' => $invoice->due_date?->toDateString(),
                 'amount' => (float) $invoice->amount,
                 'status' => $invoice->status,
+                'paidAt' => $invoice->paid_at?->toDateString(),
+                'hasPaymentProof' => $invoice->payment_proof_path !== null,
                 'memo' => $invoice->memo,
                 'invoiceCategory' => ['id' => $invoice->category->id, 'name' => $invoice->category->name],
                 'tenant' => ['id' => $invoice->user->id, 'name' => $invoice->user->name],
@@ -85,7 +88,7 @@ class InvoicesController extends Controller
         $area = $request->attributes->get('adminArea');
 
         $units = Unit::where('area_id', $area->id)
-            ->with(['residents' => fn ($q) => $q->wherePivot('status', 'active')->wherePivotIn('relation', ['owner', 'tenant'])])
+            ->with(['residents' => fn ($q) => $q->wherePivot('status', 'active')->wherePivotIn('relation', ['owner', 'tenant'])->activeMemberOf($area)])
             ->get()
             ->map(fn (Unit $unit) => [
                 'unitId' => $unit->id,
@@ -176,7 +179,36 @@ class InvoicesController extends Controller
             abort(404);
         }
 
-        $this->invoices->markPaid($invoice, $request->user());
+        $data = $request->validate([
+            'paid_at' => ['required', 'date', 'before_or_equal:'.$this->todayInJakarta()],
+            'payment_proof' => [
+                'required', 'file',
+                'mimes:jpg,jpeg,png,webp',
+                'mimetypes:image/jpeg,image/png,image/webp',
+                'max:5120',
+            ],
+        ], [
+            'payment_proof.required' => __('Bukti bayar wajib diunggah.'),
+            'payment_proof.mimes' => __('Bukti bayar harus berupa JPG, PNG, atau WEBP.'),
+            'payment_proof.mimetypes' => __('Bukti bayar harus berupa JPG, PNG, atau WEBP.'),
+            'payment_proof.max' => __('Ukuran bukti bayar maksimal 5 MB.'),
+            'paid_at.before_or_equal' => __('Tanggal bayar tidak boleh melebihi hari ini.'),
+        ]);
+
+        // Private disk + random hashName(): never publicly reachable, original filename discarded.
+        $path = $request->file('payment_proof')->store("payment-proofs/{$area->id}", 'local');
+
+        try {
+            $marked = $this->invoices->markPaid($invoice, $request->user(), Carbon::parse($data['paid_at']), $path);
+        } catch (\Throwable $e) {
+            Storage::disk('local')->delete($path);
+
+            throw $e;
+        }
+
+        if (! $marked) {
+            Storage::disk('local')->delete($path);
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -193,13 +225,16 @@ class InvoicesController extends Controller
         $data = $request->validate([
             'invoice_ids' => ['required', 'array', 'min:1'],
             'invoice_ids.*' => ['integer'],
+            'paid_at' => ['required', 'date', 'before_or_equal:'.$this->todayInJakarta()],
+        ], [
+            'paid_at.before_or_equal' => __('Tanggal bayar tidak boleh melebihi hari ini.'),
         ]);
 
         $invoices = Invoice::where('area_id', $area->id)
             ->whereIn('id', $data['invoice_ids'])
             ->get();
 
-        $count = $this->invoices->markPaidBulk($invoices, $request->user());
+        $count = $this->invoices->markPaidBulk($invoices, $request->user(), Carbon::parse($data['paid_at']));
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -207,6 +242,17 @@ class InvoicesController extends Controller
         ]);
 
         return redirect()->route('admin.invoices.index');
+    }
+
+    public function paymentProof(Request $request, Invoice $invoice)
+    {
+        $area = $request->attributes->get('adminArea');
+
+        if ($invoice->area_id !== $area->id) {
+            abort(404);
+        }
+
+        return $invoice->paymentProofResponse();
     }
 
     public function cancel(Request $request, Invoice $invoice)
@@ -248,6 +294,15 @@ class InvoicesController extends Controller
         ]);
 
         return redirect()->route('admin.invoices.index');
+    }
+
+    /**
+     * App runs in UTC, but admins pick "today" in WIB — between 00:00 and 07:00 WIB the
+     * UTC date is still yesterday and a plain `before_or_equal:today` would reject it.
+     */
+    private function todayInJakarta(): string
+    {
+        return Carbon::now('Asia/Jakarta')->toDateString();
     }
 
     private function nextRunDate(int $dayOfMonth): Carbon

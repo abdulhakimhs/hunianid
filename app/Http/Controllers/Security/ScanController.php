@@ -29,8 +29,21 @@ class ScanController extends Controller
             return response()->json(['status' => 'invalid']);
         }
 
+        if ($pass->status === 'exited') {
+            return response()->json(['status' => 'exited']);
+        }
+
+        // Already inside — not a terminal state, security can scan again to log the exit.
         if ($pass->status === 'used') {
-            return response()->json(['status' => 'used']);
+            return response()->json([
+                'status' => 'used',
+                'visitor' => [
+                    'name' => $pass->guest_name,
+                    'unit' => trim("{$pass->unit?->block} {$pass->unit?->unit_number}") ?: '—',
+                    'purpose' => $pass->purpose,
+                    'enteredAt' => $pass->used_at?->translatedFormat('d M Y H:i'),
+                ],
+            ]);
         }
 
         if ($pass->isExpired()) {
@@ -64,6 +77,27 @@ class ScanController extends Controller
             'status' => 'used',
             'used_at' => now(),
             'used_by' => $request->user()->id,
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function exit(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string'],
+        ]);
+
+        $pass = $this->findPass($request, $data['code']);
+
+        if (! $pass || $pass->status !== 'used') {
+            return response()->json(['ok' => false], 422);
+        }
+
+        $pass->update([
+            'status' => 'exited',
+            'exited_at' => now(),
+            'exited_by' => $request->user()->id,
         ]);
 
         return response()->json(['ok' => true]);

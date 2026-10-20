@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\AreaMember;
+use App\Models\Invoice;
+use App\Models\Ticket;
 use App\Models\User;
+use App\Models\VisitorPass;
 use App\Services\MembershipContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,10 +35,83 @@ class DashboardController extends Controller
             return redirect()->route('tenant.dashboard');
         }
 
+        $isPengelola = $current && in_array($current->role->key_name, ['superadmin', 'staff'], true);
+
         return Inertia::render('dashboard', [
             'guidance' => $guidance,
             'status' => $request->session()->get('status'),
+            ...($isPengelola ? $this->operationalWidgets($current->area_id) : $this->emptyOperationalWidgets()),
         ]);
+    }
+
+    private function operationalWidgets(int $areaId): array
+    {
+        $openInvoicesQuery = Invoice::where('area_id', $areaId)->whereIn('status', ['unpaid', 'overdue']);
+        $openInvoices = $openInvoicesQuery->clone()
+            ->with(['unit:id,unit_number,block', 'user:id,name'])
+            ->orderBy('due_date')
+            ->limit(5)
+            ->get()
+            ->map(fn (Invoice $invoice) => [
+                'id' => $invoice->id,
+                'invoiceNumber' => $invoice->invoice_number,
+                'dueDate' => $invoice->due_date?->toDateString(),
+                'amount' => (float) $invoice->amount,
+                'status' => $invoice->status,
+                'tenant' => ['id' => $invoice->user->id, 'name' => $invoice->user->name],
+                'unit' => ['id' => $invoice->unit->id, 'label' => trim(($invoice->unit->block ?? '').' '.$invoice->unit->unit_number)],
+            ]);
+
+        $openTicketsQuery = Ticket::where('area_id', $areaId)->where('status', '!=', 'closed');
+        $openTickets = $openTicketsQuery->clone()
+            ->with(['unit:id,unit_number,block', 'user:id,name'])
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn (Ticket $ticket) => [
+                'id' => $ticket->id,
+                'subject' => $ticket->subject,
+                'status' => $ticket->status,
+                'createdAt' => $ticket->created_at->toISOString(),
+                'reporter' => ['id' => $ticket->user->id, 'name' => $ticket->user->name],
+                'unit' => ['id' => $ticket->unit->id, 'label' => trim(($ticket->unit->block ?? '').' '.$ticket->unit->unit_number)],
+            ]);
+
+        $activePassesQuery = VisitorPass::where('area_id', $areaId)
+            ->where('status', 'pending')
+            ->where('valid_until', '>', Carbon::now());
+        $activeVisitorPasses = $activePassesQuery->clone()
+            ->with(['unit:id,unit_number,block'])
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(fn (VisitorPass $pass) => [
+                'id' => $pass->id,
+                'guestName' => $pass->guest_name,
+                'validUntil' => $pass->valid_until?->toIso8601String(),
+                'unit' => trim(($pass->unit?->block ?? '').' '.($pass->unit?->unit_number ?? '')) ?: '—',
+            ]);
+
+        return [
+            'openInvoices' => $openInvoices,
+            'openInvoicesCount' => $openInvoicesQuery->count(),
+            'openTickets' => $openTickets,
+            'openTicketsCount' => $openTicketsQuery->count(),
+            'activeVisitorPasses' => $activeVisitorPasses,
+            'activeVisitorPassesCount' => $activePassesQuery->count(),
+        ];
+    }
+
+    private function emptyOperationalWidgets(): array
+    {
+        return [
+            'openInvoices' => [],
+            'openInvoicesCount' => 0,
+            'openTickets' => [],
+            'openTicketsCount' => 0,
+            'activeVisitorPasses' => [],
+            'activeVisitorPassesCount' => 0,
+        ];
     }
 
     private function guidanceFor(User $user, AreaMember $current): ?array
@@ -64,7 +141,9 @@ class DashboardController extends Controller
         }
 
         $inUnclaimedArea = $area->status === 'unclaimed';
-        $pendingApproval = $current->status === 'pending_approval';
+        // A resident with status === 'pending_approval' (outside an unclaimed area)
+        // never reaches this code — the `pending.approval` middleware redirects them
+        // to the dedicated waiting page before the dashboard route resolves.
         $pendingUnitConfirmation = $user->units()->wherePivot('status', 'pending')->exists();
 
         if ($inUnclaimedArea && $pendingUnitConfirmation) {
@@ -73,14 +152,6 @@ class DashboardController extends Controller
 
         if ($inUnclaimedArea) {
             return ['type' => 'penghuni_unclaimed', 'areaId' => $area->id, 'areaName' => $area->name];
-        }
-
-        if ($pendingApproval && $pendingUnitConfirmation) {
-            return ['type' => 'penghuni_pending_both', 'areaId' => $area->id, 'areaName' => $area->name];
-        }
-
-        if ($pendingApproval) {
-            return ['type' => 'penghuni_pending_approval', 'areaId' => $area->id, 'areaName' => $area->name];
         }
 
         if ($pendingUnitConfirmation) {
