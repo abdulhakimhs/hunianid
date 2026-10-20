@@ -1,17 +1,30 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
-    ArrowUpRight,
-    BadgeCheck,
-    BellRing,
+    CircleCheck,
     CircleDollarSign,
-    Clock,
     Home,
+    Loader2,
+    Megaphone,
     MessageCircle,
+    ReceiptText,
     Send,
     ShieldCheck,
+    Ticket as TicketIcon,
     UserCircle,
     Users,
 } from 'lucide-react';
+import { useState } from 'react';
+import { ImageDropzone } from '@/components/image-dropzone';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 
 type Guidance =
@@ -21,9 +34,7 @@ type Guidance =
               | 'pengelola_new'
               | 'penghuni_unclaimed'
               | 'penghuni_unclaimed_and_pending_unit'
-              | 'penghuni_pending_approval'
               | 'penghuni_pending_unit'
-              | 'penghuni_pending_both'
               | 'penghuni_active';
           areaId: number;
           areaName: string;
@@ -79,12 +90,8 @@ return null;
 
     const showUnclaimedCards =
         guidance.type === 'penghuni_unclaimed' || guidance.type === 'penghuni_unclaimed_and_pending_unit';
-    const showPendingApproval =
-        guidance.type === 'penghuni_pending_approval' || guidance.type === 'penghuni_pending_both';
     const showPendingUnit =
-        guidance.type === 'penghuni_pending_unit' ||
-        guidance.type === 'penghuni_pending_both' ||
-        guidance.type === 'penghuni_unclaimed_and_pending_unit';
+        guidance.type === 'penghuni_pending_unit' || guidance.type === 'penghuni_unclaimed_and_pending_unit';
 
     return (
         <div className="flex flex-col gap-4">
@@ -121,15 +128,6 @@ return null;
                     <p className="mt-4 text-sm text-[color:var(--color-ink,#142033)]/60">
                         Anda bisa mengundang siapa saja duluan. Nanti, akses sebagai pengelola bisa dipindahkan ke akun warga
                         manapun kapan saja dari halaman ini.
-                    </p>
-                </section>
-            )}
-
-            {showPendingApproval && (
-                <section className="flex items-start gap-3 rounded-[1.5rem] border border-[color:var(--color-coral,#FF6B57)]/25 bg-[color:var(--color-coral,#FF6B57)]/10 p-5 shadow-elevated">
-                    <Clock className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-coral,#FF6B57)]" />
-                    <p className="text-sm text-[color:var(--color-ink,#142033)]">
-                        Akun Anda sedang menunggu persetujuan dari pengurus {guidance.areaName}.
                     </p>
                 </section>
             )}
@@ -174,37 +172,142 @@ return null;
     );
 }
 
-const stats = [
-    {
-        label: 'Tamu hari ini',
-        value: '14',
-        hint: '+4 vs kemarin',
-        icon: Users,
-        tone: 'sky',
-    },
-    {
-        label: 'Tagihan belum lunas',
-        value: '3',
-        hint: '1 butuh follow-up',
-        icon: CircleDollarSign,
-        tone: 'mint',
-    },
-    {
-        label: 'Komplain tertangani',
-        value: '8',
-        hint: '2 menunggu verifikasi',
-        icon: BadgeCheck,
-        tone: 'coral',
-    },
-];
+type OpenInvoice = {
+    id: number;
+    invoiceNumber: string;
+    dueDate: string | null;
+    amount: number;
+    status: 'unpaid' | 'overdue';
+    tenant: { id: number; name: string };
+    unit: { id: number; label: string };
+};
 
-const activity = [
-    'Tamu Budi masuk lewat QR pada 09:40',
-    'Tagihan IPL blok C sudah dikirim ke warga',
-    'Komplain pompa air diteruskan ke tukang',
-];
+type OpenTicket = {
+    id: number;
+    subject: string;
+    status: 'open' | 'in_progress';
+    createdAt: string;
+    reporter: { id: number; name: string };
+    unit: { id: number; label: string };
+};
 
-export default function Dashboard({ guidance = null, status }: { guidance?: Guidance; status?: string | null }) {
+type ActiveVisitorPass = {
+    id: number;
+    guestName: string;
+    validUntil: string | null;
+    unit: string;
+};
+
+function formatCurrency(amount: number) {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+    }).format(amount);
+}
+
+function formatDate(date: string | null) {
+    if (!date) {
+        return '-';
+    }
+
+    return new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+// Local calendar date, not toISOString() — that's UTC and gives yesterday before 07:00 WIB.
+function todayLocal() {
+    const d = new Date();
+
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const invoiceStatusMeta: Record<OpenInvoice['status'], { label: string; className: string }> = {
+    unpaid: { label: 'Belum Dibayar', className: 'bg-amber-100 text-amber-600' },
+    overdue: { label: 'Jatuh Tempo', className: 'bg-red-100 text-red-600' },
+};
+
+const ticketStatusMeta: Record<OpenTicket['status'], { label: string; className: string }> = {
+    open: { label: 'Baru', className: 'bg-[color:var(--color-sky)]/12 text-[color:var(--color-sky-deep)]' },
+    in_progress: { label: 'Diproses', className: 'bg-amber-100 text-amber-600' },
+};
+
+function EmptyRow({ children }: { children: React.ReactNode }) {
+    return <p className="px-1 py-6 text-center text-sm text-[color:var(--color-ink)]/45">{children}</p>;
+}
+
+function WidgetCard({
+    title,
+    count,
+    viewAllHref,
+    children,
+}: {
+    title: string;
+    count: number;
+    viewAllHref: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated">
+            <div className="flex items-center justify-between">
+                <h2 className="font-display text-lg font-semibold text-[color:var(--color-ink)]">
+                    {title} <span className="text-[color:var(--color-ink)]/40">({count})</span>
+                </h2>
+                <Link href={viewAllHref} className="text-sm font-semibold text-[color:var(--color-sky-deep)]">
+                    Lihat semua
+                </Link>
+            </div>
+            <div className="mt-4 space-y-2">{children}</div>
+        </div>
+    );
+}
+
+export default function Dashboard({
+    guidance = null,
+    status,
+    openInvoices = [],
+    openInvoicesCount = 0,
+    openTickets = [],
+    openTicketsCount = 0,
+    activeVisitorPasses = [],
+    activeVisitorPassesCount = 0,
+}: {
+    guidance?: Guidance;
+    status?: string | null;
+    openInvoices?: OpenInvoice[];
+    openInvoicesCount?: number;
+    openTickets?: OpenTicket[];
+    openTicketsCount?: number;
+    activeVisitorPasses?: ActiveVisitorPass[];
+    activeVisitorPassesCount?: number;
+}) {
+    const [markPaidTarget, setMarkPaidTarget] = useState<OpenInvoice | null>(null);
+    const [paidDate, setPaidDate] = useState(todayLocal());
+    const [paymentProof, setPaymentProof] = useState<File | null>(null);
+    const [markingPaid, setMarkingPaid] = useState(false);
+
+    function openMarkPaid(invoice: OpenInvoice) {
+        setPaidDate(todayLocal());
+        setPaymentProof(null);
+        setMarkPaidTarget(invoice);
+    }
+
+    function confirmMarkPaid() {
+        if (!markPaidTarget || !paymentProof) {
+            return;
+        }
+
+        setMarkingPaid(true);
+        router.post(
+            `/admin/invoices/${markPaidTarget.id}/mark-paid`,
+            { paid_at: paidDate, payment_proof: paymentProof },
+            {
+                forceFormData: true,
+                onSuccess: () => setMarkPaidTarget(null),
+                onFinish: () => setMarkingPaid(false),
+            },
+        );
+    }
+
     return (
         <>
             <Head title="Dashboard" />
@@ -219,140 +322,184 @@ export default function Dashboard({ guidance = null, status }: { guidance?: Guid
 
                 <section className="relative overflow-hidden rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-6 shadow-elevated lg:p-8">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,_var(--color-sky)_16%,_transparent),_transparent_45%),radial-gradient(circle_at_bottom_right,_color-mix(in_srgb,_var(--color-mint)_16%,_transparent),_transparent_40%)]" />
-                    <div className="relative grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-                        <div className="space-y-4">
-                            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep)]">
-                                Dashboard pengelola perumahan
-                            </p>
-                            <h1 className="max-w-2xl font-display text-3xl font-bold tracking-tight text-[color:var(--color-ink)] sm:text-4xl">
-                                Semua yang penting di satu tempat
-                            </h1>
-                            <p className="max-w-xl text-base leading-relaxed text-[color:var(--color-ink)]/70">
-                                Tamu, tagihan, dan komplain kini tampil rapi seperti pengalaman landing page yang Anda pilih — cepat dipahami, mudah dipantau, dan siap dibagi ke pengurus.
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                <span className="rounded-full border border-[color:var(--color-sky)]/25 bg-[color:var(--color-sky)]/10 px-3 py-1.5 text-sm font-medium text-[color:var(--color-sky-deep)]">
-                                    14 tamu hari ini
-                                </span>
-                                <span className="rounded-full border border-[color:var(--color-mint)]/25 bg-[color:var(--color-mint)]/10 px-3 py-1.5 text-sm font-medium text-[color:var(--color-mint-deep)]">
-                                    3 tagihan belum lunas
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 p-4">
-                            <div className="flex items-center justify-between">
-                                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-ink)]/55">
-                                    Aktivitas terbaru
-                                </p>
-                                <span className="rounded-full bg-[color:var(--color-sky)]/10 p-2 text-[color:var(--color-sky-deep)]">
-                                    <BellRing className="h-4 w-4" />
-                                </span>
-                            </div>
-                            <ul className="mt-4 space-y-3">
-                                {activity.map((item) => (
-                                    <li
-                                        key={item}
-                                        className="flex items-start gap-2 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] px-3 py-2.5 text-sm text-[color:var(--color-ink)]/70"
-                                    >
-                                        <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[color:var(--color-mint)]" />
-                                        <span>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                    <div className="relative space-y-2">
+                        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep)]">
+                            Dashboard pengelola perumahan
+                        </p>
+                        <h1 className="max-w-2xl font-display text-3xl font-bold tracking-tight text-[color:var(--color-ink)] sm:text-4xl">
+                            Semua yang penting di satu tempat
+                        </h1>
+                        <p className="max-w-xl text-base leading-relaxed text-[color:var(--color-ink)]/70">
+                            Tagihan, tiket, dan tamu aktif tampil langsung di sini — tidak perlu bolak-balik ke halaman lain untuk memantau kondisi hari ini.
+                        </p>
                     </div>
                 </section>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    {stats.map((stat) => {
-                        const Icon = stat.icon;
-                        const toneClasses =
-                            stat.tone === 'mint'
-                                ? 'bg-[color:var(--color-mint)]/10 text-[color:var(--color-mint-deep)]'
-                                : stat.tone === 'coral'
-                                  ? 'bg-[color:var(--color-coral)]/10 text-[color:var(--color-coral)]'
-                                  : 'bg-[color:var(--color-sky)]/10 text-[color:var(--color-sky-deep)]';
-
-                        return (
-                            <div
-                                key={stat.label}
-                                className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated"
-                            >
-                                <div className={`inline-flex rounded-2xl p-2.5 ${toneClasses}`}>
-                                    <Icon className="h-5 w-5" />
-                                </div>
-                                <p className="mt-4 text-sm text-[color:var(--color-ink)]/60">
-                                    {stat.label}
-                                </p>
-                                <p className="mt-1 font-display text-3xl font-semibold text-[color:var(--color-ink)]">
-                                    {stat.value}
-                                </p>
-                                <p className="mt-2 text-sm text-[color:var(--color-ink)]/60">
-                                    {stat.hint}
-                                </p>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
                     <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep)]">
-                                    Agenda hari ini
-                                </p>
-                                <h2 className="mt-2 font-display text-xl font-semibold text-[color:var(--color-ink)]">
-                                    Prioritas yang perlu ditindaklanjuti
-                                </h2>
-                            </div>
-                            <a
-                                href="#"
-                                className="inline-flex items-center gap-1 text-sm font-semibold text-[color:var(--color-sky-deep)]"
-                            >
-                                Lihat semua <ArrowUpRight className="h-4 w-4" />
-                            </a>
+                        <div className="inline-flex rounded-2xl bg-[color:var(--color-mint)]/10 p-2.5 text-[color:var(--color-mint-deep)]">
+                            <CircleDollarSign className="h-5 w-5" />
                         </div>
-
-                        <div className="mt-5 space-y-3">
-                            {[
-                                'Sampaikan update tagihan ke 3 unit yang masih menunggak',
-                                'Buatkan tiket perbaikan pompa air untuk satpam',
-                                'Cek daftar tamu untuk acara buka bersama sore ini',
-                            ].map((item) => (
-                                <div
-                                    key={item}
-                                    className="flex items-start gap-3 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-3"
-                                >
-                                    <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[color:var(--color-mint)]" />
-                                    <p className="text-sm leading-relaxed text-[color:var(--color-ink)]/70">
-                                        {item}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
+                        <p className="mt-4 text-sm text-[color:var(--color-ink)]/60">Tagihan belum lunas</p>
+                        <p className="mt-1 font-display text-3xl font-semibold text-[color:var(--color-ink)]">{openInvoicesCount}</p>
                     </div>
 
                     <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated">
-                        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-mint-deep)]">
-                            Aksi cepat
-                        </p>
-                        <div className="mt-4 space-y-3">
-                            {['Buat QR tamu', 'Kirim pengumuman', 'Lihat laporan mingguan'].map((action) => (
-                                <button
-                                    key={action}
-                                    type="button"
-                                    className="flex w-full items-center justify-between rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-3 text-left text-sm font-medium text-[color:var(--color-ink)]/75"
-                                >
-                                    <span>{action}</span>
-                                    <ArrowUpRight className="h-4 w-4 text-[color:var(--color-sky-deep)]" />
-                                </button>
-                            ))}
+                        <div className="inline-flex rounded-2xl bg-[color:var(--color-coral)]/10 p-2.5 text-[color:var(--color-coral)]">
+                            <TicketIcon className="h-5 w-5" />
                         </div>
+                        <p className="mt-4 text-sm text-[color:var(--color-ink)]/60">Tiket terbuka</p>
+                        <p className="mt-1 font-display text-3xl font-semibold text-[color:var(--color-ink)]">{openTicketsCount}</p>
+                    </div>
+
+                    <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated">
+                        <div className="inline-flex rounded-2xl bg-[color:var(--color-sky)]/10 p-2.5 text-[color:var(--color-sky-deep)]">
+                            <Users className="h-5 w-5" />
+                        </div>
+                        <p className="mt-4 text-sm text-[color:var(--color-ink)]/60">Tamu aktif</p>
+                        <p className="mt-1 font-display text-3xl font-semibold text-[color:var(--color-ink)]">{activeVisitorPassesCount}</p>
+                    </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                    <WidgetCard title="Tagihan Belum Lunas" count={openInvoicesCount} viewAllHref="/admin/invoices">
+                        {openInvoices.length === 0 && <EmptyRow>Semua tagihan sudah lunas.</EmptyRow>}
+                        {openInvoices.map((invoice) => (
+                            <div
+                                key={invoice.id}
+                                className="flex flex-col gap-2 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-2.5"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <p className="min-w-0 truncate text-sm font-medium text-[color:var(--color-ink)]">{invoice.tenant.name}</p>
+                                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${invoiceStatusMeta[invoice.status].className}`}>
+                                        {invoiceStatusMeta[invoice.status].label}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-[color:var(--color-ink)]/50">
+                                    {invoice.unit.label} · {formatCurrency(invoice.amount)}
+                                </p>
+                                <p className="text-xs text-[color:var(--color-ink)]/50">Jatuh tempo {formatDate(invoice.dueDate)}</p>
+                                <Button
+                                    size="sm"
+                                    className="h-8 w-full gap-1.5 rounded-full bg-[color:var(--color-mint)] text-white hover:bg-[color:var(--color-mint-deep)]"
+                                    onClick={() => openMarkPaid(invoice)}
+                                >
+                                    <CircleCheck className="h-3.5 w-3.5" />
+                                    Lunas
+                                </Button>
+                            </div>
+                        ))}
+                    </WidgetCard>
+
+                    <WidgetCard title="Tiket Terbuka" count={openTicketsCount} viewAllHref="/admin/tickets">
+                        {openTickets.length === 0 && <EmptyRow>Tidak ada tiket yang perlu ditindaklanjuti.</EmptyRow>}
+                        {openTickets.map((ticket) => (
+                            <Link
+                                key={ticket.id}
+                                href={`/admin/tickets/${ticket.id}`}
+                                className="flex flex-col gap-2 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-2.5"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <p className="min-w-0 truncate text-sm font-medium text-[color:var(--color-ink)]">{ticket.subject}</p>
+                                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${ticketStatusMeta[ticket.status].className}`}>
+                                        {ticketStatusMeta[ticket.status].label}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-[color:var(--color-ink)]/50">
+                                    {ticket.reporter.name} · {ticket.unit.label}
+                                </p>
+                            </Link>
+                        ))}
+                    </WidgetCard>
+
+                    <WidgetCard title="Tamu Aktif" count={activeVisitorPassesCount} viewAllHref="/admin/visitor-passes">
+                        {activeVisitorPasses.length === 0 && <EmptyRow>Tidak ada izin tamu yang masih berlaku.</EmptyRow>}
+                        {activeVisitorPasses.map((pass) => (
+                            <div
+                                key={pass.id}
+                                className="flex flex-col gap-2 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-2.5"
+                            >
+                                <p className="min-w-0 truncate text-sm font-medium text-[color:var(--color-ink)]">{pass.guestName}</p>
+                                <p className="text-xs text-[color:var(--color-ink)]/50">{pass.unit}</p>
+                                <p className="text-xs text-[color:var(--color-ink)]/50">Berlaku s.d. {formatDate(pass.validUntil)}</p>
+                            </div>
+                        ))}
+                    </WidgetCard>
+                </div>
+
+                <div className="rounded-[1.5rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-5 shadow-elevated">
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-mint-deep)]">
+                        Aksi cepat
+                    </p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <Link
+                            href="/admin/invoices"
+                            className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-3 text-sm font-medium text-[color:var(--color-ink)]/75"
+                        >
+                            <ReceiptText className="h-4 w-4 text-[color:var(--color-sky-deep)]" />
+                            Tagihan
+                        </Link>
+                        <Link
+                            href="/admin/tickets"
+                            className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-3 text-sm font-medium text-[color:var(--color-ink)]/75"
+                        >
+                            <TicketIcon className="h-4 w-4 text-[color:var(--color-sky-deep)]" />
+                            Tiket & Komplain
+                        </Link>
+                        <Link
+                            href="/admin/visitor-passes"
+                            className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-3 text-sm font-medium text-[color:var(--color-ink)]/75"
+                        >
+                            <Users className="h-4 w-4 text-[color:var(--color-sky-deep)]" />
+                            Visitor Pass
+                        </Link>
+                        <Link
+                            href="/admin/announcements"
+                            className="flex items-center gap-3 rounded-2xl border border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/70 px-3 py-3 text-sm font-medium text-[color:var(--color-ink)]/75"
+                        >
+                            <Megaphone className="h-4 w-4 text-[color:var(--color-sky-deep)]" />
+                            Kirim Pengumuman
+                        </Link>
                     </div>
                 </div>
             </div>
+
+            <Dialog open={!!markPaidTarget} onOpenChange={(open) => !open && !markingPaid && setMarkPaidTarget(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Tandai Lunas</DialogTitle>
+                        <DialogDescription>
+                            {markPaidTarget && `${markPaidTarget.invoiceNumber} · ${markPaidTarget.tenant.name} · ${formatCurrency(markPaidTarget.amount)}`}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-[color:var(--color-ink)]">Tanggal Bayar</label>
+                            <Input type="date" value={paidDate} max={todayLocal()} onChange={(e) => setPaidDate(e.target.value)} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-[color:var(--color-ink)]">Bukti Bayar</label>
+                            <ImageDropzone value={paymentProof} onChange={setPaymentProof} disabled={markingPaid} />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setMarkPaidTarget(null)} disabled={markingPaid}>
+                            Batal
+                        </Button>
+                        <Button
+                            className="bg-[color:var(--color-mint)] text-white hover:bg-[color:var(--color-mint-deep)]"
+                            onClick={confirmMarkPaid}
+                            disabled={!paidDate || !paymentProof || markingPaid}
+                        >
+                            {markingPaid && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Simpan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

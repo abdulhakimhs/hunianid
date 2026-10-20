@@ -21,6 +21,8 @@ class SettingsController extends Controller
             'defaultSecurityInvitationMessage' => Area::DEFAULT_SECURITY_INVITATION_MESSAGE,
             'reminderDaysBeforeDue' => $area->reminder_days_before_due,
             'defaultReminderDaysBeforeDue' => Area::DEFAULT_REMINDER_DAYS_BEFORE_DUE,
+            'ticketEscalationDays' => $area->ticket_escalation_days,
+            'defaultTicketEscalationDays' => Area::DEFAULT_TICKET_ESCALATION_DAYS,
         ]);
     }
 
@@ -72,6 +74,26 @@ class SettingsController extends Controller
 
         $area->update([
             'reminder_days_before_due' => $data['reminder_days_before_due'] ?? null,
+        ]);
+
+        return redirect()->route('admin.settings.index');
+    }
+
+    /**
+     * PUT /admin/settings/ticket-escalation — how many days a ticket can go without
+     * staff follow-up before the escalation WhatsApp reminder fires, repeating every
+     * window until someone acts.
+     */
+    public function updateTicketEscalationSettings(Request $request)
+    {
+        $area = $request->attributes->get('adminArea');
+
+        $data = $request->validate([
+            'ticket_escalation_days' => ['nullable', 'integer', 'min:1', 'max:30'],
+        ]);
+
+        $area->update([
+            'ticket_escalation_days' => $data['ticket_escalation_days'] ?? null,
         ]);
 
         return redirect()->route('admin.settings.index');

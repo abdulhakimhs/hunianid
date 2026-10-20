@@ -13,6 +13,8 @@ type Props = {
     defaultSecurityInvitationMessage: string;
     reminderDaysBeforeDue: number | null;
     defaultReminderDaysBeforeDue: number;
+    ticketEscalationDays: number | null;
+    defaultTicketEscalationDays: number;
 };
 
 const PLACEHOLDERS = [
@@ -131,6 +133,8 @@ export default function SettingsIndex({
     defaultSecurityInvitationMessage,
     reminderDaysBeforeDue,
     defaultReminderDaysBeforeDue,
+    ticketEscalationDays,
+    defaultTicketEscalationDays,
 }: Props) {
     const [message, setMessage] = useState(invitationMessage ?? defaultInvitationMessage);
     const [submitting, setSubmitting] = useState(false);
@@ -211,6 +215,29 @@ export default function SettingsIndex({
         );
     }
 
+    const [escalationDays, setEscalationDays] = useState(
+        String(ticketEscalationDays ?? defaultTicketEscalationDays),
+    );
+    const [escalationSubmitting, setEscalationSubmitting] = useState(false);
+    const [escalationSaved, setEscalationSaved] = useState(false);
+
+    function saveEscalationSettings() {
+        setEscalationSubmitting(true);
+        setEscalationSaved(false);
+
+        router.put(
+            '/admin/settings/ticket-escalation',
+            { ticket_escalation_days: escalationDays },
+            {
+                onFinish: () => setEscalationSubmitting(false),
+                onSuccess: () => {
+                    setEscalationSaved(true);
+                    setTimeout(() => setEscalationSaved(false), 2500);
+                },
+            },
+        );
+    }
+
     return (
         <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-[2rem] bg-[color:var(--color-bg)] p-4 sm:p-6 lg:p-8">
             <Head title="Pengaturan" />
@@ -229,6 +256,7 @@ export default function SettingsIndex({
                     <TabsTrigger value="template-pesan-wa">Template Pesan Warga</TabsTrigger>
                     <TabsTrigger value="template-pesan-security">Template Pesan Security</TabsTrigger>
                     <TabsTrigger value="pengingat-tagihan">Pengingat Tagihan</TabsTrigger>
+                    <TabsTrigger value="eskalasi-tiket">Eskalasi Tiket</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="template-pesan-wa" className="flex flex-col gap-4">
@@ -305,6 +333,36 @@ export default function SettingsIndex({
                         >
                             {reminderSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             {reminderSaved ? 'Tersimpan' : 'Simpan perubahan'}
+                        </Button>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="eskalasi-tiket" className="flex flex-col gap-4">
+                    <p className="max-w-2xl text-sm leading-relaxed text-[color:var(--color-ink)]/55">
+                        Jika sebuah tiket tidak ada tindak lanjut dari staff selama sekian hari, pengingat WhatsApp
+                        dikirim ke staff yang ditugaskan (atau semua admin jika belum ditugaskan) — diulang setiap
+                        periode yang sama selama tiket masih mangkrak.
+                    </p>
+
+                    <div className="flex max-w-xs flex-col gap-2 rounded-[2rem] border border-[color:var(--color-ink)]/8 bg-[color:var(--color-surface)] p-6 shadow-elevated">
+                        <label className="text-sm font-medium text-[color:var(--color-ink)]" htmlFor="escalation-days">
+                            Kirim pengingat setelah (hari tanpa tindak lanjut)
+                        </label>
+                        <Input
+                            id="escalation-days"
+                            type="number"
+                            min={1}
+                            max={30}
+                            value={escalationDays}
+                            onChange={(e) => setEscalationDays(e.target.value)}
+                        />
+                        <Button
+                            className="mt-2"
+                            disabled={escalationSubmitting}
+                            onClick={saveEscalationSettings}
+                        >
+                            {escalationSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                            {escalationSaved ? 'Tersimpan' : 'Simpan perubahan'}
                         </Button>
                     </div>
                 </TabsContent>

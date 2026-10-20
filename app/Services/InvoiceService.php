@@ -11,7 +11,6 @@ use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class InvoiceService
 {
@@ -32,10 +31,9 @@ class InvoiceService
     {
         return DB::transaction(function () use ($area, $tenantUserIds, $attrs) {
             $tenants = User::whereIn('id', $tenantUserIds)
+                ->activeMemberOf($area)
                 ->with(['units' => fn ($q) => $q->wherePivot('status', 'active')->where('area_id', $area->id)])
                 ->get();
-
-            $this->assertNoDuplicatesForPeriod($area, $tenants, $attrs['invoice_category_id']);
 
             return $tenants->map(function (User $tenant) use ($area, $attrs) {
                 $unit = $tenant->units->first();
@@ -71,37 +69,6 @@ class InvoiceService
             return $targets->map(fn (array $target) => $this->create($area, $target['unit'], $target['user'], $attrs, $template))
                 ->values();
         });
-    }
-
-    /**
-     * Block billing the same tenant twice for the same category within the same
-     * calendar month (the "period" for a manually-created invoice is the month it's
-     * created in, since there's no period picker on the create form).
-     *
-     * @param  Collection<int, User>  $tenants
-     */
-    private function assertNoDuplicatesForPeriod(Area $area, Collection $tenants, int $invoiceCategoryId): void
-    {
-        $today = Carbon::today();
-
-        $duplicateTenantIds = Invoice::where('area_id', $area->id)
-            ->where('invoice_category_id', $invoiceCategoryId)
-            ->whereIn('user_id', $tenants->pluck('id'))
-            ->whereIn('status', ['unpaid', 'overdue', 'paid'])
-            ->whereYear('invoice_date', $today->year)
-            ->whereMonth('invoice_date', $today->month)
-            ->pluck('user_id')
-            ->unique();
-
-        if ($duplicateTenantIds->isEmpty()) {
-            return;
-        }
-
-        $names = $tenants->whereIn('id', $duplicateTenantIds)->pluck('name')->implode(', ');
-
-        throw ValidationException::withMessages([
-            'tenant_ids' => "Sudah ada tagihan dengan kategori ini bulan ini untuk: {$names}.",
-        ]);
     }
 
     private function create(Area $area, Unit $unit, User $tenant, array $attrs, ?InvoiceTemplate $template = null): Invoice
@@ -147,29 +114,31 @@ class InvoiceService
         return sprintf('INV/%s/%s/%04d', $year, $month, $sequence);
     }
 
-    public function markPaid(Invoice $invoice, User $by): void
+    public function markPaid(Invoice $invoice, User $by, Carbon $paidAt, ?string $proofPath = null): bool
     {
         if (! in_array($invoice->status, ['unpaid', 'overdue'], true)) {
-            return;
+            return false;
         }
 
         $invoice->update([
             'status' => 'paid',
-            'paid_at' => now(),
+            'paid_at' => $paidAt,
             'paid_by' => $by->id,
+            'payment_proof_path' => $proofPath,
         ]);
+
+        return true;
     }
 
     /**
      * @param  Collection<int, Invoice>  $invoices
      */
-    public function markPaidBulk(Collection $invoices, User $by): int
+    public function markPaidBulk(Collection $invoices, User $by, Carbon $paidAt): int
     {
         $count = 0;
 
         foreach ($invoices as $invoice) {
-            if (in_array($invoice->status, ['unpaid', 'overdue'], true)) {
-                $this->markPaid($invoice, $by);
+            if ($this->markPaid($invoice, $by, $paidAt)) {
                 $count++;
             }
         }

@@ -23,6 +23,8 @@ class BillsController extends Controller
                 'dueDate' => $invoice->due_date?->toDateString(),
                 'amount' => (float) $invoice->amount,
                 'status' => $invoice->status,
+                'paidAt' => $invoice->paid_at?->toDateString(),
+                'hasPaymentProof' => $invoice->payment_proof_path !== null,
                 'memo' => $invoice->memo,
                 'invoiceCategory' => ['id' => $invoice->category->id, 'name' => $invoice->category->name],
             ]);
@@ -30,5 +32,14 @@ class BillsController extends Controller
         return Inertia::render('tenant/bills', [
             'invoices' => $invoices,
         ]);
+    }
+
+    public function paymentProof(Request $request, Invoice $invoice)
+    {
+        if ($invoice->user_id !== $request->user()->id) {
+            abort(404);
+        }
+
+        return $invoice->paymentProofResponse();
     }
 }

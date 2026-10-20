@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertOctagon,
     CheckCircle2,
@@ -13,8 +13,10 @@ import { useState } from 'react';
 import SecurityBottomNav from '@/components/security/bottom-nav';
 import type { PanicAlert } from '@/components/security/panic-alert-overlay';
 import PanicAlertOverlay from '@/components/security/panic-alert-overlay';
+import LogoutConfirm from '@/components/shared/logout-confirm';
 import PageHeader from '@/components/shared/page-header';
 import HunianLogo from '@/components/hunian-logo';
+import { logout } from '@/routes';
 
 type ActivityStatus = 'valid' | 'invalid' | 'expired';
 
@@ -80,6 +82,13 @@ export default function SecurityDashboard({
     activity,
 }: Props) {
     const [activeAlert, setActiveAlert] = useState<PanicAlert | null>(null);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
+
+    function confirmLogout() {
+        setLoggingOut(true);
+        router.post(logout.url(), {}, { onFinish: () => setLoggingOut(false) });
+    }
 
     function simulateAlert() {
         if (activeAlert) {
@@ -113,6 +122,7 @@ export default function SecurityDashboard({
                     rightSlot={
                         <button
                             type="button"
+                            onClick={() => setConfirmOpen(true)}
                             className="flex h-9 w-9 items-center justify-center rounded-full text-white hover:bg-white/10"
                             aria-label="Keluar"
                         >
@@ -120,6 +130,14 @@ export default function SecurityDashboard({
                         </button>
                     }
                 />
+
+                {confirmOpen && (
+                    <LogoutConfirm
+                        loading={loggingOut}
+                        onCancel={() => setConfirmOpen(false)}
+                        onConfirm={confirmLogout}
+                    />
+                )}
 
                 <div className="flex items-center gap-3 px-5 pt-4 pb-1">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-(--color-mint)/15 text-(--color-mint-deep)">

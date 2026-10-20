@@ -79,6 +79,7 @@ export type AdminAccess = {
     announcements: boolean;
     staffManagement: boolean;
     visitorPasses: boolean;
+    tickets: boolean;
 };
 
 export type Auth = {

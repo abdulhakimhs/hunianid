@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Receipt, Wallet } from 'lucide-react';
+import { ImageIcon, Receipt, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import PageHeader from '@/components/shared/page-header';
 
@@ -14,6 +14,8 @@ type Invoice = {
     dueDate: string | null; // ISO date
     amount: number;
     status: InvoiceStatus;
+    paidAt: string | null; // ISO date
+    hasPaymentProof: boolean;
     memo: string | null;
     invoiceCategory: { id: number; name: string };
 };
@@ -220,6 +222,25 @@ function InvoiceCard({ invoice }: { invoice: Invoice }) {
                 <p className="mt-3 text-center text-xs text-(--color-ink)/45">
                     Hubungi pengelola untuk info pembayaran
                 </p>
+            )}
+
+            {invoice.status === 'paid' && (
+                <div className="mt-3 flex items-center justify-between border-t border-(--color-ink)/8 pt-3 text-xs">
+                    <span className="text-(--color-ink)/45">
+                        Dibayar {formatDate(invoice.paidAt)}
+                    </span>
+                    {invoice.hasPaymentProof && (
+                        <a
+                            href={`/tenant/bills/${invoice.id}/payment-proof`}
+                            target="_blank"
+                            rel="noopener"
+                            className="inline-flex items-center gap-1 font-medium text-(--color-mint-deep)"
+                        >
+                            <ImageIcon className="h-3.5 w-3.5" />
+                            Lihat Bukti
+                        </a>
+                    )}
+                </div>
             )}
         </div>
     );

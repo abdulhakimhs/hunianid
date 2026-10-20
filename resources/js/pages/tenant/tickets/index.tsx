@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     Clock,
     Loader2,
@@ -9,6 +9,7 @@ import {
     Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { ImageDropzone } from '@/components/image-dropzone';
 import PageHeader from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,49 +24,14 @@ type Ticket = {
     subject: string;
     category: TicketCategory;
     status: TicketStatus;
-    lastMessage: string;
-    lastMessageAt: string;
-    hasUnreadReply: boolean;
+    lastActivity: string;
+    lastActivityAt: string;
+    hasUnreadUpdate: boolean;
 };
 
-const dummyTickets: Ticket[] = [
-    {
-        id: 1,
-        subject: 'AC unit tidak dingin',
-        category: 'maintenance',
-        status: 'in_progress',
-        lastMessage: 'Teknisi akan datang besok pukul 10:00.',
-        lastMessageAt: '2026-09-16T14:20:00',
-        hasUnreadReply: true,
-    },
-    {
-        id: 2,
-        subject: 'Lampu koridor lantai 3 mati',
-        category: 'maintenance',
-        status: 'open',
-        lastMessage: 'Laporan diterima, menunggu penjadwalan.',
-        lastMessageAt: '2026-09-15T09:05:00',
-        hasUnreadReply: false,
-    },
-    {
-        id: 3,
-        subject: 'Sampah menumpuk di area parkir',
-        category: 'cleanliness',
-        status: 'closed',
-        lastMessage: 'Sudah dibersihkan, terima kasih laporannya.',
-        lastMessageAt: '2026-09-10T11:30:00',
-        hasUnreadReply: false,
-    },
-    {
-        id: 4,
-        subject: 'CCTV blok B tidak berfungsi',
-        category: 'security',
-        status: 'closed',
-        lastMessage: 'Kamera sudah diperbaiki oleh vendor.',
-        lastMessageAt: '2026-09-02T16:00:00',
-        hasUnreadReply: false,
-    },
-];
+type Props = {
+    tickets: Ticket[];
+};
 
 const categoryMeta: Record<
     TicketCategory,
@@ -125,18 +91,18 @@ function timeAgo(iso: string) {
     return `${days} hari lalu`;
 }
 
-export default function TenantTickets() {
+export default function TenantTickets({ tickets }: Props) {
     const [tab, setTab] = useState<'active' | 'history'>('active');
     const [createOpen, setCreateOpen] = useState(false);
 
     const active = useMemo(
-        () => dummyTickets.filter((t) => t.status !== 'closed'),
-        [],
+        () => tickets.filter((t) => t.status !== 'closed'),
+        [tickets],
     );
 
     const history = useMemo(
-        () => dummyTickets.filter((t) => t.status === 'closed'),
-        [],
+        () => tickets.filter((t) => t.status === 'closed'),
+        [tickets],
     );
 
     const list = tab === 'active' ? active : history;
@@ -261,13 +227,13 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
                                 {ticket.subject}
                             </p>
 
-                            {ticket.hasUnreadReply && (
+                            {ticket.hasUnreadUpdate && (
                                 <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-red-500" />
                             )}
                         </div>
 
                         <p className="mt-0.5 truncate text-xs text-(--color-ink)/50">
-                            {ticket.lastMessage}
+                            {ticket.lastActivity}
                         </p>
 
                         <div className="mt-2 flex items-center justify-between">
@@ -278,7 +244,7 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
                             </span>
                             <span className="flex items-center gap-1 text-[11px] text-(--color-ink)/40">
                                 <Clock className="h-3 w-3" />
-                                {timeAgo(ticket.lastMessageAt)}
+                                {timeAgo(ticket.lastActivityAt)}
                             </span>
                         </div>
                     </div>
@@ -292,6 +258,7 @@ function CreateTicketSheet({ onClose }: { onClose: () => void }) {
     const [subject, setSubject] = useState('');
     const [category, setCategory] = useState<TicketCategory>('maintenance');
     const [description, setDescription] = useState('');
+    const [photo, setPhoto] = useState<File | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     function submit() {
@@ -301,12 +268,15 @@ function CreateTicketSheet({ onClose }: { onClose: () => void }) {
 
         setSubmitting(true);
 
-        // Dummy create — swap for a real POST /tenant/tickets call, then
-        // redirect to /tenant/tickets/{id} with the created ticket.
-        setTimeout(() => {
-            setSubmitting(false);
-            onClose();
-        }, 500);
+        router.post(
+            '/tenant/tickets',
+            { subject, category, description, photo },
+            {
+                forceFormData: true,
+                onFinish: () => setSubmitting(false),
+                onSuccess: () => onClose(),
+            },
+        );
     }
 
     return (
@@ -324,7 +294,7 @@ function CreateTicketSheet({ onClose }: { onClose: () => void }) {
                         <Input
                             id="subject"
                             autoFocus
-                            placeholder="cth. AC unit tidak dingin"
+                            placeholder="cth. Lampu Taman Mati"
                             className="h-12 text-base"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
@@ -367,6 +337,11 @@ function CreateTicketSheet({ onClose }: { onClose: () => void }) {
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                         />
+                    </div>
+
+                    <div className="grid gap-1.5">
+                        <Label>Foto (opsional)</Label>
+                        <ImageDropzone value={photo} onChange={setPhoto} disabled={submitting} />
                     </div>
                 </div>
 

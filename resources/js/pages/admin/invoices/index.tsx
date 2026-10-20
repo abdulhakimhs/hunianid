@@ -1,7 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Ban, CircleCheck, ListFilter, Loader2, Pencil, Plus, Repeat, Search, Trash2, X } from 'lucide-react';
+import { Ban, CircleCheck, ImageIcon, ListFilter, Loader2, Pencil, Plus, Repeat, Search, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTablePagination } from '@/components/data-table-pagination';
+import { ImageDropzone } from '@/components/image-dropzone';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -43,6 +44,8 @@ type InvoiceRow = {
     dueDate: string | null;
     amount: number;
     status: InvoiceStatus;
+    paidAt: string | null;
+    hasPaymentProof: boolean;
     memo: string | null;
     invoiceCategory: InvoiceCategoryRef;
     tenant: { id: number; name: string };
@@ -92,7 +95,16 @@ return '-';
     return new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function initialTab(): 'outstanding' | 'history' | 'templates' {
+// Local calendar date, not toISOString() — that's UTC and gives yesterday before 07:00 WIB.
+function todayLocal() {
+    const d = new Date();
+
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+type MarkPaidTarget = { mode: 'single'; invoice: InvoiceRow } | { mode: 'bulk' };
+
+function initialTab():'outstanding' | 'history' | 'templates' {
     if (typeof window === 'undefined') {
 return 'outstanding';
 }
@@ -177,6 +189,9 @@ export default function InvoicesIndex({ invoices, templates, categories, reminde
     });
     const [editTemplateSubmitting, setEditTemplateSubmitting] = useState(false);
     const [markingPaidId, setMarkingPaidId] = useState<number | null>(null);
+    const [markPaidTarget, setMarkPaidTarget] = useState<MarkPaidTarget | null>(null);
+    const [paidDate, setPaidDate] = useState(todayLocal());
+    const [paymentProof, setPaymentProof] = useState<File | null>(null);
     const [cancellingInvoice, setCancellingInvoice] = useState<InvoiceRow | null>(null);
     const [cancelling, setCancelling] = useState(false);
     const [bulkCancelOpen, setBulkCancelOpen] = useState(false);
@@ -260,12 +275,36 @@ export default function InvoicesIndex({ invoices, templates, categories, reminde
         }
     }
 
-    function markPaid(invoice: InvoiceRow) {
+    function openMarkPaid(target: MarkPaidTarget) {
+        setPaidDate(todayLocal());
+        setPaymentProof(null);
+        setMarkPaidTarget(target);
+    }
+
+    function confirmMarkPaid() {
+        if (!markPaidTarget) {
+            return;
+        }
+
+        if (markPaidTarget.mode === 'bulk') {
+            markPaidBulk();
+
+            return;
+        }
+
+        const invoice = markPaidTarget.invoice;
+
+        if (!paymentProof) {
+            return;
+        }
+
         setMarkingPaidId(invoice.id);
         router.post(
             `/admin/invoices/${invoice.id}/mark-paid`,
-            {},
+            { paid_at: paidDate, payment_proof: paymentProof },
             {
+                forceFormData: true,
+                onSuccess: () => setMarkPaidTarget(null),
                 onFinish: () => setMarkingPaidId(null),
             },
         );
@@ -292,9 +331,12 @@ export default function InvoicesIndex({ invoices, templates, categories, reminde
         setBulkSubmitting(true);
         router.post(
             '/admin/invoices/mark-paid-bulk',
-            { invoice_ids: selected },
+            { invoice_ids: selected, paid_at: paidDate },
             {
-                onSuccess: () => setSelected([]),
+                onSuccess: () => {
+                    setSelected([]);
+                    setMarkPaidTarget(null);
+                },
                 onFinish: () => setBulkSubmitting(false),
             },
         );
@@ -562,7 +604,7 @@ return;
                                                     size="sm"
                                                     className="h-8 gap-1.5 rounded-full bg-(--color-mint) px-3 text-white shadow-sm hover:bg-(--color-mint-deep)"
                                                     disabled={markingPaidId === invoice.id}
-                                                    onClick={() => markPaid(invoice)}
+                                                    onClick={() => openMarkPaid({ mode: 'single', invoice })}
                                                 >
                                                     {markingPaidId === invoice.id ? (
                                                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -581,6 +623,22 @@ return;
                                                     <Ban className="h-3.5 w-3.5" />
                                                     Batalkan
                                                 </Button>
+                                            </div>
+                                        )}
+                                        {invoice.status === 'paid' && (
+                                            <div className="flex flex-col items-end gap-0.5">
+                                                <span className="text-xs text-(--color-ink)/50">Dibayar {formatDate(invoice.paidAt)}</span>
+                                                {invoice.hasPaymentProof && (
+                                                    <a
+                                                        href={`/admin/invoices/${invoice.id}/payment-proof`}
+                                                        target="_blank"
+                                                        rel="noopener"
+                                                        className="inline-flex items-center gap-1 text-xs font-medium text-(--color-mint-deep) hover:underline"
+                                                    >
+                                                        <ImageIcon className="h-3.5 w-3.5" />
+                                                        Lihat Bukti
+                                                    </a>
+                                                )}
                                             </div>
                                         )}
                                     </TableCell>
@@ -681,7 +739,7 @@ return;
                             size="sm"
                             className="gap-1.5 rounded-full bg-(--color-mint) text-white hover:bg-(--color-mint-deep)"
                             disabled={bulkSubmitting || bulkCancelling}
-                            onClick={markPaidBulk}
+                            onClick={() => openMarkPaid({ mode: 'bulk' })}
                         >
                             {bulkSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleCheck className="h-3.5 w-3.5" />}
                             Tandai Lunas
@@ -699,6 +757,67 @@ return;
                     </div>
                 </div>
             )}
+
+            {/* Mark paid (single: date + proof, bulk: date only) */}
+            <Dialog
+                open={!!markPaidTarget}
+                onOpenChange={(open) => !open && !markingPaidId && !bulkSubmitting && setMarkPaidTarget(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {markPaidTarget?.mode === 'bulk' ? `Tandai ${selected.length} Tagihan Lunas` : 'Tandai Lunas'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {markPaidTarget?.mode === 'single'
+                                ? `${markPaidTarget.invoice.invoiceNumber} · ${markPaidTarget.invoice.tenant.name} · ${formatCurrency(markPaidTarget.invoice.amount)}`
+                                : 'Tanggal bayar akan dicatat sama untuk semua tagihan terpilih.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <label className="text-sm font-medium text-(--color-ink)">Tanggal Bayar</label>
+                            <Input
+                                type="date"
+                                value={paidDate}
+                                max={todayLocal()}
+                                onChange={(e) => setPaidDate(e.target.value)}
+                            />
+                        </div>
+
+                        {markPaidTarget?.mode === 'single' && (
+                            <div className="grid gap-2">
+                                <label className="text-sm font-medium text-(--color-ink)">Bukti Bayar</label>
+                                <ImageDropzone value={paymentProof} onChange={setPaymentProof} disabled={!!markingPaidId} />
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setMarkPaidTarget(null)}
+                            disabled={!!markingPaidId || bulkSubmitting}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            className="bg-(--color-mint) text-white hover:bg-(--color-mint-deep)"
+                            onClick={confirmMarkPaid}
+                            disabled={
+                                !paidDate ||
+                                (markPaidTarget?.mode === 'single' && !paymentProof) ||
+                                !!markingPaidId ||
+                                bulkSubmitting
+                            }
+                        >
+                            {(markingPaidId || bulkSubmitting) && <Loader2 className="h-4 w-4 animate-spin" />}
+                            Simpan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Bulk cancel confirmation */}
             <Dialog open={bulkCancelOpen} onOpenChange={(open) => !open && setBulkCancelOpen(false)}>

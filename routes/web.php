@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipSwitchController;
+use App\Http\Controllers\PendingApprovalController;
 use App\Http\Controllers\VisitorPassController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -16,9 +17,13 @@ Route::inertia('/', 'landing')->name('home');
 Route::get('pass/{token}', [VisitorPassController::class, 'show'])->name('visitor-pass.show');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('dashboard', DashboardController::class)->name('dashboard');
-    Route::inertia('units-map', 'units-map')->name('units-map');
+    Route::get('menunggu-persetujuan', PendingApprovalController::class)->name('pending-approval');
     Route::post('switch-membership', [MembershipSwitchController::class, 'store'])->name('switch-membership');
+
+    Route::middleware(['pending.approval'])->group(function () {
+        Route::get('dashboard', DashboardController::class)->name('dashboard');
+        Route::inertia('units-map', 'units-map')->name('units-map');
+    });
 });
 
 // /register stays open even for an already-authenticated visitor, not behind `guest` —

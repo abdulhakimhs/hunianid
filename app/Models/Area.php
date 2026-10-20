@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by', 'invitation_message', 'security_invitation_message', 'reminder_days_before_due'])]
+#[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by', 'invitation_message', 'security_invitation_message', 'reminder_days_before_due', 'ticket_escalation_days'])]
 class Area extends Model
 {
     /** @use HasFactory<AreaFactory> */
@@ -24,6 +24,8 @@ class Area extends Model
         "\n\nTautan ini bersifat pribadi, jangan bagikan ke orang lain.";
 
     public const DEFAULT_REMINDER_DAYS_BEFORE_DUE = 3;
+
+    public const DEFAULT_TICKET_ESCALATION_DAYS = 7;
 
     /**
      * Get the attributes that should be cast.
@@ -50,6 +52,11 @@ class Area extends Model
     public function reminderDaysBeforeDue(): int
     {
         return $this->reminder_days_before_due ?? self::DEFAULT_REMINDER_DAYS_BEFORE_DUE;
+    }
+
+    public function ticketEscalationDays(): int
+    {
+        return $this->ticket_escalation_days ?? self::DEFAULT_TICKET_ESCALATION_DAYS;
     }
 
     /**

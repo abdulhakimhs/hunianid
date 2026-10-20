@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -63,6 +64,17 @@ class User extends Authenticatable implements PasskeyUser
     public function areaMemberships(): HasMany
     {
         return $this->hasMany(AreaMember::class);
+    }
+
+    /**
+     * Only people whose membership in this area is approved — `unit_user` defaults to
+     * active on registration, so it alone doesn't exclude pending_approval residents.
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopeActiveMemberOf(Builder $query, Area $area): void
+    {
+        $query->whereHas('areaMemberships', fn ($q) => $q->where('area_id', $area->id)->where('status', 'active'));
     }
 
     /**

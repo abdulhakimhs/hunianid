@@ -26,7 +26,10 @@ return new class extends Migration
 
         // 'accepted' marks a targeted invite as consumed once its tenant registers
         // through it — distinct from 'expired'/'revoked' since it succeeded.
-        DB::statement("ALTER TABLE invites MODIFY status ENUM('active', 'expired', 'revoked', 'accepted') NOT NULL DEFAULT 'active'");
+        // MySQL-only enum change; SQLite (test suite) has no MODIFY.
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE invites MODIFY status ENUM('active', 'expired', 'revoked', 'accepted') NOT NULL DEFAULT 'active'");
+        }
     }
 
     /**
@@ -34,7 +37,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE invites MODIFY status ENUM('active', 'expired', 'revoked') NOT NULL DEFAULT 'active'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE invites MODIFY status ENUM('active', 'expired', 'revoked') NOT NULL DEFAULT 'active'");
+        }
 
         Schema::table('invites', function (Blueprint $table) {
             $table->dropConstrainedForeignId('unit_id');

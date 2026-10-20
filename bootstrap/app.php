@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureAdminRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\RedirectIfPendingApproval;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -28,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('invoices:generate-recurring')->dailyAt('01:00')->withoutOverlapping();
         $schedule->command('invoices:flip-overdue')->dailyAt('01:05')->withoutOverlapping();
         $schedule->command('invoices:send-reminders')->dailyAt('08:00')->withoutOverlapping();
+        $schedule->command('tickets:send-escalation-reminders')->dailyAt('09:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Nginx and any HTTPS-terminating proxy in front of it (cloudflared tunnel,
@@ -40,7 +42,10 @@ return Application::configure(basePath: dirname(__DIR__))
             ? route('login-security')
             : route('login'));
 
-        $middleware->alias(['admin.role' => EnsureAdminRole::class]);
+        $middleware->alias([
+            'admin.role' => EnsureAdminRole::class,
+            'pending.approval' => RedirectIfPendingApproval::class,
+        ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 

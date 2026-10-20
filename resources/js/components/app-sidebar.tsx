@@ -33,8 +33,6 @@ import { dashboard } from '@/routes';
 import type { AdminAccess, NavItem } from '@/types';
 
 function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
-    const isAdminSide = !isTenant;
-
     return [
         {
             label: 'Utama',
@@ -125,9 +123,9 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
                     // Admin-side complaint/ticket triage — a tenant's own tickets live
                     // under /tenant/tickets, outside this sidebar entirely.
                     title: 'Tiket & Komplain',
-                    href: '#',
+                    href: '/admin/tickets',
                     icon: Ticket,
-                    requires: isAdminSide,
+                    requires: adminAccess.tickets,
                 },
             ].filter((item) => item.requires ?? true),
         },

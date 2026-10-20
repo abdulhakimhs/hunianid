@@ -21,7 +21,7 @@ class VisitorPassController extends Controller
 
         $state = match (true) {
             $pass->status === 'cancelled' => 'cancelled',
-            $pass->status === 'used' => 'used',
+            $pass->status === 'used', $pass->status === 'exited' => 'used',
             $pass->isExpired() => 'expired',
             default => 'valid',
         };
