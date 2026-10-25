@@ -1,5 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import HunianLogo from '@/components/hunian-logo';
+import { login } from '@/routes';
+import MockupPanic from '../components/mockup-panic.jsx';
 import {
     MockupChat,
     MockupProcessing,
@@ -10,7 +13,6 @@ import {
     MockupBroadcast,
 } from '../components/mockups.jsx';
 import Reveal from '../components/reveal.jsx';
-import { login } from '@/routes';
 
 const NAV_LINKS = [
     { href: '#cara-kerja', label: 'Cara Kerja' },
@@ -20,7 +22,7 @@ const NAV_LINKS = [
 ];
 
 const VALUE_CHIPS = [
-    'Mulai gratis untuk RT kecil',
+    'Coba gratis 30 hari',
     'Setup dalam hitungan hari',
     'Data terpisah per RT',
 ];
@@ -37,6 +39,10 @@ const COMPARISON = [
     {
         old: 'Komplain warga numpuk di grup WA, hilang ketimbun chat lain',
         now: 'Komplain otomatis jadi tiket, terarah ke petugas yang tepat',
+    },
+    {
+        old: 'Ada kejadian darurat, teriak di grup WA dan telepon satpam satu-satu',
+        now: 'Tahan satu tombol, satpam langsung dapat alarm lengkap dengan unit',
     },
 ];
 
@@ -90,33 +96,43 @@ const FEATURES = [
         kind: 'human',
         mockup: MockupBroadcast,
     },
+    {
+        title: 'Darurat? Satu tahan, satpam langsung tahu',
+        subtitle: 'Tombol Darurat',
+        desc: 'Warga menahan tombol 2 detik, satpam langsung dapat alarm layar penuh berisi nama dan unit. Alarm baru berhenti setelah satpam konfirmasi.',
+        kind: 'alert',
+        wide: true,
+        mockup: MockupPanic,
+    },
 ];
 
 const PLANS = [
     {
-        name: 'Free Trial',
+        name: 'Coba Gratis',
         price: 'Gratis',
-        period: '15 hari',
-        desc: 'Coba semua fitur inti tanpa komitmen.',
+        period: '30 hari',
+        desc: 'Coba semua fitur, tanpa kartu kredit dan tanpa komitmen.',
         features: [
-            'Tamu, Tagihan, Komplain, Broadcast',
-            '1 RT / komplek',
-            'Sampai 50 unit',
-            'Support via WhatsApp',
+            'Tagihan, Tamu, Komplain, Broadcast',
+            'Tombol darurat & aplikasi satpam',
+            '1 RT / komplek, sampai 50 unit',
+            'Bantuan setup via WhatsApp',
         ],
-        cta: 'Mulai Trial',
+        cta: 'Mulai Coba Gratis',
         highlight: false,
     },
     {
         name: 'Standard',
         price: 'Rp149rb',
         period: '/bulan',
+        note: 'sampai 150 unit, sekitar Rp1.000 per unit',
         desc: 'Untuk RT yang sudah pakai HunianID sehari-hari.',
         features: [
-            'Semua fitur Free Trial',
-            'Unit tanpa batas untuk 1 RT',
-            'Riwayat & laporan tak terbatas',
-            'Support prioritas',
+            'Semua fitur Coba Gratis',
+            'Sampai 150 unit untuk 1 RT',
+            'Riwayat & laporan lengkap',
+            'Support prioritas via WhatsApp',
+            'Bayar tahunan hemat 2 bulan (Rp1.490.000/tahun)',
         ],
         cta: 'Pilih Standard',
         highlight: true,
@@ -125,9 +141,9 @@ const PLANS = [
         name: 'Custom',
         price: 'Hubungi Kami',
         period: '',
-        desc: 'Untuk gabungan beberapa lingkungan atau kebutuhan khusus.',
+        desc: 'Untuk lebih dari 150 unit, beberapa RT, atau kebutuhan khusus.',
         features: [
-            'Multi-RT dalam 1 komplek',
+            'Unit & RT sesuai kebutuhan',
             'Dashboard gabungan untuk pengelola',
             'Audit trail lengkap',
             'Onboarding & support khusus',
@@ -140,7 +156,7 @@ const PLANS = [
 const FAQS = [
     {
         q: 'Warga saya gaptek, gimana?',
-        a: 'Ga masalah. Fitur utama pakai WhatsApp yang sudah dipakai sehari-hari — warga ga perlu download atau belajar aplikasi baru.',
+        a: 'Ga masalah. Fitur utama pakai WhatsApp yang sudah dipakai sehari-hari — warga ga perlu download atau belajar aplikasi baru. Tombol darurat dan aplikasi satpam berjalan sebagai aplikasi web yang bisa dipasang langsung dari browser, tanpa Play Store.',
     },
     {
         q: 'Data kami aman ga?',
@@ -153,6 +169,14 @@ const FAQS = [
     {
         q: 'Bisa buat 2 RT dalam 1 komplek?',
         a: 'Bisa. Ini justru salah satu kasus penggunaan yang didukung — tiap RT punya data dan pengurusnya sendiri dalam satu komplek.',
+    },
+    {
+        q: 'Kalau tombol darurat kepencet, gimana?',
+        a: 'Tombol harus ditahan 2 detik, jadi sentuhan sekilas tidak akan mengirim apa-apa. Kalau tetap terkirim, ada 15 detik untuk membatalkannya sebagai alarm palsu.',
+    },
+    {
+        q: 'Siapa yang menerima alarm darurat?',
+        a: 'Satpam yang bertugas langsung dapat alarm layar penuh dan notifikasi. Alarm baru berhenti setelah satpam menekan konfirmasi, jadi jelas ada yang merespons. Pastikan notifikasi aplikasi aktif di HP satpam.',
     },
 ];
 
@@ -247,12 +271,45 @@ function IconChatPile() {
     );
 }
 
+function IconSiren() {
+    return (
+        <svg
+            viewBox="0 0 48 48"
+            fill="none"
+            className="h-9 w-9"
+            aria-hidden="true"
+        >
+            <path
+                d="M14 34v-8a10 10 0 0 1 20 0v8"
+                stroke="var(--color-coral)"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                fill="var(--color-surface)"
+            />
+            <path
+                d="M10 34h28v4a2 2 0 0 1-2 2H12a2 2 0 0 1-2-2v-4Z"
+                stroke="var(--color-coral)"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                fill="var(--color-surface)"
+            />
+            <path
+                d="M24 8v4M10 14l3 3M38 14l-3 3"
+                stroke="var(--color-coral)"
+                strokeWidth="2"
+                strokeLinecap="round"
+            />
+        </svg>
+    );
+}
+
 const PAIN_ICONS = {
     log: IconTornLog,
     bills: IconBillsStack,
     chat: IconChatPile,
+    alarm: IconSiren,
 };
-const PAIN_KEYS = ['log', 'bills', 'chat'];
+const PAIN_KEYS = ['log', 'bills', 'chat', 'alarm'];
 
 function IconHouseGate() {
     return (
@@ -380,7 +437,7 @@ function ScrollProgress() {
 function FloatingChip({ className, children, delay = false }) {
     return (
         <div
-            className={`chip-float ${delay ? 'chip-float-delay' : ''} shadow-elevated-lg absolute z-10 flex items-center gap-2 rounded-2xl border border-[color:var(--color-ink)]/6 bg-[color:var(--color-surface)] px-3.5 py-2.5 ${className}`}
+            className={`chip-float ${delay ? 'chip-float-delay' : ''} shadow-elevated-lg absolute z-10 flex items-center gap-2 rounded-2xl border border-(--color-ink)/6 bg-(--color-surface) px-3.5 py-2.5 ${className}`}
         >
             {children}
         </div>
@@ -415,16 +472,16 @@ function WaToQrVisual() {
             }}
         >
             <div
-                className="blob mesh-drift absolute -top-8 -left-10 h-36 w-36 rounded-full bg-[color:var(--color-mint)]/25 blur-3xl"
+                className="blob mesh-drift absolute -top-8 -left-10 h-36 w-36 rounded-full bg-(--color-mint)/25 blur-3xl"
                 aria-hidden="true"
             />
             <div
-                className="blob blob-delay mesh-drift absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-[color:var(--color-sky)]/30 blur-3xl"
+                className="blob blob-delay mesh-drift absolute -right-10 -bottom-10 h-40 w-40 rounded-full bg-(--color-sky)/30 blur-3xl"
                 aria-hidden="true"
             />
 
-            <div className="shadow-elevated-lg relative mx-auto flex h-full w-full max-w-[280px] flex-col rounded-[2.4rem] border-4 border-[color:var(--color-ink)] bg-[color:var(--color-ink)] p-2">
-                <div className="relative flex-1 overflow-hidden rounded-[1.8rem] bg-[color:var(--color-bg)]">
+            <div className="shadow-elevated-lg relative mx-auto flex h-full w-full max-w-[280px] flex-col rounded-[2.4rem] border-4 border-(--color-ink) bg-(--color-ink) p-2">
+                <div className="relative flex-1 overflow-hidden rounded-[1.8rem] bg-(--color-bg)">
                     <div
                         className="absolute top-0 right-0 left-0 z-10 flex items-center gap-2 px-3 py-2.5"
                         style={{
@@ -441,11 +498,11 @@ function WaToQrVisual() {
                     </div>
 
                     <div className="wa-qr-frame wa-qr-frame--1 absolute inset-0 flex items-center justify-center px-5 pt-12">
-                        <div className="shadow-elevated w-full rounded-2xl rounded-bl-sm bg-[color:var(--color-surface)] p-3.5">
-                            <p className="font-mono text-[10px] text-[color:var(--color-mint-deep)]">
+                        <div className="shadow-elevated w-full rounded-2xl rounded-bl-sm bg-(--color-surface) p-3.5">
+                            <p className="font-mono text-[10px] text-(--color-mint-deep)">
                                 09:58
                             </p>
-                            <p className="mt-1 text-[15px] leading-snug text-[color:var(--color-ink)]">
+                            <p className="mt-1 text-[15px] leading-snug text-(--color-ink)">
                                 Tamu saya jam 10, nama Budi
                             </p>
                         </div>
@@ -469,7 +526,7 @@ function WaToQrVisual() {
                     </div>
 
                     <div className="wa-qr-frame wa-qr-frame--3 absolute inset-0 flex items-center justify-center px-5 pt-12">
-                        <div className="shadow-elevated rounded-2xl bg-[color:var(--color-surface)] p-4 text-center">
+                        <div className="shadow-elevated rounded-2xl bg-(--color-surface) p-4 text-center">
                             <div
                                 className="mx-auto grid h-28 w-28 grid-cols-5 grid-rows-5 gap-1 rounded-xl p-2"
                                 style={{
@@ -493,7 +550,7 @@ function WaToQrVisual() {
                                     />
                                 ))}
                             </div>
-                            <p className="mt-2.5 font-mono text-[11px] text-[color:var(--color-mint-deep)]">
+                            <p className="mt-2.5 font-mono text-[11px] text-(--color-mint-deep)">
                                 Tamu: Budi · 10:00
                             </p>
                         </div>
@@ -501,11 +558,11 @@ function WaToQrVisual() {
 
                     <div className="wa-qr-frame wa-qr-frame--4 absolute inset-0 flex items-center justify-center px-5 pt-12">
                         <div className="flex w-full flex-col gap-2">
-                            <div className="shadow-elevated w-full rounded-2xl rounded-bl-sm bg-[color:var(--color-surface)] p-3">
-                                <p className="font-mono text-[10px] text-[color:var(--color-mint-deep)]">
+                            <div className="shadow-elevated w-full rounded-2xl rounded-bl-sm bg-(--color-surface) p-3">
+                                <p className="font-mono text-[10px] text-(--color-mint-deep)">
                                     14:02
                                 </p>
-                                <p className="mt-1 text-[13px] leading-snug text-[color:var(--color-ink)]">
+                                <p className="mt-1 text-[13px] leading-snug text-(--color-ink)">
                                     Pompa air mati nih
                                 </p>
                             </div>
@@ -533,7 +590,7 @@ function WaToQrVisual() {
                 <span className="icon-chip-ai grid h-6 w-6 place-items-center rounded-full text-[10px] font-bold text-white">
                     AI
                 </span>
-                <span className="text-[11px] font-semibold text-[color:var(--color-ink)]">
+                <span className="text-[11px] font-semibold text-(--color-ink)">
                     mencatat otomatis
                 </span>
             </FloatingChip>
@@ -541,7 +598,7 @@ function WaToQrVisual() {
             <FloatingChip className="bottom-10 -left-4 sm:-left-10" delay>
                 <svg
                     viewBox="0 0 16 16"
-                    className="h-4 w-4 text-[color:var(--color-mint-deep)]"
+                    className="h-4 w-4 text-(--color-mint-deep)"
                     fill="none"
                     aria-hidden="true"
                 >
@@ -553,7 +610,7 @@ function WaToQrVisual() {
                         strokeLinejoin="round"
                     />
                 </svg>
-                <span className="text-[11px] font-semibold text-[color:var(--color-ink)]">
+                <span className="text-[11px] font-semibold text-(--color-ink)">
                     Tagihan lunas
                 </span>
             </FloatingChip>
@@ -597,7 +654,7 @@ function Faq({ item, open, onToggle }) {
                 className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
             >
                 <div className="overflow-hidden">
-                    <p className="pb-4 text-sm leading-relaxed text-[color:var(--color-ink)]/70">
+                    <p className="pb-4 text-sm leading-relaxed text-(--color-ink)/70">
                         {item.a}
                     </p>
                 </div>
@@ -624,30 +681,25 @@ export default function Landing() {
         <>
             <Head title="HunianID — Kelola Perumahan Tanpa Ribet Catat Manual" />
 
-            <div className="min-h-screen overflow-x-hidden bg-[color:var(--color-bg)] font-sans text-[color:var(--color-ink)] antialiased">
+            <div className="min-h-screen overflow-x-hidden bg-(--color-bg) font-sans text-(--color-ink) antialiased">
                 <ScrollProgress />
 
                 {/* NAV */}
                 <header
                     className={`sticky top-0 z-40 border-b transition-colors duration-300 ${
                         scrolled
-                            ? 'border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]/90 shadow-sm backdrop-blur'
+                            ? 'border-(--color-ink)/8 bg-(--color-bg)/90 shadow-sm backdrop-blur'
                             : 'border-transparent bg-transparent'
                     }`}
                 >
                     <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-                        <span className="font-display text-lg font-bold tracking-tight">
-                            Hunian
-                            <span className="text-[color:var(--color-sky-deep)]">
-                                ID
-                            </span>
-                        </span>
+                        <HunianLogo className="h-7 w-auto" />
                         <nav className="hidden items-center gap-8 md:flex">
                             {NAV_LINKS.map((link) => (
                                 <a
                                     key={link.href}
                                     href={link.href}
-                                    className="text-sm font-medium text-[color:var(--color-ink)]/75 transition hover:text-[color:var(--color-ink)]"
+                                    className="text-sm font-medium text-(--color-ink)/75 transition hover:text-(--color-ink)"
                                 >
                                     {link.label}
                                 </a>
@@ -656,13 +708,13 @@ export default function Landing() {
                         <div className="flex items-center gap-3">
                             <Link
                                 href={login()}
-                                className="text-sm font-medium text-[color:var(--color-ink)]/75 transition hover:text-[color:var(--color-ink)]"
+                                className="text-sm font-medium text-(--color-ink)/75 transition hover:text-(--color-ink)"
                             >
                                 Masuk
                             </Link>
                             <a
                                 href="#daftar"
-                                className="shadow-elevated rounded-full bg-[color:var(--color-ink)] px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
+                                className="shadow-elevated rounded-full bg-(--color-ink) px-4 py-2 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:shadow-lg"
                             >
                                 Daftar Sekarang
                             </a>
@@ -673,11 +725,11 @@ export default function Landing() {
                 {/* HERO */}
                 <section className="dot-grid relative overflow-hidden">
                     <div
-                        className="blob mesh-drift absolute top-1/3 -left-24 h-72 w-72 rounded-full bg-[color:var(--color-mint)]/20 blur-3xl"
+                        className="blob mesh-drift absolute top-1/3 -left-24 h-72 w-72 rounded-full bg-(--color-mint)/20 blur-3xl"
                         aria-hidden="true"
                     />
                     <div
-                        className="blob blob-delay mesh-drift absolute top-10 -right-16 h-64 w-64 rounded-full bg-[color:var(--color-sky)]/20 blur-3xl"
+                        className="blob blob-delay mesh-drift absolute top-10 -right-16 h-64 w-64 rounded-full bg-(--color-sky)/20 blur-3xl"
                         aria-hidden="true"
                     />
 
@@ -699,11 +751,11 @@ export default function Landing() {
                                 <Reveal
                                     delay={160}
                                     as="p"
-                                    className="mt-5 max-w-md text-lg leading-relaxed text-[color:var(--color-ink)]/75"
+                                    className="mt-5 max-w-md text-lg leading-relaxed text-(--color-ink)/75"
                                 >
                                     Satu aplikasi untuk tagihan, tamu, komplain,
-                                    dan lapor warga — cukup chat WhatsApp,
-                                    sisanya otomatis.
+                                    dan tombol darurat. Urusan harian cukup
+                                    lewat WhatsApp, sisanya otomatis.
                                 </Reveal>
                                 <Reveal
                                     delay={240}
@@ -721,7 +773,7 @@ export default function Landing() {
                                     </a>
                                     <a
                                         href="#cara-kerja"
-                                        className="text-sm font-semibold text-[color:var(--color-ink)] underline decoration-[color:var(--color-mint)] decoration-2 underline-offset-4"
+                                        className="text-sm font-semibold text-(--color-ink) underline decoration-(--color-mint) decoration-2 underline-offset-4"
                                     >
                                         Lihat Cara Kerjanya
                                     </a>
@@ -733,11 +785,11 @@ export default function Landing() {
                                     {VALUE_CHIPS.map((chip) => (
                                         <span
                                             key={chip}
-                                            className="shadow-elevated flex items-center gap-1.5 rounded-full border border-[color:var(--color-ink)]/6 bg-[color:var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[color:var(--color-ink)]/70"
+                                            className="shadow-elevated flex items-center gap-1.5 rounded-full border border-(--color-ink)/6 bg-(--color-surface) px-3 py-1.5 text-xs font-medium text-(--color-ink)/70"
                                         >
                                             <svg
                                                 viewBox="0 0 16 16"
-                                                className="h-3.5 w-3.5 text-[color:var(--color-mint-deep)]"
+                                                className="h-3.5 w-3.5 text-(--color-mint-deep)"
                                                 fill="none"
                                                 aria-hidden="true"
                                             >
@@ -757,7 +809,7 @@ export default function Landing() {
 
                             <Reveal delay={120}>
                                 <WaToQrVisual />
-                                <p className="mt-6 text-center font-mono text-xs text-[color:var(--color-ink)]/45">
+                                <p className="mt-6 text-center font-mono text-xs text-(--color-ink)/45">
                                     dari pesan WhatsApp jadi QR tamu — otomatis
                                 </p>
                             </Reveal>
@@ -766,7 +818,7 @@ export default function Landing() {
                 </section>
 
                 {/* PROBLEM / COMPARISON */}
-                <section className="bg-[color:var(--color-surface)]">
+                <section className="bg-(--color-surface)">
                     <div className="mx-auto max-w-6xl px-5 py-20">
                         <Reveal>
                             <SectionLabel tone="mint">
@@ -780,24 +832,24 @@ export default function Landing() {
                         >
                             Ribet catat manual, vs otomatis tercatat tiap hari
                         </Reveal>
-                        <div className="mt-12 grid gap-6 sm:grid-cols-3">
+                        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                             {COMPARISON.map((item, i) => {
                                 const Icon = PAIN_ICONS[PAIN_KEYS[i]];
 
                                 return (
                                     <Reveal key={item.old} delay={i * 100}>
-                                        <div className="tilt-card shadow-elevated h-full rounded-3xl border border-[color:var(--color-ink)]/6 bg-[color:var(--color-bg)] p-6 hover:shadow-xl">
-                                            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[color:var(--color-coral)]/10">
+                                        <div className="tilt-card shadow-elevated h-full rounded-3xl border border-(--color-ink)/6 bg-(--color-bg) p-6 hover:shadow-xl">
+                                            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-(--color-coral)/10">
                                                 <Icon />
                                             </span>
-                                            <p className="mt-4 text-[15px] leading-snug font-medium text-[color:var(--color-ink)]/80 line-through decoration-[color:var(--color-coral)]/50">
+                                            <p className="mt-4 text-[15px] leading-snug font-medium text-(--color-ink)/80 line-through decoration-(--color-coral)/50">
                                                 {item.old}
                                             </p>
-                                            <div className="mt-4 flex items-start gap-2 border-t border-[color:var(--color-ink)]/8 pt-4">
-                                                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[color:var(--color-mint)]/15">
+                                            <div className="mt-4 flex items-start gap-2 border-t border-(--color-ink)/8 pt-4">
+                                                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-(--color-mint)/15">
                                                     <svg
                                                         viewBox="0 0 16 16"
-                                                        className="h-3 w-3 text-[color:var(--color-mint-deep)]"
+                                                        className="h-3 w-3 text-(--color-mint-deep)"
                                                         fill="none"
                                                         aria-hidden="true"
                                                     >
@@ -810,7 +862,7 @@ export default function Landing() {
                                                         />
                                                     </svg>
                                                 </span>
-                                                <p className="text-[14px] leading-snug font-semibold text-[color:var(--color-ink)]">
+                                                <p className="text-[14px] leading-snug font-semibold text-(--color-ink)">
                                                     {item.now}
                                                 </p>
                                             </div>
@@ -839,7 +891,7 @@ export default function Landing() {
                     </Reveal>
                     <div className="relative mt-14 grid gap-12 md:grid-cols-3 md:gap-8">
                         <div
-                            className="absolute top-6 right-0 left-0 hidden h-px bg-[color:var(--color-ink)]/10 md:block"
+                            className="absolute top-6 right-0 left-0 hidden h-px bg-(--color-ink)/10 md:block"
                             aria-hidden="true"
                         />
                         {STEPS.map((step, i) => {
@@ -863,7 +915,7 @@ export default function Landing() {
                                     <h3 className="mt-4 font-display text-lg font-bold">
                                         {step.title}
                                     </h3>
-                                    <p className="mt-2 text-sm leading-relaxed text-[color:var(--color-ink)]/70">
+                                    <p className="mt-2 text-sm leading-relaxed text-(--color-ink)/70">
                                         {step.desc}
                                     </p>
                                     <div className="tilt-card mt-5">
@@ -878,15 +930,15 @@ export default function Landing() {
                 {/* FEATURES */}
                 <section
                     id="fitur"
-                    className="relative overflow-hidden bg-[color:var(--color-ink)] text-white"
+                    className="relative overflow-hidden bg-(--color-ink) text-white"
                 >
                     <div
-                        className="blob mesh-drift absolute top-0 right-0 h-96 w-96 rounded-full bg-[color:var(--color-sky)]/10 blur-3xl"
+                        className="blob mesh-drift absolute top-0 right-0 h-96 w-96 rounded-full bg-(--color-sky)/10 blur-3xl"
                         aria-hidden="true"
                     />
                     <div className="relative mx-auto max-w-6xl px-5 py-20">
                         <Reveal>
-                            <p className="font-mono text-xs font-medium tracking-[0.18em] text-[color:var(--color-sky)] uppercase">
+                            <p className="font-mono text-xs font-medium tracking-[0.18em] text-(--color-sky) uppercase">
                                 Fitur
                             </p>
                         </Reveal>
@@ -906,48 +958,68 @@ export default function Landing() {
                                 otomatis oleh AI
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-mint)]" />{' '}
+                                <span className="h-2.5 w-2.5 rounded-full bg-(--color-mint)" />{' '}
                                 aktivitas warga &amp; pengurus
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                                <span className="h-2.5 w-2.5 rounded-full bg-(--color-coral)" />{' '}
+                                darurat
                             </span>
                         </Reveal>
                         <div className="mt-10 grid gap-6 sm:grid-cols-2">
                             {FEATURES.map((f, i) => {
                                 const Mockup = f.mockup;
                                 const isAi = f.kind === 'ai';
+                                const accent =
+                                    f.kind === 'alert'
+                                        ? 'var(--color-coral)'
+                                        : isAi
+                                          ? 'var(--color-sky)'
+                                          : 'var(--color-mint)';
 
                                 return (
-                                    <Reveal key={f.title} delay={i * 100}>
-                                        <div className="tilt-card h-full rounded-3xl border border-white/10 bg-white/5 p-6 hover:border-white/20 hover:bg-white/[0.08]">
-                                            <div className="flex items-center gap-2">
-                                                <span
-                                                    className={`h-2 w-2 rounded-full ${isAi ? 'icon-chip-ai' : ''}`}
-                                                    style={
-                                                        !isAi
-                                                            ? {
-                                                                  background:
-                                                                      'var(--color-mint)',
-                                                              }
-                                                            : undefined
-                                                    }
-                                                />
-                                                <span
-                                                    className="font-mono text-xs font-medium tracking-wide uppercase"
-                                                    style={{
-                                                        color: isAi
-                                                            ? 'var(--color-sky)'
-                                                            : 'var(--color-mint)',
-                                                    }}
-                                                >
-                                                    {f.subtitle}
-                                                </span>
+                                    <Reveal
+                                        key={f.title}
+                                        delay={i * 100}
+                                        className={f.wide ? 'sm:col-span-2' : ''}
+                                    >
+                                        <div
+                                            className={`tilt-card h-full rounded-3xl border border-white/10 bg-white/5 p-6 hover:border-white/20 hover:bg-white/[0.08] ${
+                                                f.wide
+                                                    ? 'md:grid md:grid-cols-2 md:items-center md:gap-8'
+                                                    : ''
+                                            }`}
+                                        >
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className={`h-2 w-2 rounded-full ${isAi ? 'icon-chip-ai' : ''}`}
+                                                        style={
+                                                            !isAi
+                                                                ? {
+                                                                      background:
+                                                                          accent,
+                                                                  }
+                                                                : undefined
+                                                        }
+                                                    />
+                                                    <span
+                                                        className="font-mono text-xs font-medium tracking-wide uppercase"
+                                                        style={{
+                                                            color: accent,
+                                                        }}
+                                                    >
+                                                        {f.subtitle}
+                                                    </span>
+                                                </div>
+                                                <h3 className="mt-2 font-display text-lg font-bold text-balance">
+                                                    {f.title}
+                                                </h3>
+                                                <p className="mt-2 text-sm leading-relaxed text-white/65">
+                                                    {f.desc}
+                                                </p>
                                             </div>
-                                            <h3 className="mt-2 font-display text-lg font-bold text-balance">
-                                                {f.title}
-                                            </h3>
-                                            <p className="mt-2 text-sm leading-relaxed text-white/65">
-                                                {f.desc}
-                                            </p>
-                                            <div className="mt-5">
+                                            <div className="mt-5 md:mt-0">
                                                 <Mockup />
                                             </div>
                                         </div>
@@ -972,14 +1044,14 @@ export default function Landing() {
                     </Reveal>
                     <div className="mt-12 grid gap-6 md:grid-cols-2">
                         <Reveal delay={0}>
-                            <div className="tilt-card shadow-elevated h-full rounded-3xl border border-[color:var(--color-mint)]/25 bg-[color:var(--color-surface)] p-8 hover:shadow-xl">
-                                <span className="grid h-16 w-16 place-items-center rounded-2xl bg-[color:var(--color-mint)]/10">
+                            <div className="tilt-card shadow-elevated h-full rounded-3xl border border-(--color-mint)/25 bg-(--color-surface) p-8 hover:shadow-xl">
+                                <span className="grid h-16 w-16 place-items-center rounded-2xl bg-(--color-mint)/10">
                                     <IconHouseGate />
                                 </span>
                                 <h3 className="mt-4 font-display text-xl font-bold">
                                     Untuk RT
                                 </h3>
-                                <p className="mt-2 text-sm leading-relaxed text-[color:var(--color-ink)]/70">
+                                <p className="mt-2 text-sm leading-relaxed text-(--color-ink)/70">
                                     Ga perlu jadi jago teknologi — semua lewat
                                     WhatsApp yang sudah biasa dipakai. Pengurus
                                     tetap pegang kendali persetujuan tamu dan
@@ -989,14 +1061,14 @@ export default function Landing() {
                             </div>
                         </Reveal>
                         <Reveal delay={120}>
-                            <div className="tilt-card shadow-elevated h-full rounded-3xl border border-[color:var(--color-sky)]/25 bg-[color:var(--color-surface)] p-8 hover:shadow-xl">
-                                <span className="grid h-16 w-16 place-items-center rounded-2xl bg-[color:var(--color-sky)]/10">
+                            <div className="tilt-card shadow-elevated h-full rounded-3xl border border-(--color-sky)/25 bg-(--color-surface) p-8 hover:shadow-xl">
+                                <span className="grid h-16 w-16 place-items-center rounded-2xl bg-(--color-sky)/10">
                                     <IconCluster />
                                 </span>
                                 <h3 className="mt-4 font-display text-xl font-bold">
                                     Untuk Pengelola / Developer
                                 </h3>
-                                <p className="mt-2 text-sm leading-relaxed text-[color:var(--color-ink)]/70">
+                                <p className="mt-2 text-sm leading-relaxed text-(--color-ink)/70">
                                     Pantau banyak unit sekaligus, tampil lebih
                                     profesional di mata warga dan board, dan
                                     punya jejak audit yang rapi untuk tiap
@@ -1008,7 +1080,7 @@ export default function Landing() {
                 </section>
 
                 {/* PRICING */}
-                <section id="harga" className="bg-[color:var(--color-surface)]">
+                <section id="harga" className="bg-(--color-surface)">
                     <div className="mx-auto max-w-6xl px-5 py-20">
                         <div className="text-center">
                             <Reveal>
@@ -1024,9 +1096,9 @@ export default function Landing() {
                             <Reveal
                                 delay={140}
                                 as="p"
-                                className="mt-2 font-mono text-sm text-[color:var(--color-mint-deep)]"
+                                className="mt-2 font-mono text-sm text-(--color-mint-deep)"
                             >
-                                mulai gratis untuk RT kecil
+                                coba gratis 30 hari, tanpa kartu kredit
                             </Reveal>
                         </div>
 
@@ -1040,8 +1112,8 @@ export default function Landing() {
                                     <div
                                         className={`tilt-card relative flex h-full flex-col rounded-3xl border p-8 ${
                                             plan.highlight
-                                                ? 'shadow-elevated-lg border-[color:var(--color-sky)]/40 bg-[color:var(--color-surface)] md:-translate-y-3'
-                                                : 'shadow-elevated border-[color:var(--color-ink)]/8 bg-[color:var(--color-bg)]'
+                                                ? 'shadow-elevated-lg border-(--color-sky)/40 bg-(--color-surface) md:-translate-y-3'
+                                                : 'shadow-elevated border-(--color-ink)/8 bg-(--color-bg)'
                                         }`}
                                     >
                                         {plan.highlight && (
@@ -1052,35 +1124,40 @@ export default function Landing() {
                                                         'linear-gradient(135deg, var(--color-sky-deep), var(--color-sky))',
                                                 }}
                                             >
-                                                Paling Populer
+                                                Direkomendasikan
                                             </span>
                                         )}
                                         <h3 className="font-display text-lg font-bold">
                                             {plan.name}
                                         </h3>
-                                        <p className="mt-1 text-sm text-[color:var(--color-ink)]/60">
+                                        <p className="mt-1 text-sm text-(--color-ink)/60">
                                             {plan.desc}
                                         </p>
                                         <div className="mt-5 flex items-baseline gap-1.5">
-                                            <span className="font-mono text-3xl font-semibold text-[color:var(--color-ink)]">
+                                            <span className="font-mono text-3xl font-semibold text-(--color-ink)">
                                                 {plan.price}
                                             </span>
                                             {plan.period && (
-                                                <span className="font-mono text-sm text-[color:var(--color-ink)]/50">
+                                                <span className="font-mono text-sm text-(--color-ink)/50">
                                                     {plan.period}
                                                 </span>
                                             )}
                                         </div>
+                                        {plan.note && (
+                                            <p className="mt-1 text-xs text-(--color-ink)/50">
+                                                {plan.note}
+                                            </p>
+                                        )}
                                         <ul className="mt-6 flex-1 space-y-3">
                                             {plan.features.map((feature) => (
                                                 <li
                                                     key={feature}
-                                                    className="flex items-start gap-2.5 text-sm text-[color:var(--color-ink)]/75"
+                                                    className="flex items-start gap-2.5 text-sm text-(--color-ink)/75"
                                                 >
-                                                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[color:var(--color-mint)]/15">
+                                                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-(--color-mint)/15">
                                                         <svg
                                                             viewBox="0 0 16 16"
-                                                            className="h-3 w-3 text-[color:var(--color-mint-deep)]"
+                                                            className="h-3 w-3 text-(--color-mint-deep)"
                                                             fill="none"
                                                             aria-hidden="true"
                                                         >
@@ -1102,7 +1179,7 @@ export default function Landing() {
                                             className={`mt-8 inline-block rounded-full px-5 py-2.5 text-center text-sm font-semibold transition hover:-translate-y-0.5 ${
                                                 plan.highlight
                                                     ? 'shadow-elevated text-white'
-                                                    : 'border border-[color:var(--color-ink)]/15 text-[color:var(--color-ink)] hover:shadow-md'
+                                                    : 'border border-(--color-ink)/15 text-(--color-ink) hover:shadow-md'
                                             }`}
                                             style={
                                                 plan.highlight
@@ -1119,11 +1196,18 @@ export default function Landing() {
                                 </Reveal>
                             ))}
                         </div>
+                        <Reveal
+                            delay={300}
+                            as="p"
+                            className="mt-8 text-center text-sm text-(--color-ink)/55"
+                        >
+                            Tanpa kartu kredit · Batalkan kapan saja
+                        </Reveal>
                     </div>
                 </section>
 
                 {/* FAQ */}
-                <section id="faq" className="bg-[color:var(--color-surface)]">
+                <section id="faq" className="bg-(--color-surface)">
                     <div className="mx-auto max-w-3xl px-5 py-20">
                         <Reveal>
                             <SectionLabel>Pertanyaan umum</SectionLabel>
@@ -1137,7 +1221,7 @@ export default function Landing() {
                         </Reveal>
                         <Reveal
                             delay={140}
-                            className="mt-8 divide-y divide-[color:var(--color-ink)]/8 border-t border-b border-[color:var(--color-ink)]/8"
+                            className="mt-8 divide-y divide-(--color-ink)/8 border-t border-b border-(--color-ink)/8"
                         >
                             {FAQS.map((item, i) => (
                                 <Faq
@@ -1159,7 +1243,7 @@ export default function Landing() {
                     className="relative overflow-hidden py-20 text-center"
                 >
                     <div
-                        className="blob mesh-drift absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-[color:var(--color-sky)]/15 blur-3xl"
+                        className="blob mesh-drift absolute top-0 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-(--color-sky)/15 blur-3xl"
                         aria-hidden="true"
                     />
                     <Reveal className="relative mx-auto max-w-6xl px-5">
@@ -1180,15 +1264,10 @@ export default function Landing() {
                 </section>
 
                 {/* FOOTER */}
-                <footer className="border-t border-[color:var(--color-ink)]/8">
+                <footer className="border-t border-(--color-ink)/8">
                     <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 py-10 text-center sm:flex-row sm:justify-between sm:text-left">
-                        <span className="font-display text-base font-bold">
-                            Hunian
-                            <span className="text-[color:var(--color-sky-deep)]">
-                                ID
-                            </span>
-                        </span>
-                        <p className="text-sm text-[color:var(--color-ink)]/55">
+                        <HunianLogo className="h-6 w-auto" />
+                        <p className="text-sm text-(--color-ink)/55">
                             Hubungi kami:{' '}
                             <a
                                 href="mailto:halo@hunianid.com"
