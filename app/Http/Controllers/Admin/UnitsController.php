@@ -25,6 +25,7 @@ class UnitsController extends Controller
         $area = $request->attributes->get('adminArea');
 
         $units = Unit::where('area_id', $area->id)->get();
+
         return Inertia::render('admin/units/index', [
             'units' => $units,
             'area' => $area,
@@ -104,6 +105,6 @@ class UnitsController extends Controller
 
     private function normalize(?string $block, string $unitNumber): string
     {
-        return strtolower(trim(($block ?? '') . ' ' . $unitNumber));
+        return strtolower(trim(($block ?? '').' '.$unitNumber));
     }
 }

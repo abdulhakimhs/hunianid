@@ -53,6 +53,6 @@ Route::get('login-security', function (Request $request) {
 
     return Inertia::render('auth/login-security');
 })->name('login-security');
-require __DIR__ . '/settings.php';
-require __DIR__ . '/admin.php';
-require __DIR__ . '/webhooks.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/admin.php';
+require __DIR__.'/webhooks.php';
