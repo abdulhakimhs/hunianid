@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Models\AreaMember;
 use App\Models\User;
 use App\Services\MembershipContext;
-use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
@@ -20,10 +19,6 @@ class HandleInertiaRequests extends Middleware
      * @var string
      */
     protected $rootView = 'app';
-
-    public function __construct(
-        private readonly SubscriptionService $subscriptions,
-    ) {}
 
     /**
      * Determines the current asset version.
