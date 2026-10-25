@@ -39,6 +39,11 @@ export function NavMain({ groups = [] }: { groups: NavGroup[] }) {
                                     <Link href={item.href} prefetch>
                                         {item.icon && <item.icon />}
                                         <span>{item.title}</span>
+                                        {!!item.badge && (
+                                            <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[color:var(--color-coral,#FF6B57)] px-1.5 text-[11px] font-semibold text-white">
+                                                {item.badge}
+                                            </span>
+                                        )}
                                     </Link>
                                 </SidebarMenuButton>
                                 {item.items?.length ? (

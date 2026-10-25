@@ -18,11 +18,13 @@ use App\Http\Controllers\Admin\VisitorPassesController;
 use App\Http\Controllers\AnnouncementsController as TenantAnnouncementsController;
 use App\Http\Controllers\BillsController;
 use App\Http\Controllers\FamilyController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Security\DashboardController as SecurityDashboardController;
 use App\Http\Controllers\Security\HistoryController as SecurityHistoryController;
 use App\Http\Controllers\Security\ProfileController as SecurityProfileController;
 use App\Http\Controllers\Security\ScanController as SecurityScanController;
 use App\Http\Controllers\TenantDashboardController;
+use App\Http\Controllers\TenantPanicController;
 use App\Http\Controllers\TenantProfileController;
 use App\Http\Controllers\TicketsController;
 use App\Http\Controllers\UnitController;
@@ -45,6 +47,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('unit/join-requests', [UnitJoinController::class, 'index'])->name('unit.join-requests.index');
     Route::post('unit/{unit}/join-requests/{joinRequest}/confirm', [UnitJoinController::class, 'confirm'])->name('unit.join-requests.confirm');
     Route::post('unit/{unit}/join-requests/{joinRequest}/decline', [UnitJoinController::class, 'decline'])->name('unit.join-requests.decline');
+
+    // Role-agnostic — both tenant and security PWAs register/unregister their own
+    // device's push subscription through here.
+    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
 
     // Resident self-service — any active resident of a unit manages that unit's family
     // members directly, no admin approval. Admin's own /admin/families stays read-only.
@@ -149,6 +156,7 @@ Route::prefix('tenant')->name('tenant.')->middleware(['auth', 'pending.approval'
     Route::get('/profile', [TenantProfileController::class, 'edit'])->name('profile');
     Route::get('/notifications', [TenantAnnouncementsController::class, 'index'])->name('notifications');
     Route::inertia('/panic', 'tenant/panic')->name('panic');
+    Route::post('/panic/trigger', [TenantPanicController::class, 'trigger'])->name('panic.trigger');
     Route::get('/tickets', [TicketsController::class, 'index'])->name('tickets');
     Route::post('/tickets', [TicketsController::class, 'store'])->name('tickets.store');
     Route::get('/tickets/{ticket}', [TicketsController::class, 'show'])->name('tickets.show');

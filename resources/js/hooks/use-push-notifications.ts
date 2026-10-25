@@ -1,10 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 
-// Set by whoever generates the VAPID keypair on the backend (e.g. via
-// `php artisan webpush:vapid` if using laravel-notification-channels/webpush).
-// Add VITE_VAPID_PUBLIC_KEY=... to your .env once that exists.
+// Generated once via `\Minishlink\WebPush\VAPID::createVapidKeys()` in tinker
+// — see VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY in .env (backend) and
+// VITE_VAPID_PUBLIC_KEY here (frontend build-time), same value duplicated.
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as
     string | undefined;
+
+function xsrfToken(): string {
+    return decodeURIComponent(
+        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+    );
+}
 
 function urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -82,13 +88,14 @@ export function usePushNotifications() {
                 applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
             });
 
-            // Dummy send — swap for a real POST /push-subscriptions call,
-            // storing subscription.toJSON() against the current user so the
-            // backend can target this device later.
-            console.log(
-                'Push subscription to send to backend:',
-                subscription.toJSON(),
-            );
+            await fetch('/push-subscriptions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                body: JSON.stringify(subscription.toJSON()),
+            });
 
             setStatus('subscribed');
         } catch (error) {
@@ -107,9 +114,17 @@ export function usePushNotifications() {
             const existing = await registration.pushManager.getSubscription();
 
             if (existing) {
+                const endpoint = existing.endpoint;
                 await existing.unsubscribe();
 
-                // Dummy — swap for a real DELETE /push-subscriptions call.
+                await fetch('/push-subscriptions', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-XSRF-TOKEN': xsrfToken(),
+                    },
+                    body: JSON.stringify({ endpoint }),
+                });
             }
 
             setStatus('default');

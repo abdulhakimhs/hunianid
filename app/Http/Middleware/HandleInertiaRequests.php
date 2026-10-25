@@ -3,8 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Models\AreaMember;
+use App\Models\User;
 use App\Services\MembershipContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -58,9 +60,29 @@ class HandleInertiaRequests extends Middleware
                 'currentMembershipId' => $current?->id,
 
                 'adminAccess' => $this->adminAccess($current),
+
+                'pendingJoinRequestsCount' => $user ? $this->pendingJoinRequestsCount($user) : 0,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * How many people are waiting on this user to confirm/decline them joining one
+     * of their active units (unit_user status=pending). Drives the sidebar badge.
+     */
+    private function pendingJoinRequestsCount(User $user): int
+    {
+        $unitIds = $user->units()->wherePivot('status', 'active')->pluck('units.id');
+
+        if ($unitIds->isEmpty()) {
+            return 0;
+        }
+
+        return DB::table('unit_user')
+            ->whereIn('unit_id', $unitIds)
+            ->where('status', 'pending')
+            ->count();
     }
 
     /**

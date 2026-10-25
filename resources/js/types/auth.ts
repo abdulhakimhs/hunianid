@@ -87,6 +87,7 @@ export type Auth = {
     memberships: Membership[];
     currentMembershipId: number | null;
     adminAccess: AdminAccess;
+    pendingJoinRequestsCount: number;
 };
 
 /* @chisel-passkeys */

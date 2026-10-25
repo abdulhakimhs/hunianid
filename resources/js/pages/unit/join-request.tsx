@@ -9,6 +9,7 @@ type JoinRequest = {
     block: string | null;
     name: string;
     email: string;
+    phone: string | null;
 };
 
 type Props = {
@@ -38,7 +39,8 @@ export default function JoinRequests({ requests }: Props) {
                             <div>
                                 <p className="font-medium">{r.name}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {r.email} · ingin bergabung di {r.block ? `${r.block} ` : ''}
+                                    {r.email}
+                                    {r.phone ? ` · ${r.phone}` : ''} · ingin bergabung di {r.block ? `${r.block} ` : ''}
                                     {r.unit_number}
                                 </p>
                             </div>

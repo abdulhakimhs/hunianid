@@ -1,14 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
 import {
     AlertOctagon,
-    Check,
     ChevronLeft,
     Flame,
     HeartPulse,
+    Loader2,
     ShieldAlert,
     X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const HOLD_DURATION_MS = 2000;
 const CANCEL_WINDOW_MS = 15000;
@@ -17,8 +17,17 @@ function now() {
     return performance.now();
 }
 
+function xsrfToken(): string {
+    return decodeURIComponent(
+        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+    );
+}
+
+// idle/holding: pre-send. pending: cancel countdown running, nothing sent
+// yet. sending: the real request is in flight. sent: it succeeded — terminal.
+// cancelled: the hold was aborted during the countdown, nothing was ever sent.
 type Phase =
-    'idle' | 'holding' | 'sending' | 'sent' | 'acknowledged' | 'cancelled';
+    'idle' | 'holding' | 'pending' | 'sending' | 'sent' | 'cancelled' | 'error';
 
 type Reason = 'medical' | 'security' | 'fire' | 'other';
 
@@ -68,7 +77,7 @@ export default function TenantPanic() {
         setProgress(pct);
 
         if (pct >= 100) {
-            triggerAlert();
+            startPending();
 
             return;
         }
@@ -90,45 +99,68 @@ export default function TenantPanic() {
         setPhase('idle');
     }
 
-    function triggerAlert() {
+    // Hold-complete just starts the cancellable countdown — nothing is sent
+    // to the backend yet, so a false trigger here costs nothing.
+    function startPending() {
         if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
         }
-
-        setPhase('sending');
 
         if (navigator.vibrate) {
             navigator.vibrate([300, 100, 300]);
         }
 
-        // Dummy send — swap for a real POST /tenant/panic/trigger call,
-        // which should capture unit_id/user_id server-side from the session
-        // and broadcast to whichever recipients the complex has configured.
-        setTimeout(() => {
-            setPhase('sent');
-            setCancelSecondsLeft(CANCEL_WINDOW_MS / 1000);
-        }, 700);
+        setPhase('pending');
+        setCancelSecondsLeft(CANCEL_WINDOW_MS / 1000);
     }
 
+    const sendAlert = useCallback(async () => {
+        setPhase('sending');
+
+        try {
+            const response = await fetch('/tenant/panic/trigger', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                body: JSON.stringify({ reason: selectedReason }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            setPhase('sent');
+        } catch {
+            setPhase('error');
+        }
+    }, [selectedReason]);
+
     function cancelFalseAlarm() {
+        // Nothing was ever sent during the pending countdown, so cancelling
+        // here is a true no-op — no backend call to undo.
         setPhase('cancelled');
     }
 
     function markReason(reason: Reason) {
         setSelectedReason(reason);
-
-        // Dummy — swap for PATCH /tenant/panic/{id} to attach the reason
-        // without re-triggering or delaying the original alert.
     }
 
-    // Countdown for the false-alarm cancel window.
+    // Countdown for the cancel window — fires the real send once it hits 0.
     useEffect(() => {
-        if (phase !== 'sent') {
+        if (phase !== 'pending') {
             return;
         }
 
         if (cancelSecondsLeft <= 0) {
-            return;
+            // Deferred via setTimeout rather than called inline — sendAlert's
+            // first line is a setState, and calling that synchronously inside
+            // an effect body (rather than a timer/event callback) is what
+            // react-hooks/set-state-in-effect warns against.
+            const timer = setTimeout(sendAlert, 0);
+
+            return () => clearTimeout(timer);
         }
 
         const timer = setTimeout(
@@ -137,19 +169,7 @@ export default function TenantPanic() {
         );
 
         return () => clearTimeout(timer);
-    }, [phase, cancelSecondsLeft]);
-
-    // Dummy auto-acknowledge — swap for a real WebSocket/push listener that
-    // flips this once security taps "Konfirmasi Diterima" on their end.
-    useEffect(() => {
-        if (phase !== 'sent') {
-            return;
-        }
-
-        const timer = setTimeout(() => setPhase('acknowledged'), 8000);
-
-        return () => clearTimeout(timer);
-    }, [phase]);
+    }, [phase, cancelSecondsLeft, sendAlert]);
 
     return (
         <>
@@ -165,10 +185,8 @@ export default function TenantPanic() {
                     />
                 )}
 
-                {phase === 'sending' && <SendingView />}
-
-                {phase === 'sent' && (
-                    <SentView
+                {phase === 'pending' && (
+                    <PendingView
                         cancelSecondsLeft={cancelSecondsLeft}
                         selectedReason={selectedReason}
                         onSelectReason={markReason}
@@ -176,9 +194,15 @@ export default function TenantPanic() {
                     />
                 )}
 
-                {phase === 'acknowledged' && <AcknowledgedView />}
+                {phase === 'sending' && <SendingView />}
+
+                {phase === 'sent' && <SentView />}
 
                 {phase === 'cancelled' && <CancelledView />}
+
+                {phase === 'error' && (
+                    <ErrorView onRetry={() => setPhase('idle')} />
+                )}
             </div>
         </>
     );
@@ -203,7 +227,7 @@ function IdleView({
         <>
             <div className="flex items-center px-4 pt-4">
                 <Link
-                    href="/tenant/dashboard"
+                    href="/tenant"
                     className="flex h-9 w-9 items-center justify-center rounded-full text-(--color-ink)/50 hover:bg-(--color-ink)/5"
                 >
                     <ChevronLeft className="h-5 w-5" />
@@ -268,26 +292,15 @@ function IdleView({
                 </div>
 
                 <p className="mt-8 text-xs text-(--color-ink)/40">
-                    Gunakan hanya dalam keadaan darurat sesungguhnya. Keamanan,
-                    pengelola, dan tetangga sekitar akan diberi tahu.
+                    Gunakan hanya dalam keadaan darurat sesungguhnya. Keamanan
+                    di kompleks Anda akan diberi tahu.
                 </p>
             </div>
         </>
     );
 }
 
-function SendingView() {
-    return (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-red-600/20 border-t-red-600" />
-            <p className="text-sm font-medium text-(--color-ink)/60">
-                Mengirim sinyal darurat...
-            </p>
-        </div>
-    );
-}
-
-function SentView({
+function PendingView({
     cancelSecondsLeft,
     selectedReason,
     onSelectReason,
@@ -308,11 +321,10 @@ function SentView({
             </div>
 
             <p className="mt-5 text-lg font-semibold text-(--color-ink)">
-                Sinyal Darurat Terkirim
+                Mengirim dalam {cancelSecondsLeft} detik...
             </p>
             <p className="mt-1 text-sm text-(--color-ink)/50">
-                Keamanan pos gerbang telah diberi tahu dan sedang menuju lokasi
-                Anda.
+                Batalkan sekarang jika ini tidak sengaja tertekan.
             </p>
 
             <div className="mt-6 w-full space-y-2">
@@ -340,35 +352,48 @@ function SentView({
 
             <div className="flex-1" />
 
-            {cancelSecondsLeft > 0 && (
-                <button
-                    type="button"
-                    onClick={onCancelFalseAlarm}
-                    className="mb-8 flex items-center gap-1.5 text-sm text-(--color-ink)/45 underline-offset-2 hover:underline"
-                >
-                    <X className="h-3.5 w-3.5" />
-                    Ini alarm palsu, batalkan ({cancelSecondsLeft}s)
-                </button>
-            )}
+            <button
+                type="button"
+                onClick={onCancelFalseAlarm}
+                className="mb-8 flex items-center gap-1.5 text-sm text-(--color-ink)/45 underline-offset-2 hover:underline"
+            >
+                <X className="h-3.5 w-3.5" />
+                Ini alarm palsu, batalkan
+            </button>
         </div>
     );
 }
 
-function AcknowledgedView() {
+function SendingView() {
+    return (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+            <Loader2 className="h-12 w-12 animate-spin text-red-600" />
+            <p className="text-sm font-medium text-(--color-ink)/60">
+                Mengirim sinyal darurat...
+            </p>
+        </div>
+    );
+}
+
+function SentView() {
     return (
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-(--color-mint)/15 text-(--color-mint-deep)">
-                <Check className="h-8 w-8" />
+            <div className="relative flex h-20 w-20 items-center justify-center">
+                <span className="absolute inset-0 animate-ping rounded-full bg-red-200" />
+                <span className="relative flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600">
+                    <AlertOctagon className="h-8 w-8" />
+                </span>
             </div>
-            <p className="mt-4 text-lg font-semibold text-(--color-ink)">
-                Direspon oleh Keamanan
+
+            <p className="mt-5 text-lg font-semibold text-(--color-ink)">
+                Sinyal Darurat Terkirim
             </p>
             <p className="mt-1 text-sm text-(--color-ink)/50">
-                Budi Santoso (Pos Gerbang Utama) sedang menuju lokasi Anda.
+                Keamanan di kompleks Anda sudah diberi notifikasi.
             </p>
 
             <Link
-                href="/tenant/"
+                href="/tenant"
                 className="mt-8 rounded-full bg-(--color-ink) px-6 py-3 text-sm font-medium text-white"
             >
                 Kembali ke Beranda
@@ -387,15 +412,40 @@ function CancelledView() {
                 Alarm Dibatalkan
             </p>
             <p className="mt-1 text-sm text-(--color-ink)/50">
-                Keamanan telah diberi tahu bahwa ini alarm palsu.
+                Tidak ada sinyal yang terkirim ke keamanan.
             </p>
 
             <Link
-                href="/tenant/dashboard"
+                href="/tenant"
                 className="mt-8 rounded-full bg-(--color-ink) px-6 py-3 text-sm font-medium text-white"
             >
                 Kembali ke Beranda
             </Link>
+        </div>
+    );
+}
+
+function ErrorView({ onRetry }: { onRetry: () => void }) {
+    return (
+        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <AlertOctagon className="h-8 w-8" />
+            </div>
+            <p className="mt-4 text-lg font-semibold text-(--color-ink)">
+                Gagal Mengirim
+            </p>
+            <p className="mt-1 text-sm text-(--color-ink)/50">
+                Sinyal darurat gagal terkirim. Periksa koneksi internet Anda
+                dan coba lagi.
+            </p>
+
+            <button
+                type="button"
+                onClick={onRetry}
+                className="mt-8 rounded-full bg-red-600 px-6 py-3 text-sm font-medium text-white"
+            >
+                Coba Lagi
+            </button>
         </div>
     );
 }

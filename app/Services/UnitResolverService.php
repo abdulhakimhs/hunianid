@@ -9,6 +9,10 @@ use Illuminate\Validation\ValidationException;
 
 class UnitResolverService
 {
+    public function __construct(
+        private readonly UnitJoinNotificationService $joinNotifier,
+    ) {}
+
     /**
      * Resolve a unit within an area for a given user.
      *
@@ -61,6 +65,10 @@ class UnitResolverService
             'confirmed_by' => $existingResident ? null : $user->id,
             'confirmed_at' => $existingResident ? null : now(),
         ]);
+
+        if ($existingResident) {
+            $this->joinNotifier->notifyResidentsOfJoinRequest($existing, $user);
+        }
 
         return $existing;
     }

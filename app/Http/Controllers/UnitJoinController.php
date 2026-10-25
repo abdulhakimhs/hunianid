@@ -22,7 +22,7 @@ class UnitJoinController extends Controller
             ->join('users', 'users.id', '=', 'unit_user.user_id')
             ->whereIn('unit_user.unit_id', $unitIds)
             ->where('unit_user.status', 'pending')
-            ->select('unit_user.id', 'unit_user.unit_id', 'units.unit_number', 'units.block', 'users.name', 'users.email')
+            ->select('unit_user.id', 'unit_user.unit_id', 'units.unit_number', 'units.block', 'users.name', 'users.email', 'users.phone')
             ->get();
 
         return Inertia::render('unit/join-request', ['requests' => $requests]);

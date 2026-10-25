@@ -48,6 +48,12 @@ return [
         'webhook_secret' => env('WABLAST_WEBHOOK_SECRET'),
     ],
 
+    'vapid' => [
+        'public_key' => env('VAPID_PUBLIC_KEY'),
+        'private_key' => env('VAPID_PRIVATE_KEY'),
+        'subject' => env('VAPID_SUBJECT', 'mailto:admin@hunianid.app'),
+    ],
+
     'deepseek' => [
         'api_key' => env('DEEPSEEK_API_KEY'),
         'base_url' => env('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
