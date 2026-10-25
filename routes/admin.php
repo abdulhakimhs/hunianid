@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AnnouncementsController;
 use App\Http\Controllers\Admin\AreaHandoverController;
+use App\Http\Controllers\Admin\BillingController;
 use App\Http\Controllers\Admin\FamiliesController;
 use App\Http\Controllers\Admin\InviteController;
 use App\Http\Controllers\Admin\InvoiceCategoriesController;
@@ -68,26 +69,34 @@ Route::middleware(['auth'])->group(function () {
         Route::put('settings/reminder', [SettingsController::class, 'updateReminderSettings'])->name('settings.reminder.update');
         Route::put('settings/ticket-escalation', [SettingsController::class, 'updateTicketEscalationSettings'])->name('settings.ticket-escalation.update');
 
+        // Deliberately outside the subscription.active group below — an expired
+        // admin still needs to reach the billing page itself to pay and reactivate.
+        Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
+        Route::get('billing/expired', [BillingController::class, 'expired'])->name('billing.expired');
+        Route::post('billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+
         // Invoicing touches money and payment status, so it stays out of the broader
         // unclaimed_creator/area_without_admin groups below — only a fully-approved
         // superadmin/staff can bill tenants or mark invoices paid.
-        Route::get('invoices', [InvoicesController::class, 'index'])->name('invoices.index');
-        Route::get('invoices/create', [InvoicesController::class, 'create'])->name('invoices.create');
-        Route::post('invoices', [InvoicesController::class, 'store'])->name('invoices.store');
-        Route::post('invoices/mark-paid-bulk', [InvoicesController::class, 'markPaidBulk'])->name('invoices.mark-paid-bulk');
-        Route::post('invoices/cancel-bulk', [InvoicesController::class, 'cancelBulk'])->name('invoices.cancel-bulk');
-        Route::post('invoices/{invoice}/mark-paid', [InvoicesController::class, 'markPaid'])->name('invoices.mark-paid');
-        Route::get('invoices/{invoice}/payment-proof', [InvoicesController::class, 'paymentProof'])->name('invoices.payment-proof');
-        Route::post('invoices/{invoice}/cancel', [InvoicesController::class, 'cancel'])->name('invoices.cancel');
+        Route::middleware(['subscription.active'])->group(function () {
+            Route::get('invoices', [InvoicesController::class, 'index'])->name('invoices.index');
+            Route::get('invoices/create', [InvoicesController::class, 'create'])->name('invoices.create');
+            Route::post('invoices', [InvoicesController::class, 'store'])->name('invoices.store');
+            Route::post('invoices/mark-paid-bulk', [InvoicesController::class, 'markPaidBulk'])->name('invoices.mark-paid-bulk');
+            Route::post('invoices/cancel-bulk', [InvoicesController::class, 'cancelBulk'])->name('invoices.cancel-bulk');
+            Route::post('invoices/{invoice}/mark-paid', [InvoicesController::class, 'markPaid'])->name('invoices.mark-paid');
+            Route::get('invoices/{invoice}/payment-proof', [InvoicesController::class, 'paymentProof'])->name('invoices.payment-proof');
+            Route::post('invoices/{invoice}/cancel', [InvoicesController::class, 'cancel'])->name('invoices.cancel');
 
-        Route::get('tickets', [AdminTicketsController::class, 'index'])->name('tickets.index');
-        Route::get('tickets/{ticket}', [AdminTicketsController::class, 'show'])->name('tickets.show');
-        Route::patch('tickets/{ticket}/status', [AdminTicketsController::class, 'updateStatus'])->name('tickets.status');
-        Route::post('tickets/{ticket}/update', [AdminTicketsController::class, 'sendUpdate'])->name('tickets.send-update');
-        Route::patch('tickets/{ticket}/assign', [AdminTicketsController::class, 'assign'])->name('tickets.assign');
-        Route::patch('tickets/{ticket}/priority', [AdminTicketsController::class, 'setPriority'])->name('tickets.priority');
-        Route::post('tickets/{ticket}/notes', [AdminTicketsController::class, 'addNote'])->name('tickets.notes');
-        Route::get('tickets/{ticket}/messages/{message}/photo', [AdminTicketsController::class, 'photo'])->name('tickets.photo');
+            Route::get('tickets', [AdminTicketsController::class, 'index'])->name('tickets.index');
+            Route::get('tickets/{ticket}', [AdminTicketsController::class, 'show'])->name('tickets.show');
+            Route::patch('tickets/{ticket}/status', [AdminTicketsController::class, 'updateStatus'])->name('tickets.status');
+            Route::post('tickets/{ticket}/update', [AdminTicketsController::class, 'sendUpdate'])->name('tickets.send-update');
+            Route::patch('tickets/{ticket}/assign', [AdminTicketsController::class, 'assign'])->name('tickets.assign');
+            Route::patch('tickets/{ticket}/priority', [AdminTicketsController::class, 'setPriority'])->name('tickets.priority');
+            Route::post('tickets/{ticket}/notes', [AdminTicketsController::class, 'addNote'])->name('tickets.notes');
+            Route::get('tickets/{ticket}/messages/{message}/photo', [AdminTicketsController::class, 'photo'])->name('tickets.photo');
+        });
 
         Route::post('invoice-templates', [InvoiceTemplatesController::class, 'store'])->name('invoice-templates.store');
         Route::put('invoice-templates/{template}', [InvoiceTemplatesController::class, 'update'])->name('invoice-templates.update');
@@ -99,7 +108,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('invoice-categories/{invoiceCategory}', [InvoiceCategoriesController::class, 'destroy'])->name('invoice-categories.destroy');
     });
 
-    Route::middleware(['admin.role:superadmin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware(['admin.role:superadmin', 'subscription.active'])->prefix('admin')->name('admin.')->group(function () {
         Route::resource('staff', StaffController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('staff/invites', [StaffController::class, 'invitesIndex'])->name('staff.invites');
         Route::post('staff/invite-bulk', [StaffController::class, 'bulkInvite'])->name('staff.invite-bulk');
@@ -124,15 +133,18 @@ Route::middleware(['auth'])->group(function () {
         // Read-only for admins — adding/editing/removing family members is the
         // resident's own call (see the top-level `family` routes above).
         Route::resource('families', FamiliesController::class)->only(['index']);
-        Route::resource('security', SecurityController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::get('security/invites', [SecurityController::class, 'invitesIndex'])->name('security.invites');
-        Route::post('security/invite-bulk', [SecurityController::class, 'bulkInvite'])->name('security.invite-bulk');
-        Route::post('security/{security}/invite', [SecurityController::class, 'invite'])->name('security.invite');
         Route::post('area/promote', [AreaHandoverController::class, 'store'])->name('area.promote');
 
-        Route::resource('announcements', AnnouncementsController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::middleware(['subscription.active'])->group(function () {
+            Route::resource('security', SecurityController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::get('security/invites', [SecurityController::class, 'invitesIndex'])->name('security.invites');
+            Route::post('security/invite-bulk', [SecurityController::class, 'bulkInvite'])->name('security.invite-bulk');
+            Route::post('security/{security}/invite', [SecurityController::class, 'invite'])->name('security.invite');
 
-        Route::get('visitor-passes', [VisitorPassesController::class, 'index'])->name('visitor-passes.index');
+            Route::resource('announcements', AnnouncementsController::class)->only(['index', 'store', 'update', 'destroy']);
+
+            Route::get('visitor-passes', [VisitorPassesController::class, 'index'])->name('visitor-passes.index');
+        });
     });
 });
 Route::middleware(['auth', 'admin.role:security'])->prefix('security')->name('security.')->group(function () {

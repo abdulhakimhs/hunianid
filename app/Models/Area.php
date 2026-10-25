@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['complex_id', 'name', 'type', 'status', 'require_approval', 'created_by', 'invitation_message', 'security_invitation_message', 'reminder_days_before_due', 'ticket_escalation_days'])]
 class Area extends Model
@@ -131,5 +132,13 @@ class Area extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return HasOne<Subscription, $this>
+     */
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(Subscription::class);
     }
 }

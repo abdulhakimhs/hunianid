@@ -4,13 +4,19 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Unit;
+use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UnitsController extends Controller
 {
+    public function __construct(
+        private readonly SubscriptionService $subscriptions,
+    ) {}
+
     /**
      * GET /admin/units — full unit list.
      */
@@ -28,6 +34,12 @@ class UnitsController extends Controller
     public function store(Request $request)
     {
         $area = $request->attributes->get('adminArea');
+
+        if (! $this->subscriptions->canAddUnit($area)) {
+            throw ValidationException::withMessages([
+                'unit_number' => 'Paket Anda saat ini sudah mencapai batas jumlah unit. Upgrade paket untuk menambah unit baru.',
+            ]);
+        }
 
         DB::transaction(function () use ($area, $request) {
             $block = $request->input('block');

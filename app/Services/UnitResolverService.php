@@ -11,6 +11,7 @@ class UnitResolverService
 {
     public function __construct(
         private readonly UnitJoinNotificationService $joinNotifier,
+        private readonly SubscriptionService $subscriptions,
     ) {}
 
     /**
@@ -30,6 +31,12 @@ class UnitResolverService
             ->first();
 
         if (! $existing) {
+            if (! $this->subscriptions->canAddUnit($area)) {
+                throw ValidationException::withMessages([
+                    'unit_number' => 'RT/pengelola ini sudah mencapai batas jumlah unit pada paketnya saat ini. Hubungi pengurus untuk upgrade paket.',
+                ]);
+            }
+
             $unit = Unit::create([
                 'area_id' => $area->id,
                 'complex_id' => $area->complex_id,

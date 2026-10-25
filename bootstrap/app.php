@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAdminRole;
+use App\Http\Middleware\EnsureSubscriptionActive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfPendingApproval;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('invoices:flip-overdue')->dailyAt('01:05')->withoutOverlapping();
         $schedule->command('invoices:send-reminders')->dailyAt('08:00')->withoutOverlapping();
         $schedule->command('tickets:send-escalation-reminders')->dailyAt('09:00')->withoutOverlapping();
+        $schedule->command('subscriptions:expire-trials')->dailyAt('00:05')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Nginx and any HTTPS-terminating proxy in front of it (cloudflared tunnel,
@@ -45,6 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.role' => EnsureAdminRole::class,
             'pending.approval' => RedirectIfPendingApproval::class,
+            'subscription.active' => EnsureSubscriptionActive::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

@@ -90,6 +90,12 @@ export type Auth = {
     pendingJoinRequestsCount: number;
 };
 
+export type SubscriptionStatus = {
+    status: 'trialing' | 'active' | 'past_due' | 'expired' | 'canceled';
+    trialEndsAt: string | null;
+    daysLeft: number | null;
+};
+
 /* @chisel-passkeys */
 export type Passkey = {
     id: number;

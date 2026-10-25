@@ -1,5 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import HunianLogo from '@/components/hunian-logo';
 import { login } from '@/routes';
 import MockupPanic from '../components/mockup-panic.jsx';
@@ -632,6 +633,90 @@ function SectionLabel({ children, tone = 'sky' }) {
     );
 }
 
+function ContactForm() {
+    const { data, setData, post, processing, errors, wasSuccessful, reset } =
+        useForm({
+            name: '',
+            email: '',
+            phone: '',
+            company_or_area_name: '',
+            message: '',
+            plan_interest: 'custom',
+        });
+
+    function submit(e: FormEvent) {
+        e.preventDefault();
+        post('/contact', { onSuccess: () => reset() });
+    }
+
+    if (wasSuccessful) {
+        return (
+            <p className="mt-6 rounded-2xl bg-(--color-mint)/10 p-4 text-sm font-medium text-(--color-mint-deep)">
+                Terima kasih! Tim kami akan segera menghubungi Anda.
+            </p>
+        );
+    }
+
+    return (
+        <form onSubmit={submit} className="mt-6 space-y-3">
+            <input
+                type="text"
+                placeholder="Nama"
+                value={data.name}
+                onChange={(e) => setData('name', e.target.value)}
+                className="w-full rounded-xl border border-(--color-ink)/15 bg-(--color-bg) px-4 py-2.5 text-sm"
+            />
+            {errors.name && (
+                <p className="text-xs text-(--color-coral)">{errors.name}</p>
+            )}
+            <input
+                type="email"
+                placeholder="Email"
+                value={data.email}
+                onChange={(e) => setData('email', e.target.value)}
+                className="w-full rounded-xl border border-(--color-ink)/15 bg-(--color-bg) px-4 py-2.5 text-sm"
+            />
+            {errors.email && (
+                <p className="text-xs text-(--color-coral)">{errors.email}</p>
+            )}
+            <input
+                type="text"
+                placeholder="Nomor WhatsApp (opsional)"
+                value={data.phone}
+                onChange={(e) => setData('phone', e.target.value)}
+                className="w-full rounded-xl border border-(--color-ink)/15 bg-(--color-bg) px-4 py-2.5 text-sm"
+            />
+            <input
+                type="text"
+                placeholder="Nama RT / Perumahan (opsional)"
+                value={data.company_or_area_name}
+                onChange={(e) =>
+                    setData('company_or_area_name', e.target.value)
+                }
+                className="w-full rounded-xl border border-(--color-ink)/15 bg-(--color-bg) px-4 py-2.5 text-sm"
+            />
+            <textarea
+                placeholder="Pesan (opsional)"
+                value={data.message}
+                onChange={(e) => setData('message', e.target.value)}
+                rows={3}
+                className="w-full rounded-xl border border-(--color-ink)/15 bg-(--color-bg) px-4 py-2.5 text-sm"
+            />
+            <button
+                type="submit"
+                disabled={processing}
+                className="shadow-elevated w-full rounded-full px-5 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+                style={{
+                    background:
+                        'linear-gradient(135deg, var(--color-sky-deep), var(--color-sky))',
+                }}
+            >
+                {processing ? 'Mengirim...' : 'Kirim'}
+            </button>
+        </form>
+    );
+}
+
 function Faq({ item, open, onToggle }) {
     return (
         <div className="py-1">
@@ -1175,7 +1260,7 @@ export default function Landing() {
                                             ))}
                                         </ul>
                                         <a
-                                            href="#daftar"
+                                            href={plan.cta === 'Hubungi Kami' ? '#kontak' : '#daftar'}
                                             className={`mt-8 inline-block rounded-full px-5 py-2.5 text-center text-sm font-semibold transition hover:-translate-y-0.5 ${
                                                 plan.highlight
                                                     ? 'shadow-elevated text-white'
@@ -1261,6 +1346,26 @@ export default function Landing() {
                             Daftar Sekarang
                         </a>
                     </Reveal>
+                </section>
+
+                {/* CONTACT */}
+                <section
+                    id="kontak"
+                    className="bg-(--color-surface) py-20"
+                >
+                    <div className="mx-auto max-w-lg px-5">
+                        <Reveal>
+                            <SectionLabel tone="mint">Hubungi Kami</SectionLabel>
+                        </Reveal>
+                        <Reveal
+                            delay={80}
+                            as="h2"
+                            className="mt-3 font-display text-2xl font-bold text-balance sm:text-3xl"
+                        >
+                            Untuk paket Custom atau pertanyaan lain
+                        </Reveal>
+                        <ContactForm />
+                    </div>
                 </section>
 
                 {/* FOOTER */}

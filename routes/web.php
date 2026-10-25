@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\PhoneLoginController;
 use App\Http\Controllers\Auth\RegionController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SocialLoginController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipSwitchController;
 use App\Http\Controllers\PendingApprovalController;
@@ -15,6 +16,8 @@ use Inertia\Inertia;
 Route::inertia('/', 'landing')->name('home');
 
 Route::get('pass/{token}', [VisitorPassController::class, 'show'])->name('visitor-pass.show');
+
+Route::post('contact', [ContactController::class, 'submit'])->middleware('throttle:6,1')->name('contact.submit');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('menunggu-persetujuan', PendingApprovalController::class)->name('pending-approval');
