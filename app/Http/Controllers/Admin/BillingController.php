@@ -56,7 +56,7 @@ class BillingController extends Controller
             ]);
         }
 
-        $subscription = $area->subscription ?? $this->subscriptions->startTrial($area);
+        $subscription = $this->subscriptions->ensureSubscriptionAnchor($area, $plan);
 
         $result = $this->midtrans->createSnapTransaction($subscription, $plan, $data['billing_cycle']);
 

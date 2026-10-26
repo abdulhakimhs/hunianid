@@ -58,6 +58,31 @@ class SubscriptionService
             && $subscription->trial_ends_at->isFuture();
     }
 
+    /**
+     * Returns the area's subscription row, creating a non-expiring placeholder
+     * on the plan being checked out if none exists yet — needed as an anchor
+     * for Midtrans's order_id/webhook flow. Deliberately NOT startTrial():
+     * a legacy area with no subscription row is grandfathered as
+     * always-active (see isActive()), and merely attempting a checkout must
+     * never convert that into a real, expiring 30-day trial — or silently
+     * shrink its unit limit to the trial plan's — before payment has
+     * actually succeeded. Status stays 'active' until the webhook confirms
+     * payment and sets the real billing period.
+     */
+    public function ensureSubscriptionAnchor(Area $area, Plan $plan): Subscription
+    {
+        if ($area->subscription) {
+            return $area->subscription;
+        }
+
+        return Subscription::create([
+            'area_id' => $area->id,
+            'plan_id' => $plan->id,
+            'billing_cycle' => 'trial',
+            'status' => 'active',
+        ]);
+    }
+
     public function maxUnits(Area $area): ?int
     {
         return $area->subscription?->plan?->max_units;

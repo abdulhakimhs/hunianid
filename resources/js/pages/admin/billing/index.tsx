@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,9 +47,12 @@ const STATUS_LABEL: Record<Subscription['status'], string> = {
 };
 
 function formatRupiah(amount: number | null): string {
+    // This page only ever lists self-service plans (is_self_service=true),
+    // so a null price here always means the free trial plan, never Custom
+    // (which is filtered out before reaching this page).
     if (amount === null) {
-return 'Hubungi Kami';
-}
+        return 'Gratis';
+    }
 
     return `Rp${amount.toLocaleString('id-ID')}`;
 }
@@ -96,14 +100,22 @@ return;
     function choosePlan(plan: Plan) {
         setLoadingPlanId(plan.id);
 
+        // Laravel's VerifyCsrfToken reads this cookie (set on every response)
+        // against the X-XSRF-TOKEN header — the same mechanism axios/Inertia use
+        // automatically; this page uses a plain fetch so it's done by hand here.
+        const xsrfToken = decodeURIComponent(
+            document.cookie
+                .split('; ')
+                .find((row) => row.startsWith('XSRF-TOKEN='))
+                ?.split('=')[1] ?? '',
+        );
+
         fetch('/admin/billing/checkout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN':
-                    document
-                        .querySelector('meta[name="csrf-token"]')
-                        ?.getAttribute('content') ?? '',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': xsrfToken,
             },
             body: JSON.stringify({ plan_id: plan.id, billing_cycle: cycle }),
         })
@@ -114,8 +126,22 @@ return;
                         onSuccess: () => router.reload(),
                         onPending: () => router.reload(),
                     });
+                } else if (data.token) {
+                    // Checkout succeeded but the Snap.js script hasn't finished loading yet.
+                    toast.error(
+                        'Pembayaran sedang disiapkan, silakan coba lagi dalam beberapa detik.',
+                    );
+                } else {
+                    // Validation failures (e.g. gateway not configured) come back as
+                    // Laravel's standard {message, errors} shape, not a top-level `error`.
+                    toast.error(
+                        data.errors?.plan_id?.[0] ??
+                            data.message ??
+                            'Gagal memproses pembayaran. Silakan coba lagi.',
+                    );
                 }
             })
+            .catch(() => toast.error('Gagal memproses pembayaran. Silakan coba lagi.'))
             .finally(() => setLoadingPlanId(null));
     }
 
@@ -172,7 +198,9 @@ return;
 
             <div className="grid gap-4 sm:grid-cols-2">
                 {plans
-                    .filter((plan) => plan.is_self_service)
+                    // The trial plan is auto-granted at registration, not something to
+                    // buy here — only list plans that actually have a price to check out with.
+                    .filter((plan) => plan.is_self_service && plan.price_monthly !== null)
                     .map((plan) => (
                         <Card key={plan.id}>
                             <CardHeader>
