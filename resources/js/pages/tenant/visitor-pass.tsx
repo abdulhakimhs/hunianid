@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import PageHeader from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 // Mirrors the visitor_passes table. `token` is the QR payload and also
-// what /pass/{token} (a separate guest-facing page, not built yet) resolves.
+// what /pass/{token} resolves to on the guest-facing page.
 
 type PassStatus = 'pending' | 'used' | 'cancelled';
 
@@ -36,52 +37,15 @@ type VisitorPass = {
     validUntil: string; // ISO
 };
 
-const dummyPasses: VisitorPass[] = [
-    {
-        id: 1,
-        guestName: 'Andi Wijaya',
-        guestPhone: '628123456789',
-        vehicleInfo: 'B 1234 XYZ',
-        purpose: 'Kunjungan keluarga',
-        token: 'b7e2c1a0-1111-4a2b-9c3d-000000000001',
-        status: 'pending',
-        validFrom: '2026-09-17T14:00:00',
-        validUntil: '2026-09-17T18:00:00',
-    },
-    {
-        id: 2,
-        guestName: 'Kurir JNE',
-        guestPhone: null,
-        vehicleInfo: null,
-        purpose: 'Pengiriman paket',
-        token: 'b7e2c1a0-1111-4a2b-9c3d-000000000002',
-        status: 'pending',
-        validFrom: '2026-09-17T09:00:00',
-        validUntil: '2026-09-17T17:00:00',
-    },
-    {
-        id: 3,
-        guestName: 'Rina Marlina',
-        guestPhone: '628987654321',
-        vehicleInfo: null,
-        purpose: 'Arisan RT',
-        token: 'b7e2c1a0-1111-4a2b-9c3d-000000000003',
-        status: 'used',
-        validFrom: '2026-09-15T15:00:00',
-        validUntil: '2026-09-15T20:00:00',
-    },
-    {
-        id: 4,
-        guestName: 'Sopir Grab',
-        guestPhone: null,
-        vehicleInfo: 'B 5678 ABC',
-        purpose: null,
-        token: 'b7e2c1a0-1111-4a2b-9c3d-000000000004',
-        status: 'cancelled',
-        validFrom: '2026-09-14T10:00:00',
-        validUntil: '2026-09-14T11:00:00',
-    },
-];
+type Props = {
+    passes: VisitorPass[];
+};
+
+function xsrfToken(): string {
+    return decodeURIComponent(
+        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+    );
+}
 
 function isExpired(pass: VisitorPass, now: Date) {
     return pass.status === 'pending' && new Date(pass.validUntil) < now;
@@ -103,8 +67,8 @@ function formatWindow(validFrom: string, validUntil: string) {
     return `${dateFmt(from)} ${timeFmt(from)} - ${dateFmt(until)} ${timeFmt(until)}`;
 }
 
-export default function TenantVisitorPass() {
-    const [passes, setPasses] = useState<VisitorPass[]>(dummyPasses);
+export default function TenantVisitorPass({ passes: initialPasses }: Props) {
+    const [passes, setPasses] = useState<VisitorPass[]>(initialPasses);
     const [tab, setTab] = useState<'active' | 'history'>('active');
     const [createOpen, setCreateOpen] = useState(false);
     const [shareTarget, setShareTarget] = useState<VisitorPass | null>(null);
@@ -124,6 +88,8 @@ export default function TenantVisitorPass() {
     }
 
     function cancelPass(id: number) {
+        const previous = passes;
+
         setPasses((prev) =>
             prev.map((p) => {
                 if (p.id !== id) {
@@ -133,6 +99,17 @@ export default function TenantVisitorPass() {
                 return { ...p, status: 'cancelled' as const };
             }),
         );
+
+        fetch(`/tenant/visitor-pass/${id}/cancel`, {
+            method: 'PATCH',
+            headers: {
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': xsrfToken(),
+            },
+        }).catch(() => {
+            setPasses(previous);
+            toast.error('Gagal membatalkan pass. Silakan coba lagi.');
+        });
     }
 
     return (
@@ -361,26 +338,37 @@ function CreatePassSheet({
 
         setSubmitting(true);
 
-        // Dummy create — swap for a real POST /tenant/visitor-pass call,
-        // which should return the created row including its token.
-        setTimeout(() => {
-            const now = new Date();
-            const until = new Date(now.getTime() + 4 * 60 * 60 * 1000);
-
-            onCreated({
-                id: Date.now(),
-                guestName: guestName.trim(),
-                guestPhone: guestPhone.trim() || null,
-                vehicleInfo: vehicleInfo.trim() || null,
+        fetch('/tenant/visitor-pass', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': xsrfToken(),
+            },
+            body: JSON.stringify({
+                guest_name: guestName.trim(),
+                guest_phone: guestPhone.trim() || null,
+                vehicle_info: vehicleInfo.trim() || null,
                 purpose: purpose.trim() || null,
-                token: crypto.randomUUID(),
-                status: 'pending',
-                validFrom: now.toISOString(),
-                validUntil: until.toISOString(),
-            });
+            }),
+        })
+            .then(async (res) => {
+                const data = await res.json();
 
-            setSubmitting(false);
-        }, 500);
+                if (!res.ok) {
+                    throw new Error(
+                        data.errors?.guest_name?.[0] ??
+                            data.message ??
+                            'Gagal membuat pass.',
+                    );
+                }
+
+                onCreated(data);
+            })
+            .catch((err: Error) => {
+                toast.error(err.message || 'Gagal membuat pass. Silakan coba lagi.');
+            })
+            .finally(() => setSubmitting(false));
     }
 
     return (

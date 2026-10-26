@@ -31,6 +31,12 @@ type Props = {
 type SortKey = 'name' | 'createdAt';
 type SortDir = 'asc' | 'desc';
 
+const STATUS_LABEL: Record<Family['status'], string> = {
+    pending: 'Menunggu',
+    active: 'Aktif',
+    declined: 'Ditolak',
+};
+
 function formatDate(
     iso: string | null,
     style: 'long' | 'short' = 'long',
@@ -242,7 +248,7 @@ export default function FamiliesIndex({ families, units, area }: Props) {
                                     </TableCell>
                                     <TableCell className="py-2">
                                         <span className="text-(--color-ink)/55 text-sm">
-                                            {m.status}
+                                            {STATUS_LABEL[m.status]}
                                         </span>
                                     </TableCell>
                                     <TableCell className="py-2">
@@ -335,7 +341,7 @@ export default function FamiliesIndex({ families, units, area }: Props) {
                                 Status
                             </p>
                             <p className="font-medium text-(--color-ink)">
-                                {detail?.status ?? '—'}
+                                {detail ? STATUS_LABEL[detail.status] : '—'}
                             </p>
                         </div>
 

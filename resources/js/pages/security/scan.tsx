@@ -95,7 +95,12 @@ export default function SecurityScan() {
     }, []);
 
     function handleDecoded(code: string) {
-        if (phase !== 'scanning') {
+        // Reachable from two triggers: the live QR scanner (only fires while
+        // phase === 'scanning') and the manual-code sheet, which is also the
+        // fallback shown when the camera failed — so 'camera-error' must be
+        // allowed through too, or manual entry silently does nothing exactly
+        // when it's needed most.
+        if (phase !== 'scanning' && phase !== 'camera-error') {
             return;
         } // ignore extra frames while processing
 

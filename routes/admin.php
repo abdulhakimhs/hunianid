@@ -27,6 +27,7 @@ use App\Http\Controllers\Security\ScanController as SecurityScanController;
 use App\Http\Controllers\TenantDashboardController;
 use App\Http\Controllers\TenantPanicController;
 use App\Http\Controllers\TenantProfileController;
+use App\Http\Controllers\TenantVisitorPassController;
 use App\Http\Controllers\TicketsController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitJoinController;
@@ -160,12 +161,15 @@ Route::middleware(['auth', 'admin.role:security'])->prefix('security')->name('se
 });
 Route::prefix('tenant')->name('tenant.')->middleware(['auth', 'pending.approval'])->group(function () {
     Route::get('/', [TenantDashboardController::class, 'index'])->name('dashboard');
-    Route::inertia('/visitor-pass', 'tenant/visitor-pass')->name('visitorpass');
+    Route::get('/visitor-pass', [TenantVisitorPassController::class, 'index'])->name('visitorpass');
+    Route::post('/visitor-pass', [TenantVisitorPassController::class, 'store'])->name('visitorpass.store');
+    Route::patch('/visitor-pass/{pass}/cancel', [TenantVisitorPassController::class, 'cancel'])->name('visitorpass.cancel');
     Route::get('/bills', [BillsController::class, 'index'])->name('bills');
     Route::get('/bills/{invoice}/payment-proof', [BillsController::class, 'paymentProof'])->name('bills.payment-proof');
     Route::get('/unit', [UnitController::class, 'show'])->name('unit');
     Route::get('/family', [FamilyController::class, 'tenantIndex'])->name('family');
     Route::get('/profile', [TenantProfileController::class, 'edit'])->name('profile');
+    Route::put('/profile/password', [TenantProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/notifications', [TenantAnnouncementsController::class, 'index'])->name('notifications');
     Route::inertia('/panic', 'tenant/panic')->name('panic');
     Route::post('/panic/trigger', [TenantPanicController::class, 'trigger'])->name('panic.trigger');
