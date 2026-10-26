@@ -21,8 +21,7 @@ class InvoicesController extends Controller
     public function __construct(
         private readonly InvoiceService $invoices,
         private readonly InvoiceNotificationService $notifier,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): Response
     {
@@ -115,6 +114,9 @@ class InvoicesController extends Controller
         return Inertia::render('admin/invoices/create', [
             'units' => $units,
             'categories' => $categories,
+            // Lets the units map's "Buat tagihan" action land here with that unit's
+            // tenants pre-selected instead of the admin hunting for it in the list.
+            'preselectedUnitId' => $request->integer('unit_id') ?: null,
         ]);
     }
 

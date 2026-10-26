@@ -25,7 +25,6 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['pending.approval'])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
-        Route::inertia('units-map', 'units-map')->name('units-map');
     });
 });
 

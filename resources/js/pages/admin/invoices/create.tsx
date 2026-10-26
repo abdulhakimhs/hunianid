@@ -39,6 +39,7 @@ type UnitOption = {
 type Props = {
     units: UnitOption[];
     categories: InvoiceCategoryOption[];
+    preselectedUnitId?: number | null;
 };
 
 type TenantRow = {
@@ -48,8 +49,22 @@ type TenantRow = {
     unitLabel: string;
 };
 
-export default function InvoicesCreate({ units, categories }: Props) {
-    const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>([]);
+export default function InvoicesCreate({
+    units,
+    categories,
+    preselectedUnitId,
+}: Props) {
+    const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>(() => {
+        if (!preselectedUnitId) {
+            return [];
+        }
+
+        return (
+            units
+                .find((u) => u.unitId === preselectedUnitId)
+                ?.tenants.map((t) => t.id) ?? []
+        );
+    });
     const [amount, setAmount] = useState('');
     const [categoryId, setCategoryId] = useState<string>('');
     const [memo, setMemo] = useState('');

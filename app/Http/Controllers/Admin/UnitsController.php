@@ -42,17 +42,25 @@ class UnitsController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($area, $request) {
-            $block = $request->input('block');
-            $unitNumber = $request->input('unit_number');
-            $normalizedAddress = $this->normalize($block, $unitNumber);
+        $validated = $request->validate([
+            'unit_number' => ['required', 'string', 'max:255'],
+            'block' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'string', 'in:active,inactive'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        DB::transaction(function () use ($area, $validated) {
+            $normalizedAddress = $this->normalize($validated['block'] ?? null, $validated['unit_number']);
             Unit::create([
                 'area_id' => $area->id,
                 'complex_id' => $area->complex_id,
-                'unit_number' => $request->input('unit_number'),
-                'block' => $request->input('block'),
+                'unit_number' => $validated['unit_number'],
+                'block' => $validated['block'] ?? null,
                 'normalized_address' => $normalizedAddress,
-                'status' => $request->input('status', 'active'),
+                'status' => $validated['status'] ?? 'active',
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
             ]);
         });
 
@@ -65,6 +73,8 @@ class UnitsController extends Controller
             'unit_number' => ['required', 'string', 'max:255'],
             'block' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'string', 'in:active,inactive'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $normalizedAddress = $this->normalize(
@@ -77,6 +87,8 @@ class UnitsController extends Controller
             'block' => $validated['block'],
             'normalized_address' => $normalizedAddress,
             'status' => $validated['status'],
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
         ]);
 
         return redirect()->route('admin.units.index');

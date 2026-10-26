@@ -9,6 +9,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['area_id', 'unit_id', 'user_id', 'reason'])]
 class PanicAlert extends Model
 {
+    protected function casts(): array
+    {
+        return [
+            'resolved_at' => 'datetime',
+        ];
+    }
+
+    public function isActive(): bool
+    {
+        return $this->resolved_at === null;
+    }
+
     /**
      * @return BelongsTo<Area, $this>
      */
@@ -31,5 +43,13 @@ class PanicAlert extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function resolvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
     }
 }

@@ -10,11 +10,13 @@ use App\Http\Controllers\Admin\InvoicesController;
 use App\Http\Controllers\Admin\InvoiceTemplatesController;
 use App\Http\Controllers\Admin\MemberApprovalController;
 use App\Http\Controllers\Admin\MembersController;
+use App\Http\Controllers\Admin\PanicAlertsController;
 use App\Http\Controllers\Admin\SecurityController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\TicketsController as AdminTicketsController;
 use App\Http\Controllers\Admin\UnitsController;
+use App\Http\Controllers\Admin\UnitsMapController;
 use App\Http\Controllers\Admin\VisitorPassesController;
 use App\Http\Controllers\AnnouncementsController as TenantAnnouncementsController;
 use App\Http\Controllers\BillsController;
@@ -131,6 +133,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('members', [MembersController::class, 'index'])->name('members.index');
         // Route::get('units', [UnitsController::class, 'index'])->name('units.index');
         Route::resource('units', UnitsController::class)->only(['index', 'store', 'update', 'destroy']);
+        Route::get('units-map', [UnitsMapController::class, 'index'])->name('units-map.index');
+        Route::get('units-map/data', [UnitsMapController::class, 'data'])->name('units-map.data');
+        Route::post('units-map/{unit}/tickets', [AdminTicketsController::class, 'storeForUnit'])->name('units-map.tickets.store');
+        Route::post('panic-alerts/{panicAlert}/resolve', [PanicAlertsController::class, 'resolve'])->name('panic-alerts.resolve');
         // Read-only for admins — adding/editing/removing family members is the
         // resident's own call (see the top-level `family` routes above).
         Route::resource('families', FamiliesController::class)->only(['index']);

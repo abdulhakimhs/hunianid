@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AreaMember;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
+use App\Models\Unit;
 use App\Services\TicketNotificationService;
 use App\Support\PhoneNumber;
 use Illuminate\Http\Request;
@@ -305,6 +306,46 @@ class TicketsController extends Controller
         });
 
         return redirect()->route('admin.tickets.show', $ticket);
+    }
+
+    /**
+     * POST /admin/units-map/{unit}/tickets — staff files a ticket on a unit's behalf
+     * directly from the units map, attributed to that unit's own active resident
+     * (tickets.user_id is required — a unit with no active resident can't get one
+     * this way, same as it can't be invoiced; invite the owner first).
+     */
+    public function storeForUnit(Request $request, Unit $unit)
+    {
+        $area = $request->attributes->get('adminArea');
+
+        abort_unless($unit->area_id === $area->id, 404);
+
+        $resident = $unit->residents()->wherePivot('status', 'active')->first();
+
+        abort_if(! $resident, 422, 'Unit ini belum punya penghuni aktif — undang pemilik terlebih dahulu.');
+
+        $data = $request->validate([
+            'subject' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'in:maintenance,security,cleanliness,other'],
+        ]);
+
+        $ticket = Ticket::create([
+            'area_id' => $area->id,
+            'unit_id' => $unit->id,
+            'user_id' => $resident->id,
+            'category' => $data['category'],
+            'subject' => $data['subject'],
+            'status' => 'open',
+            'source' => 'web',
+        ]);
+
+        $ticket->messages()->create([
+            'sender_type' => 'staff',
+            'user_id' => $request->user()->id,
+            'body' => "Tiket dibuat oleh staf atas nama unit {$unit->unit_number}.",
+        ]);
+
+        return response()->json(['ok' => true, 'id' => $ticket->id]);
     }
 
     public function photo(Request $request, Ticket $ticket, TicketMessage $message)

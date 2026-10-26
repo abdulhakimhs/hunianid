@@ -5,6 +5,7 @@ import {
     ArrowUpDown,
     Eye,
     Loader2,
+    MapPinned,
     Plus,
     Search,
     SquarePen,
@@ -12,6 +13,7 @@ import {
     Users,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { UnitPinPicker } from '@/components/admin/unit-pin-picker';
 import { DataTablePagination } from '@/components/data-table-pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,6 +84,8 @@ export default function UnitsIndex({ units, area }: Props) {
         unit_number: '',
         block: '',
         status: 'active',
+        latitude: null as number | null,
+        longitude: null as number | null,
     });
     const [submitting, setSubmitting] = useState(false);
     const [deletingUnit, setDeletingUnit] = useState<Unit | null>(null);
@@ -94,6 +98,8 @@ export default function UnitsIndex({ units, area }: Props) {
             unit_number: '',
             block: '',
             status: 'active',
+            latitude: null,
+            longitude: null,
         });
     }
 
@@ -104,8 +110,16 @@ export default function UnitsIndex({ units, area }: Props) {
             unit_number: unit.unit_number,
             block: unit.block ?? '',
             status: unit.status,
+            latitude: unit.latitude != null ? Number(unit.latitude) : null,
+            longitude: unit.longitude != null ? Number(unit.longitude) : null,
         });
     }
+
+    const complexCenter = {
+        lat: Number(area.complex?.latitude ?? 0),
+        lng: Number(area.complex?.longitude ?? 0),
+    };
+    const hasComplexCenter = complexCenter.lat !== 0 || complexCenter.lng !== 0;
 
     const stats = useMemo(() => {
         const active = units.filter((m) => m.status == 'active').length;
@@ -213,10 +227,19 @@ export default function UnitsIndex({ units, area }: Props) {
                 <h1 className="font-display text-2xl font-bold tracking-tight text-(--color-ink) sm:text-3xl">
                     Unit di {area.complex?.name}-{area.name}
                 </h1>
-                <Button onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4" />
-                    Tambah Unit
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        onClick={() => router.visit('/admin/units-map')}
+                    >
+                        <MapPinned className="h-4 w-4" />
+                        Peta Unit
+                    </Button>
+                    <Button onClick={() => setShowCreateDialog(true)}>
+                        <Plus className="h-4 w-4" />
+                        Tambah Unit
+                    </Button>
+                </div>
             </div>
 
             <section className="shadow-elevated overflow-hidden rounded-2xl border border-(--color-ink)/8 bg-(--color-surface)">
@@ -459,6 +482,29 @@ export default function UnitsIndex({ units, area }: Props) {
                                 </SelectContent>
                             </Select>
                         </div>
+
+                        {hasComplexCenter && (
+                            <UnitPinPicker
+                                key={editingUnit?.id ?? 'new'}
+                                center={complexCenter}
+                                value={
+                                    formData.latitude != null &&
+                                    formData.longitude != null
+                                        ? {
+                                              lat: formData.latitude,
+                                              lng: formData.longitude,
+                                          }
+                                        : null
+                                }
+                                onChange={(pos) =>
+                                    setFormData({
+                                        ...formData,
+                                        latitude: pos.lat,
+                                        longitude: pos.lng,
+                                    })
+                                }
+                            />
+                        )}
                     </div>
 
                     <DialogFooter>

@@ -44,11 +44,6 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean, pendingJoin
                     icon: LayoutGrid,
                 },
                 {
-                    title: 'Peta Unit',
-                    href: '/units-map',
-                    icon: MapPinned,
-                },
-                {
                     title: 'Keluarga Saya',
                     href: '/family',
                     icon: UsersRound,
@@ -95,6 +90,12 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean, pendingJoin
                     title: 'Unit / Rumah',
                     href: '/admin/units',
                     icon: Building2,
+                    requires: adminAccess.members,
+                },
+                {
+                    title: 'Peta Unit',
+                    href: '/admin/units-map',
+                    icon: MapPinned,
                     requires: adminAccess.members,
                 },
             ].filter((item) => item.requires ?? true),

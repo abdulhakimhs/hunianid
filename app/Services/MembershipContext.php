@@ -27,7 +27,7 @@ class MembershipContext
     {
         return $user->areaMemberships()
             ->whereIn('status', $statuses)
-            ->with(['area:id,complex_id,name,status,created_by', 'area.complex:id,name', 'role:id,key_name,label'])
+            ->with(['area:id,complex_id,name,status,created_by', 'area.complex:id,name,latitude,longitude', 'role:id,key_name,label'])
             ->get()
             ->sortBy(fn (AreaMember $m) => self::ROLE_PRIORITY[$m->role->key_name] ?? 9)
             ->values();
