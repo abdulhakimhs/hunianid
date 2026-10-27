@@ -46,6 +46,11 @@ return [
         'token' => env('WABLAST_API_KEY'),
         'secret_key' => env('WABLAST_SECRET_KEY'),
         'webhook_secret' => env('WABLAST_WEBHOOK_SECRET'),
+        // Temporary soft-launch toggle: skips real WhatsApp delivery and returns the
+        // OTP code in the API response even outside local/testing, so testers can log
+        // in by phone before WA Business API delivery is wired up. Unset before a real
+        // launch — it would otherwise leak login codes to anyone calling the endpoint.
+        'otp_dev_mode' => env('OTP_DEV_MODE', false),
     ],
 
     'vapid' => [

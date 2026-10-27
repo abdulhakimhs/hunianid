@@ -1,20 +1,15 @@
-import { usePage } from '@inertiajs/react';
+type Props = {
+    /** 'dark' = navy text for light backgrounds, 'light' = white text for dark backgrounds (e.g. the sidebar). */
+    variant?: 'dark' | 'light';
+};
 
-export default function AppLogo() {
-    const { name } = usePage().props;
+export default function AppLogo({ variant = 'dark' }: Props) {
+    const src =
+        variant === 'light'
+            ? '/logo/hunianid-logo-text-white.png'
+            : '/logo/hunianid-logo-text.png';
 
     return (
-        <>
-            <img
-                src="/logo/hunianid-logo-text.png"
-                alt="HunianID"
-                className="h-8 w-auto object-contain"
-            />
-            <div className="ml-2 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
-                    {name}
-                </span>
-            </div>
-        </>
+        <img src={src} alt="HunianID" className="h-8 w-auto object-contain" />
     );
 }

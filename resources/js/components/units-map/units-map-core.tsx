@@ -1,33 +1,27 @@
 import { router } from '@inertiajs/react';
 import {
     AlertTriangle,
+    CircleHelp,
     Loader2,
     MapPin,
     Phone,
     Receipt,
-    Ticket as TicketIcon,
     UserPlus,
     Users,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
 import { loadGoogleMaps } from '@/lib/google-maps';
 
 export type MapUnit = {
@@ -75,6 +69,59 @@ function severity(unit: MapUnit): 'panic' | 'alert' | 'normal' {
     }
 
     return 'normal';
+}
+
+function statusInfo(unit: MapUnit): {
+    label: string;
+    description: string;
+    dot: string;
+    badgeClasses: string;
+} {
+    if (unit.activePanicAlert) {
+        return {
+            label: 'Panic alert aktif',
+            description:
+                'Penghuni menekan tombol darurat dan belum ditandai selesai. Perlu respons sekarang.',
+            dot: 'bg-(--color-coral)',
+            badgeClasses: 'bg-(--color-coral)/10 text-(--color-coral) border-(--color-coral)/30',
+        };
+    }
+
+    if (unit.openTicketCount > 0 && unit.overdueInvoiceCount > 0) {
+        return {
+            label: 'Ada tiket & tagihan menunggak',
+            description:
+                'Unit ini punya laporan/tiket yang masih terbuka dan tagihan yang belum dibayar.',
+            dot: 'bg-(--color-coral)/85',
+            badgeClasses: 'bg-(--color-coral)/10 text-(--color-coral) border-(--color-coral)/30',
+        };
+    }
+
+    if (unit.openTicketCount > 0) {
+        return {
+            label: 'Ada tiket terbuka',
+            description:
+                'Penghuni punya laporan/keluhan yang belum diselesaikan oleh pengelola.',
+            dot: 'bg-(--color-coral)/85',
+            badgeClasses: 'bg-(--color-coral)/10 text-(--color-coral) border-(--color-coral)/30',
+        };
+    }
+
+    if (unit.overdueInvoiceCount > 0) {
+        return {
+            label: 'Tagihan menunggak',
+            description: 'Ada tagihan yang sudah lewat jatuh tempo dan belum dibayar.',
+            dot: 'bg-(--color-coral)/85',
+            badgeClasses: 'bg-(--color-coral)/10 text-(--color-coral) border-(--color-coral)/30',
+        };
+    }
+
+    return {
+        label: 'Aman, tidak ada kendala',
+        description: 'Tidak ada tiket terbuka maupun tagihan menunggak untuk unit ini.',
+        dot: 'bg-(--color-mint)',
+        badgeClasses: 'bg-(--color-mint)/10 text-(--color-mint) border-(--color-mint)/30',
+    };
 }
 
 function markerColorClasses(sev: ReturnType<typeof severity>): {
@@ -139,11 +186,6 @@ export function UnitsMapCore({
     const [units, setUnits] = useState<MapUnit[]>(initialUnits);
     const [unpinnedCount, setUnpinnedCount] = useState(initialUnpinnedCount);
     const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
-    const [ticketForm, setTicketForm] = useState({
-        subject: '',
-        category: 'maintenance',
-    });
-    const [ticketSubmitting, setTicketSubmitting] = useState(false);
     const [inviteForm, setInviteForm] = useState({ name: '', phone: '' });
     const [inviteSubmitting, setInviteSubmitting] = useState(false);
     const [resolving, setResolving] = useState(false);
@@ -231,7 +273,7 @@ export function UnitsMapCore({
         if (mapRef.current) {
             syncMarkers(mapRef.current, units);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+         
     }, [units]);
 
     // No broadcasting/websocket infra exists in this project yet — short-interval
@@ -255,37 +297,7 @@ export function UnitsMapCore({
 
     function closeDetail() {
         setSelectedUnitId(null);
-        setTicketForm({ subject: '', category: 'maintenance' });
         setInviteForm({ name: '', phone: '' });
-    }
-
-    function submitTicket() {
-        if (!selectedUnit || !ticketForm.subject.trim()) {
-            return;
-        }
-
-        setTicketSubmitting(true);
-
-        fetch(`/admin/units-map/${selectedUnit.id}/tickets`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': xsrfToken(),
-            },
-            body: JSON.stringify(ticketForm),
-        })
-            .then(async (r) => {
-                if (!r.ok) {
-                    const data = await r.json().catch(() => null);
-                    throw new Error(data?.message ?? 'Gagal membuat tiket.');
-                }
-
-                toast.success('Tiket berhasil dibuat.');
-                setTicketForm({ subject: '', category: 'maintenance' });
-            })
-            .catch((err: Error) => toast.error(err.message))
-            .finally(() => setTicketSubmitting(false));
     }
 
     function submitInvite() {
@@ -363,22 +375,62 @@ export function UnitsMapCore({
                 </button>
             )}
 
+            <div className="shadow-elevated flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-(--color-ink)/8 bg-white px-4 py-3 text-xs text-(--color-ink)/70">
+                <span className="flex items-center gap-1.5 font-semibold text-(--color-ink)/50">
+                    <CircleHelp className="h-3.5 w-3.5" />
+                    Arti warna pin:
+                </span>
+                <span className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-(--color-mint)" />
+                    Hijau — aman, tidak ada kendala
+                </span>
+                <span className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-(--color-coral)/85" />
+                    Oranye/merah muda — ada tiket terbuka atau tagihan menunggak
+                </span>
+                <span className="flex items-center gap-1.5">
+                    <span className="relative h-2.5 w-2.5">
+                        <span className="absolute inset-0 animate-ping rounded-full bg-(--color-coral)/50" />
+                        <span className="absolute inset-0 rounded-full bg-(--color-coral)" />
+                    </span>
+                    Merah berkedip — panic alert aktif, butuh respons sekarang
+                </span>
+                <span className="flex items-center gap-1.5">
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-(--color-ink) text-[8px] font-bold text-white">
+                        9
+                    </span>
+                    Angka di pojok pin — jumlah tiket + tagihan menunggak
+                </span>
+            </div>
+
             <div
                 ref={mapDivRef}
                 className="shadow-elevated min-h-[480px] flex-1 overflow-hidden rounded-2xl border border-(--color-ink)/8"
             />
 
-            <Dialog open={!!selectedUnit} onOpenChange={(open) => !open && closeDetail()}>
-                <DialogContent className="max-h-[85vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Unit {selectedUnit?.label}</DialogTitle>
-                        <DialogDescription>
+            <Sheet open={!!selectedUnit} onOpenChange={(open) => !open && closeDetail()}>
+                <SheetContent className="w-full gap-0 overflow-y-auto sm:max-w-md">
+                    <SheetHeader className="border-b border-(--color-ink)/8 pb-4">
+                        <SheetTitle>Unit {selectedUnit?.label}</SheetTitle>
+                        <SheetDescription>
                             Detail penghuni dan aksi cepat untuk unit ini.
-                        </DialogDescription>
-                    </DialogHeader>
+                        </SheetDescription>
+                        {selectedUnit && (
+                            <span
+                                className={`mt-1 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${statusInfo(selectedUnit).badgeClasses}`}
+                            >
+                                <span className={`h-2 w-2 rounded-full ${statusInfo(selectedUnit).dot}`} />
+                                {statusInfo(selectedUnit).label}
+                            </span>
+                        )}
+                    </SheetHeader>
 
                     {selectedUnit && (
-                        <div className="grid gap-4">
+                        <div className="grid gap-4 px-4 py-4">
+                            <p className="-mt-1 text-xs leading-relaxed text-(--color-ink)/55">
+                                {statusInfo(selectedUnit).description}
+                            </p>
+
                             {selectedUnit.activePanicAlert && (
                                 <div className="flex items-center justify-between gap-3 rounded-xl border border-(--color-coral)/30 bg-(--color-coral)/10 px-3.5 py-3">
                                     <div className="flex items-center gap-2 text-(--color-coral)">
@@ -462,72 +514,6 @@ export function UnitsMapCore({
                                 </div>
                             </div>
 
-                            <div className="grid gap-2 rounded-xl border border-(--color-ink)/8 px-3.5 py-3">
-                                <p className="text-sm font-medium text-(--color-ink)">
-                                    Buat tiket untuk unit ini
-                                </p>
-                                <Input
-                                    placeholder="Subjek laporan"
-                                    value={ticketForm.subject}
-                                    onChange={(e) =>
-                                        setTicketForm({
-                                            ...ticketForm,
-                                            subject: e.target.value,
-                                        })
-                                    }
-                                />
-                                <div className="flex gap-2">
-                                    <Select
-                                        value={ticketForm.category}
-                                        onValueChange={(v) =>
-                                            setTicketForm({
-                                                ...ticketForm,
-                                                category: v,
-                                            })
-                                        }
-                                    >
-                                        <SelectTrigger className="flex-1">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="maintenance">
-                                                Perbaikan
-                                            </SelectItem>
-                                            <SelectItem value="security">
-                                                Keamanan
-                                            </SelectItem>
-                                            <SelectItem value="cleanliness">
-                                                Kebersihan
-                                            </SelectItem>
-                                            <SelectItem value="other">
-                                                Lainnya
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <Button
-                                        disabled={
-                                            !ticketForm.subject.trim() ||
-                                            !selectedUnit.resident ||
-                                            ticketSubmitting
-                                        }
-                                        onClick={submitTicket}
-                                    >
-                                        {ticketSubmitting ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <TicketIcon className="h-4 w-4" />
-                                        )}
-                                        Buat
-                                    </Button>
-                                </div>
-                                {!selectedUnit.resident && (
-                                    <p className="text-xs text-(--color-ink)/40">
-                                        Unit belum punya penghuni aktif — undang
-                                        pemilik dahulu.
-                                    </p>
-                                )}
-                            </div>
-
                             {!selectedUnit.resident && (
                                 <div className="grid gap-2 rounded-xl border border-(--color-ink)/8 px-3.5 py-3">
                                     <p className="text-sm font-medium text-(--color-ink)">
@@ -574,9 +560,10 @@ export function UnitsMapCore({
                         </div>
                     )}
 
-                    <DialogFooter>
+                    <SheetFooter className="flex-row border-t border-(--color-ink)/8 pt-4">
                         <Button
                             variant="outline"
+                            className="flex-1"
                             onClick={() =>
                                 selectedUnit &&
                                 router.visit(
@@ -588,12 +575,14 @@ export function UnitsMapCore({
                             <Receipt className="h-4 w-4" />
                             Buat Tagihan
                         </Button>
-                        <Button variant="outline" onClick={closeDetail}>
-                            Tutup
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        <SheetClose asChild>
+                            <Button variant="outline" className="flex-1" onClick={closeDetail}>
+                                Tutup
+                            </Button>
+                        </SheetClose>
+                    </SheetFooter>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

@@ -135,7 +135,6 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('units', UnitsController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('units-map', [UnitsMapController::class, 'index'])->name('units-map.index');
         Route::get('units-map/data', [UnitsMapController::class, 'data'])->name('units-map.data');
-        Route::post('units-map/{unit}/tickets', [AdminTicketsController::class, 'storeForUnit'])->name('units-map.tickets.store');
         Route::post('panic-alerts/{panicAlert}/resolve', [PanicAlertsController::class, 'resolve'])->name('panic-alerts.resolve');
         // Read-only for admins — adding/editing/removing family members is the
         // resident's own call (see the top-level `family` routes above).
