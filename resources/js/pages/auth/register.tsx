@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Building2, Check, CheckCircle2, Home, Loader2, MapPin, Navigation, Search, Sparkles } from 'lucide-react';
+import { Building2, Check, CheckCircle2, Home, Loader2, MapPin, Navigation, Search, ShieldCheck, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { GoogleIcon } from '@/components/google-icon';
 import InputError from '@/components/input-error';
@@ -21,6 +21,7 @@ import { login } from '@/routes';
 
 type Role = 'penghuni' | 'pengelola';
 type SubType = 'rt_rw' | 'developer';
+type IntendedPlan = 'trial' | 'standard';
 type Area = { id: number; name: string };
 type Region = { code: string; name: string };
 type StepKey = 'akun' | 'peran' | 'lokasi' | 'unit';
@@ -41,11 +42,37 @@ type LocationState = {
 
 type GooglePrefill = { name: string; email: string };
 type QuickPhonePrefill = { phone: string };
+type PasswordPolicy = {
+    minLength: number;
+    requireUpper: boolean;
+    requireLower: boolean;
+    requireNumber: boolean;
+    requireSymbol: boolean;
+};
 type Props = {
     passwordRules: string;
+    passwordPolicy: PasswordPolicy | null;
     googlePrefill?: GooglePrefill | null;
     quickPhonePrefill?: QuickPhonePrefill | null;
 };
+
+function passwordPolicyChecks(password: string, policy: PasswordPolicy) {
+    return {
+        minLength: password.length >= policy.minLength,
+        upper: !policy.requireUpper || /[A-Z]/.test(password),
+        lower: !policy.requireLower || /[a-z]/.test(password),
+        number: !policy.requireNumber || /[0-9]/.test(password),
+        symbol: !policy.requireSymbol || /[^A-Za-z0-9]/.test(password),
+    };
+}
+
+function passwordMeetsPolicy(password: string, policy: PasswordPolicy | null): boolean {
+    if (!policy) {
+        return true;
+    }
+
+    return Object.values(passwordPolicyChecks(password, policy)).every(Boolean);
+}
 
 const STEP_LABEL: Record<StepKey, string> = { akun: 'Akun', peran: 'Peran', lokasi: 'Lokasi', unit: 'Unit' };
 
@@ -66,7 +93,89 @@ type Persisted = {
     areaId: string;
     unitNumber: string;
     block: string;
+    intendedPlan: IntendedPlan;
 };
+
+function readPlanFromQuery(): IntendedPlan | null {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    const value = new URLSearchParams(window.location.search).get('plan');
+
+    return value === 'standard' || value === 'trial' ? value : null;
+}
+
+const PLAN_INFO: Record<
+    IntendedPlan,
+    { name: string; price: string; period?: string; badge: string; features: string[]; note: string }
+> = {
+    trial: {
+        name: 'Coba Gratis',
+        price: 'Gratis',
+        period: '30 hari',
+        badge: 'Tanpa kartu kredit',
+        features: ['Tagihan, Tamu, Komplain, Broadcast', 'Tombol darurat & aplikasi satpam', '1 RT/komplek, sampai 50 unit'],
+        note: 'Langsung aktif setelah data di bawah lengkap — tanpa kartu atau pembayaran.',
+    },
+    standard: {
+        name: 'Standard',
+        price: 'Rp149.000',
+        period: '/bulan',
+        badge: 'Paling populer',
+        features: ['Sampai 150 unit untuk 1 RT', 'Riwayat & laporan lengkap', 'Support prioritas via WhatsApp'],
+        note: 'Lengkapi data di bawah, lalu selesaikan pembayaran untuk mulai memakai HunianID.',
+    },
+};
+
+function PlanSummaryCard({ plan }: { plan: IntendedPlan }) {
+    const info = PLAN_INFO[plan];
+    const isPaid = plan === 'standard';
+
+    return (
+        <div
+            className={`relative overflow-hidden rounded-2xl border p-4 shadow-elevated duration-150 animate-in fade-in ${
+                isPaid
+                    ? 'border-[color:var(--color-sky-deep)]/30 bg-gradient-to-br from-[color:var(--color-sky)]/12 to-[color:var(--color-sky-deep)]/5'
+                    : 'border-[color:var(--color-mint)]/30 bg-[color:var(--color-mint)]/8'
+            }`}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase ${
+                            isPaid ? 'bg-[color:var(--color-sky-deep)] text-white' : 'bg-[color:var(--color-mint-deep)] text-white'
+                        }`}
+                    >
+                        <Sparkles className="h-3 w-3" />
+                        {info.badge}
+                    </span>
+                    <p className="mt-2 font-display text-base font-semibold text-[color:var(--color-ink)]">Paket {info.name}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                    <p className="font-display text-xl font-bold text-[color:var(--color-ink)]">{info.price}</p>
+                    {info.period && <p className="text-xs text-[color:var(--color-ink)]/50">{info.period}</p>}
+                </div>
+            </div>
+
+            <ul className="mt-3 space-y-1.5">
+                {info.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-xs text-[color:var(--color-ink)]/70">
+                        <CheckCircle2
+                            className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${isPaid ? 'text-[color:var(--color-sky-deep)]' : 'text-[color:var(--color-mint-deep)]'}`}
+                        />
+                        {feature}
+                    </li>
+                ))}
+            </ul>
+
+            <p className="mt-3 flex items-start gap-1.5 border-t border-[color:var(--color-ink)]/10 pt-3 text-xs text-[color:var(--color-ink)]/55">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {info.note}
+            </p>
+        </div>
+    );
+}
 
 function loadPersisted(): Partial<Persisted> {
     if (typeof window === 'undefined') {
@@ -90,7 +199,7 @@ function clearPersisted() {
     }
 }
 
-export default function Register({ passwordRules, googlePrefill, quickPhonePrefill }: Props) {
+export default function Register({ passwordRules, passwordPolicy, googlePrefill, quickPhonePrefill }: Props) {
     // Google sign-up still asks for phone (Google doesn't provide it) and hides the
     // password fields. Phone-quick sign-up (triggered from an unregistered OTP login
     // attempt) skips Akun entirely — name/email/password are collected later, on the
@@ -120,17 +229,23 @@ export default function Register({ passwordRules, googlePrefill, quickPhonePrefi
     const [unitNumber, setUnitNumber] = useState(initial.unitNumber ?? '');
     const [block, setBlock] = useState(initial.block ?? '');
 
+    // The landing page's plan buttons link straight here with ?plan=... — that
+    // always wins over a stale persisted value from an earlier, unrelated
+    // wizard session (e.g. someone who abandoned a trial sign-up earlier and
+    // comes back later via the Standard button).
+    const [intendedPlan] = useState<IntendedPlan>(() => readPlanFromQuery() ?? initial.intendedPlan ?? 'trial');
+
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         try {
-            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ step, role, subType, location, areaName, name, email, phone, areaId, unitNumber, block }));
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ step, role, subType, location, areaName, name, email, phone, areaId, unitNumber, block, intendedPlan }));
         } catch {
             // ignore — persistence is a nice-to-have, not a requirement
         }
-    }, [step, role, subType, location, areaName, name, email, phone, areaId, unitNumber, block]);
+    }, [step, role, subType, location, areaName, name, email, phone, areaId, unitNumber, block, intendedPlan]);
 
     const needsUnitStep = role === 'penghuni' && (location?.active_areas_count ?? 0) > 0;
     const activeSteps: StepKey[] = [
@@ -180,6 +295,7 @@ export default function Register({ passwordRules, googlePrefill, quickPhonePrefi
             password_confirmation: mode === 'normal' ? passwordConfirmation : undefined,
             phone: phone || undefined,
             auth_provider: mode === 'normal' ? undefined : mode,
+            intended_plan: role === 'pengelola' ? intendedPlan : undefined,
             ...extra,
         }, { showOverlay: false })
             .then((data) => {
@@ -223,6 +339,8 @@ export default function Register({ passwordRules, googlePrefill, quickPhonePrefi
         if (mode === 'normal') {
             if (!password) {
                 next.password = 'Kata sandi wajib diisi.';
+            } else if (!passwordMeetsPolicy(password, passwordPolicy)) {
+                next.password = 'Kata sandi belum memenuhi semua syarat di atas.';
             } else if (password !== passwordConfirmation) {
                 next.password_confirmation = 'Konfirmasi kata sandi tidak sama.';
             }
@@ -275,6 +393,8 @@ export default function Register({ passwordRules, googlePrefill, quickPhonePrefi
                     </p>
                 )}
 
+                {role === 'pengelola' && <PlanSummaryCard plan={intendedPlan} />}
+
                 {formError && (
                     <p className="rounded-xl border border-[color:var(--color-coral)]/25 bg-[color:var(--color-coral)]/10 px-3 py-2 text-sm text-[color:var(--color-coral)]">
                         {formError}
@@ -284,6 +404,7 @@ export default function Register({ passwordRules, googlePrefill, quickPhonePrefi
                 {currentStepKey === 'akun' && (
                     <AccountStep
                         passwordRules={passwordRules}
+                        passwordPolicy={passwordPolicy}
                         mode={mode}
                         name={name}
                         email={email}
@@ -929,6 +1050,7 @@ function MapConfirm({
 
 function AccountStep({
     passwordRules,
+    passwordPolicy,
     mode,
     name,
     email,
@@ -940,6 +1062,7 @@ function AccountStep({
     onContinue,
 }: {
     passwordRules: string;
+    passwordPolicy: PasswordPolicy | null;
     mode: 'normal' | 'google' | 'phone_quick';
     name: string;
     email: string;
@@ -1000,6 +1123,9 @@ function AccountStep({
                                 onChange={(e) => onChange.password(e.target.value)}
                                 passwordrules={passwordRules}
                             />
+                            {passwordPolicy && password.length > 0 && (
+                                <PasswordChecklist password={password} policy={passwordPolicy} />
+                            )}
                             <InputError message={errors.password} />
                         </div>
 
@@ -1045,6 +1171,34 @@ function AccountStep({
                 Sudah punya akun? <TextLink href={login()}>Masuk</TextLink>
             </p>
         </div>
+    );
+}
+
+function PasswordChecklist({ password, policy }: { password: string; policy: PasswordPolicy }) {
+    const checks = passwordPolicyChecks(password, policy);
+
+    const items: Array<{ key: keyof typeof checks; label: string }> = [
+        { key: 'minLength', label: `Minimal ${policy.minLength} karakter` },
+        ...(policy.requireUpper ? [{ key: 'upper' as const, label: 'Ada huruf besar' }] : []),
+        ...(policy.requireLower ? [{ key: 'lower' as const, label: 'Ada huruf kecil' }] : []),
+        ...(policy.requireNumber ? [{ key: 'number' as const, label: 'Ada angka' }] : []),
+        ...(policy.requireSymbol ? [{ key: 'symbol' as const, label: 'Ada simbol (!@#$...)' }] : []),
+    ];
+
+    return (
+        <ul className="grid grid-cols-2 gap-1">
+            {items.map((item) => (
+                <li
+                    key={item.key}
+                    className={`flex items-center gap-1.5 text-xs ${
+                        checks[item.key] ? 'text-[color:var(--color-mint-deep)]' : 'text-[color:var(--color-ink)]/45'
+                    }`}
+                >
+                    <Check className={`h-3.5 w-3.5 shrink-0 ${checks[item.key] ? 'opacity-100' : 'opacity-30'}`} />
+                    {item.label}
+                </li>
+            ))}
+        </ul>
     );
 }
 

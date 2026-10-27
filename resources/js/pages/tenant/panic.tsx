@@ -29,6 +29,9 @@ function xsrfToken(): string {
 type Phase =
     'idle' | 'holding' | 'pending' | 'sending' | 'sent' | 'cancelled' | 'error';
 
+const GENERIC_NETWORK_ERROR =
+    'Sinyal darurat gagal terkirim. Periksa koneksi internet Anda dan coba lagi.';
+
 type Reason = 'medical' | 'security' | 'fire' | 'other';
 
 const reasonOptions: { key: Reason; label: string; icon: typeof HeartPulse }[] =
@@ -44,6 +47,7 @@ export default function TenantPanic() {
     const [progress, setProgress] = useState(0);
     const [cancelSecondsLeft, setCancelSecondsLeft] = useState(0);
     const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
+    const [errorMessage, setErrorMessage] = useState(GENERIC_NETWORK_ERROR);
 
     const holdStartRef = useRef<number | null>(null);
     const rafRef = useRef<number | null>(null);
@@ -122,17 +126,33 @@ export default function TenantPanic() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    Accept: 'application/json',
                     'X-XSRF-TOKEN': xsrfToken(),
                 },
                 body: JSON.stringify({ reason: selectedReason }),
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                // The request reached the server — this is a real validation
+                // or server error, not a connectivity problem, so surface
+                // whatever message the backend returned instead of the
+                // generic "check your internet" copy.
+                const body = await response.json().catch(() => null);
+
+                setErrorMessage(
+                    body?.message ||
+                        `Sinyal darurat gagal terkirim (${response.status}). Coba lagi.`,
+                );
+                setPhase('error');
+
+                return;
             }
 
             setPhase('sent');
         } catch {
+            // fetch itself rejected (no response at all) — this is the one
+            // case that's actually a connectivity issue.
+            setErrorMessage(GENERIC_NETWORK_ERROR);
             setPhase('error');
         }
     }, [selectedReason]);
@@ -175,7 +195,7 @@ export default function TenantPanic() {
         <>
             <Head title="Panic Button" />
 
-            <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col bg-(--color-surface) pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+            <div className="mx-auto flex min-h-dvh w-full max-w-sm flex-col overflow-y-auto bg-(--color-surface) pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
                 {(phase === 'idle' || phase === 'holding') && (
                     <IdleView
                         progress={progress}
@@ -201,7 +221,10 @@ export default function TenantPanic() {
                 {phase === 'cancelled' && <CancelledView />}
 
                 {phase === 'error' && (
-                    <ErrorView onRetry={() => setPhase('idle')} />
+                    <ErrorView
+                        message={errorMessage}
+                        onRetry={() => setPhase('idle')}
+                    />
                 )}
             </div>
         </>
@@ -425,7 +448,13 @@ function CancelledView() {
     );
 }
 
-function ErrorView({ onRetry }: { onRetry: () => void }) {
+function ErrorView({
+    message,
+    onRetry,
+}: {
+    message: string;
+    onRetry: () => void;
+}) {
     return (
         <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-600">
@@ -434,10 +463,7 @@ function ErrorView({ onRetry }: { onRetry: () => void }) {
             <p className="mt-4 text-lg font-semibold text-(--color-ink)">
                 Gagal Mengirim
             </p>
-            <p className="mt-1 text-sm text-(--color-ink)/50">
-                Sinyal darurat gagal terkirim. Periksa koneksi internet Anda
-                dan coba lagi.
-            </p>
+            <p className="mt-1 text-sm text-(--color-ink)/50">{message}</p>
 
             <button
                 type="button"

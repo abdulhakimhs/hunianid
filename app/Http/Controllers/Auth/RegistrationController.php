@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\ComplexResolverService;
 use App\Services\RegistrationService;
+use App\Support\PasswordPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -23,6 +24,7 @@ class RegistrationController extends Controller
     {
         return Inertia::render('auth/register', [
             'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'passwordPolicy' => PasswordPolicy::active() ? PasswordPolicy::toArray() : null,
 
             'googlePrefill' => $request->session()->get('google_prefill'),
 
@@ -79,14 +81,24 @@ class RegistrationController extends Controller
             'area_id' => ['nullable', 'integer'],
             'unit_number' => ['nullable', 'string', 'max:50'],
             'block' => ['nullable', 'string', 'max:50'],
+
+            // Which plan card was clicked on the landing page — 'trial' (or
+            // absent) grants the usual free trial; a paid plan key sends the
+            // new admin straight to billing to pay before they can use anything.
+            'intended_plan' => ['nullable', 'string', Rule::in(['trial', 'standard'])],
         ]);
 
-        $user = $registration->register($data, $mode);
+        $result = $registration->register($data, $mode);
+        $user = $result['user'];
 
         auth()->login($user);
         $request->session()->regenerate();
         $request->session()->forget('google_prefill');
 
-        return response()->json(['redirect' => route('dashboard')]);
+        return response()->json([
+            'redirect' => $result['requiresPayment']
+                ? route('admin.billing.index')
+                : route('dashboard'),
+        ]);
     }
 }

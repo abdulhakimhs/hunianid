@@ -131,17 +131,18 @@ Route::middleware(['auth'])->group(function () {
     // Members list and promoting stay founder-only — a deliberate one-shot handover.
     Route::middleware(['admin.role:superadmin,staff,unclaimed_creator'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('members', [MembersController::class, 'index'])->name('members.index');
-        // Route::get('units', [UnitsController::class, 'index'])->name('units.index');
-        Route::resource('units', UnitsController::class)->only(['index', 'store', 'update', 'destroy']);
-        Route::get('units-map', [UnitsMapController::class, 'index'])->name('units-map.index');
-        Route::get('units-map/data', [UnitsMapController::class, 'data'])->name('units-map.data');
-        Route::post('panic-alerts/{panicAlert}/resolve', [PanicAlertsController::class, 'resolve'])->name('panic-alerts.resolve');
         // Read-only for admins — adding/editing/removing family members is the
         // resident's own call (see the top-level `family` routes above).
         Route::resource('families', FamiliesController::class)->only(['index']);
         Route::post('area/promote', [AreaHandoverController::class, 'store'])->name('area.promote');
 
         Route::middleware(['subscription.active'])->group(function () {
+            // Route::get('units', [UnitsController::class, 'index'])->name('units.index');
+            Route::resource('units', UnitsController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::get('units-map', [UnitsMapController::class, 'index'])->name('units-map.index');
+            Route::get('units-map/data', [UnitsMapController::class, 'data'])->name('units-map.data');
+            Route::post('panic-alerts/{panicAlert}/resolve', [PanicAlertsController::class, 'resolve'])->name('panic-alerts.resolve');
+
             Route::resource('security', SecurityController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::get('security/invites', [SecurityController::class, 'invitesIndex'])->name('security.invites');
             Route::post('security/invite-bulk', [SecurityController::class, 'bulkInvite'])->name('security.invite-bulk');

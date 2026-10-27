@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { postJson } from '@/lib/api';
 import { logout } from '@/routes';
 import type { Membership } from '@/types';
@@ -50,6 +51,7 @@ export default function SecurityProfile({ guard }: Props) {
     const [editOpen, setEditOpen] = useState(false);
     const [passwordOpen, setPasswordOpen] = useState(false);
     const [switchOpen, setSwitchOpen] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
 
     function requestLogout() {
         setConfirmOpen(true);
@@ -74,7 +76,7 @@ export default function SecurityProfile({ guard }: Props) {
             ? [{ icon: Building2, label: 'Ganti Kompleks', onClick: () => setSwitchOpen(true) }]
             : []),
         { icon: KeyRound, label: 'Ubah kata sandi', onClick: () => setPasswordOpen(true) },
-        { icon: Bell, label: 'Notifikasi' },
+        { icon: Bell, label: 'Notifikasi', onClick: () => setNotifOpen(true) },
         { icon: HelpCircle, label: 'Bantuan' },
     ];
 
@@ -196,6 +198,10 @@ export default function SecurityProfile({ guard }: Props) {
                     currentMembershipId={auth.currentMembershipId}
                     onClose={() => setSwitchOpen(false)}
                 />
+            )}
+
+            {notifOpen && (
+                <NotificationSheet onClose={() => setNotifOpen(false)} />
             )}
         </>
     );
@@ -444,6 +450,72 @@ function SwitchComplexSheet({
                 >
                     Batal
                 </Button>
+            </div>
+        </div>
+    );
+}
+
+function NotificationSheet({ onClose }: { onClose: () => void }) {
+    const { status, loading, subscribe, unsubscribe } = usePushNotifications();
+
+    const statusLabel = {
+        checking: 'Memeriksa status...',
+        unsupported: 'Perangkat/browser ini tidak mendukung notifikasi.',
+        default: 'Notifikasi belum aktif. Aktifkan agar sinyal darurat dari penghuni langsung masuk ke HP Anda, lengkap dengan suara.',
+        denied: 'Izin notifikasi diblokir di browser Anda. Buka pengaturan browser/HP, cari izin "Notifikasi" untuk aplikasi ini, lalu aktifkan — setelah itu tekan "Aktifkan" lagi di sini.',
+        subscribed: 'Notifikasi aktif di perangkat ini. Sinyal darurat akan langsung muncul dengan suara.',
+    }[status];
+
+    return (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/50">
+            <div className="w-full max-w-sm rounded-t-3xl bg-(--color-surface) p-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+                <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-(--color-ink)/15" />
+
+                <p className="mb-2 text-center text-base font-semibold text-(--color-ink)">
+                    Notifikasi
+                </p>
+                <p className="text-center text-sm text-(--color-ink)/55">
+                    {statusLabel}
+                </p>
+
+                <div className="mt-5 flex gap-2">
+                    <Button
+                        variant="outline"
+                        className="h-12 flex-1"
+                        onClick={onClose}
+                        disabled={loading}
+                    >
+                        Tutup
+                    </Button>
+
+                    {status === 'subscribed' ? (
+                        <Button
+                            variant="outline"
+                            className="h-12 flex-1 border-red-200 text-red-600"
+                            onClick={unsubscribe}
+                            disabled={loading}
+                        >
+                            {loading && (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            )}
+                            Matikan
+                        </Button>
+                    ) : (
+                        status !== 'unsupported' &&
+                        status !== 'checking' && (
+                            <Button
+                                className="h-12 flex-1"
+                                onClick={subscribe}
+                                disabled={loading || status === 'denied'}
+                            >
+                                {loading && (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                )}
+                                Aktifkan
+                            </Button>
+                        )
+                    )}
+                </div>
             </div>
         </div>
     );

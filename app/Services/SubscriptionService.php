@@ -36,6 +36,25 @@ class SubscriptionService
     }
 
     /**
+     * Starts a NEW pengelola area's subscription in `pending` — chosen a paid
+     * plan at registration but hasn't paid yet. Deliberately NOT
+     * ensureSubscriptionAnchor() (which anchors as `active` — correct only for
+     * a pre-existing grandfathered area where "merely checking out" must not
+     * newly lock out access that already existed). A brand-new area has never
+     * had access, so it must stay locked (isActive() === false) until the
+     * Midtrans webhook actually confirms payment and flips this to `active`.
+     */
+    public function startPendingCheckout(Area $area, Plan $plan): Subscription
+    {
+        return Subscription::create([
+            'area_id' => $area->id,
+            'plan_id' => $plan->id,
+            'billing_cycle' => 'monthly',
+            'status' => 'pending',
+        ]);
+    }
+
+    /**
      * No subscription row at all means this area predates the billing feature
      * (created directly, not through RegistrationService) — grandfathered in
      * as active rather than locked out, since there was never a trial for it

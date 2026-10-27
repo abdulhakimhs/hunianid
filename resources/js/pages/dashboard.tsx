@@ -1,7 +1,9 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+    CheckCircle2,
     CircleCheck,
     CircleDollarSign,
+    CreditCard,
     Home,
     Loader2,
     Megaphone,
@@ -9,11 +11,13 @@ import {
     ReceiptText,
     Send,
     ShieldCheck,
+    Sparkles,
     Ticket as TicketIcon,
     UserCircle,
     Users,
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { ImageDropzone } from '@/components/image-dropzone';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +29,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
 import { dashboard } from '@/routes';
 
 type Guidance =
@@ -172,6 +177,180 @@ return null;
     );
 }
 
+type PlanInfo = {
+    id: number;
+    key: string;
+    name: string;
+    max_units: number | null;
+    price_monthly: number | null;
+    price_yearly: number | null;
+    is_self_service: boolean;
+};
+
+type PaymentRequired = {
+    status: 'pending' | 'trialing' | 'active' | 'past_due' | 'expired' | 'canceled';
+    plan: PlanInfo | null;
+    plans: PlanInfo[];
+    midtransClientKey: string | null;
+    midtransMode: 'sandbox' | 'production';
+} | null;
+
+const PAYMENT_STATUS_COPY: Record<NonNullable<PaymentRequired>['status'], { title: string; body: string }> = {
+    pending: {
+        title: 'Selesaikan pembayaran untuk mulai memakai HunianID',
+        body: 'Anda memilih paket ini saat mendaftar. Modul lain (tagihan, tiket, tamu, dll) akan terbuka otomatis begitu pembayaran dikonfirmasi.',
+    },
+    trialing: {
+        title: 'Masa coba gratis Anda masih berjalan',
+        body: 'Pilih paket berbayar kapan saja agar akses tidak terputus setelah masa coba gratis berakhir.',
+    },
+    expired: {
+        title: 'Masa coba gratis sudah berakhir',
+        body: 'Lanjutkan dengan paket berbayar untuk kembali memakai HunianID — data yang sudah tercatat tetap aman.',
+    },
+    past_due: {
+        title: 'Pembayaran terakhir Anda belum berhasil',
+        body: 'Selesaikan pembayaran untuk mengaktifkan kembali akses penuh.',
+    },
+    canceled: {
+        title: 'Paket Anda telah dibatalkan',
+        body: 'Pilih paket baru untuk melanjutkan memakai HunianID.',
+    },
+    active: {
+        title: 'Selesaikan pembayaran untuk mulai memakai HunianID',
+        body: 'Modul lain akan terbuka otomatis begitu pembayaran dikonfirmasi.',
+    },
+};
+
+const PLAN_FEATURES: Record<string, string[]> = {
+    standard: [
+        'Tagihan, Tamu, Komplain, Broadcast',
+        'Tombol darurat & aplikasi satpam',
+        'Sampai 150 unit untuk 1 RT',
+        'Riwayat & laporan lengkap',
+        'Support prioritas via WhatsApp',
+    ],
+};
+
+function featuresFor(plan: PlanInfo): string[] {
+    return (
+        PLAN_FEATURES[plan.key] ?? [
+            plan.max_units ? `Sampai ${plan.max_units} unit` : 'Unit tanpa batas',
+            'Tagihan, Tamu, Komplain, Broadcast',
+            'Tombol darurat & aplikasi satpam',
+        ]
+    );
+}
+
+function formatRupiah(amount: number | null): string {
+    return amount === null ? 'Gratis' : `Rp${amount.toLocaleString('id-ID')}`;
+}
+
+function PaymentRequiredView({ paymentRequired }: { paymentRequired: NonNullable<PaymentRequired> }) {
+    const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
+    const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null);
+    const snapReady = useMidtransSnap(paymentRequired.midtransClientKey, paymentRequired.midtransMode);
+    const copy = PAYMENT_STATUS_COPY[paymentRequired.status];
+
+    function pay(plan: PlanInfo) {
+        setLoadingPlanId(plan.id);
+
+        startPlanCheckout(plan.id, cycle)
+            .then((data) => {
+                if (data.token && snapReady && window.snap) {
+                    window.snap.pay(data.token, {
+                        onSuccess: () => router.reload(),
+                        onPending: () => router.reload(),
+                    });
+                } else if (data.token) {
+                    toast.error('Pembayaran sedang disiapkan, silakan coba lagi dalam beberapa detik.');
+                } else {
+                    toast.error(
+                        data.errors?.plan_id?.[0] ?? data.message ?? 'Gagal memproses pembayaran. Silakan coba lagi.',
+                    );
+                }
+            })
+            .catch(() => toast.error('Gagal memproses pembayaran. Silakan coba lagi.'))
+            .finally(() => setLoadingPlanId(null));
+    }
+
+    const pinnedPlan = paymentRequired.plan;
+    const choices = pinnedPlan ? [pinnedPlan] : paymentRequired.plans;
+
+    return (
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[color:var(--color-sky)]/15 text-[color:var(--color-sky-deep)]">
+                <CreditCard className="h-8 w-8" />
+            </div>
+
+            <div>
+                <h1 className="font-display text-2xl font-bold text-[color:var(--color-ink)] sm:text-3xl">{copy.title}</h1>
+                <p className="mx-auto mt-2 max-w-md text-sm text-[color:var(--color-ink)]/65">{copy.body}</p>
+            </div>
+
+            {choices.length > 1 && (
+                <div className="flex items-center gap-2">
+                    <Button variant={cycle === 'monthly' ? 'default' : 'outline'} size="sm" onClick={() => setCycle('monthly')}>
+                        Bulanan
+                    </Button>
+                    <Button variant={cycle === 'yearly' ? 'default' : 'outline'} size="sm" onClick={() => setCycle('yearly')}>
+                        Tahunan (hemat 2 bulan)
+                    </Button>
+                </div>
+            )}
+
+            <div className="grid w-full gap-4 sm:grid-cols-2">
+                {choices.map((plan) => {
+                    const price = cycle === 'yearly' ? plan.price_yearly : plan.price_monthly;
+
+                    return (
+                        <div
+                            key={plan.id}
+                            className="relative flex flex-col overflow-hidden rounded-[1.5rem] border border-[color:var(--color-sky-deep)]/25 bg-gradient-to-br from-[color:var(--color-sky)]/12 to-[color:var(--color-sky-deep)]/5 p-6 text-left shadow-elevated-lg"
+                        >
+                            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[color:var(--color-sky-deep)] px-2.5 py-1 text-[10px] font-semibold tracking-wide text-white uppercase">
+                                <Sparkles className="h-3 w-3" />
+                                {pinnedPlan ? 'Paket pilihan Anda' : 'Paling populer'}
+                            </span>
+
+                            <p className="mt-3 font-display text-xl font-semibold text-[color:var(--color-ink)]">Paket {plan.name}</p>
+                            <p className="mt-1 font-display text-3xl font-bold text-[color:var(--color-ink)]">
+                                {formatRupiah(price)}
+                                <span className="ml-1 text-sm font-normal text-[color:var(--color-ink)]/50">
+                                    /{cycle === 'yearly' ? 'tahun' : 'bulan'}
+                                </span>
+                            </p>
+
+                            <ul className="mt-4 space-y-1.5">
+                                {featuresFor(plan).map((feature) => (
+                                    <li key={feature} className="flex items-start gap-2 text-sm text-[color:var(--color-ink)]/70">
+                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--color-sky-deep)]" />
+                                        {feature}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <Button
+                                className="mt-5 w-full gap-1.5 bg-[color:var(--color-sky-deep)] hover:bg-[color:var(--color-sky-deep)]/90"
+                                disabled={loadingPlanId === plan.id}
+                                onClick={() => pay(plan)}
+                            >
+                                {loadingPlanId === plan.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                                Bayar Sekarang
+                            </Button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <p className="flex items-center gap-1.5 text-xs text-[color:var(--color-ink)]/45">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Pembayaran diproses dengan aman melalui Midtrans.
+            </p>
+        </div>
+    );
+}
+
 type OpenInvoice = {
     id: number;
     invoiceNumber: string;
@@ -264,6 +443,7 @@ function WidgetCard({
 export default function Dashboard({
     guidance = null,
     status,
+    paymentRequired = null,
     openInvoices = [],
     openInvoicesCount = 0,
     openTickets = [],
@@ -273,6 +453,7 @@ export default function Dashboard({
 }: {
     guidance?: Guidance;
     status?: string | null;
+    paymentRequired?: PaymentRequired;
     openInvoices?: OpenInvoice[];
     openInvoicesCount?: number;
     openTickets?: OpenTicket[];
@@ -305,6 +486,17 @@ export default function Dashboard({
                 onSuccess: () => setMarkPaidTarget(null),
                 onFinish: () => setMarkingPaid(false),
             },
+        );
+    }
+
+    if (paymentRequired) {
+        return (
+            <>
+                <Head title="Selesaikan Pembayaran" />
+                <div className="flex h-full flex-1 flex-col rounded-[2rem] bg-[color:var(--color-bg)] p-4 sm:p-6 lg:p-8">
+                    <PaymentRequiredView paymentRequired={paymentRequired} />
+                </div>
+            </>
         );
     }
 

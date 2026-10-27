@@ -25,7 +25,9 @@ class EnsureSubscriptionActive
         $area = $request->attributes->get('adminArea');
 
         if ($area && ! $this->subscriptions->isActive($area)) {
-            return Inertia::render('admin/billing/expired')->toResponse($request);
+            return Inertia::render('admin/billing/expired', [
+                'reason' => $area->subscription?->status ?? 'expired',
+            ])->toResponse($request);
         }
 
         return $next($request);

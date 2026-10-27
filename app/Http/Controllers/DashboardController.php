@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Area;
 use App\Models\AreaMember;
 use App\Models\Invoice;
+use App\Models\PaymentGatewaySetting;
+use App\Models\Plan;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Models\VisitorPass;
 use App\Services\MembershipContext;
+use App\Services\SubscriptionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -16,6 +20,10 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly SubscriptionService $subscriptions,
+    ) {}
+
     public function __invoke(Request $request): Response|RedirectResponse
     {
         $user = $request->user();
@@ -37,11 +45,40 @@ class DashboardController extends Controller
 
         $isPengelola = $current && in_array($current->role->key_name, ['superadmin', 'staff'], true);
 
+        // An admin whose area isn't paid up (just registered on a paid plan and
+        // hasn't checked out yet, or a trial that ran out) gets ONLY a payment
+        // prompt here — no operational widgets, since every other admin route is
+        // already gated behind EnsureSubscriptionActive and would just bounce
+        // them to the same upsell screen anyway.
+        $paymentRequired = $isPengelola ? $this->paymentRequiredFor($current->area) : null;
+
         return Inertia::render('dashboard', [
-            'guidance' => $guidance,
+            'guidance' => $paymentRequired ? null : $guidance,
             'status' => $request->session()->get('status'),
-            ...($isPengelola ? $this->operationalWidgets($current->area_id) : $this->emptyOperationalWidgets()),
+            'paymentRequired' => $paymentRequired,
+            ...($isPengelola && ! $paymentRequired ? $this->operationalWidgets($current->area_id) : $this->emptyOperationalWidgets()),
         ]);
+    }
+
+    private function paymentRequiredFor(Area $area): ?array
+    {
+        if ($this->subscriptions->isActive($area)) {
+            return null;
+        }
+
+        $subscription = $area->subscription?->load('plan');
+        $gateway = PaymentGatewaySetting::current();
+
+        return [
+            'status' => $subscription->status ?? 'expired',
+            'plan' => $subscription?->plan,
+            'plans' => Plan::where('is_self_service', true)
+                ->whereNotNull('price_monthly')
+                ->orderBy('sort_order')
+                ->get(),
+            'midtransClientKey' => $gateway?->clientKey(),
+            'midtransMode' => $gateway?->mode ?? 'sandbox',
+        ];
     }
 
     private function operationalWidgets(int $areaId): array
