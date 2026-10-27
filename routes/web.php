@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\PhoneLoginController;
 use App\Http\Controllers\Auth\RegionController;
 use App\Http\Controllers\Auth\RegistrationController;
 use App\Http\Controllers\Auth\SocialLoginController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MembershipSwitchController;
 use App\Http\Controllers\PendingApprovalController;
@@ -16,13 +17,14 @@ Route::inertia('/', 'landing')->name('home');
 
 Route::get('pass/{token}', [VisitorPassController::class, 'show'])->name('visitor-pass.show');
 
+Route::post('contact', [ContactController::class, 'submit'])->middleware('throttle:6,1')->name('contact.submit');
+
 Route::middleware(['auth'])->group(function () {
     Route::get('menunggu-persetujuan', PendingApprovalController::class)->name('pending-approval');
     Route::post('switch-membership', [MembershipSwitchController::class, 'store'])->name('switch-membership');
 
     Route::middleware(['pending.approval'])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
-        Route::inertia('units-map', 'units-map')->name('units-map');
     });
 });
 
@@ -50,6 +52,6 @@ Route::get('login-security', function (Request $request) {
 
     return Inertia::render('auth/login-security');
 })->name('login-security');
-require __DIR__ . '/settings.php';
-require __DIR__ . '/admin.php';
-require __DIR__ . '/webhooks.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/admin.php';
+require __DIR__.'/webhooks.php';

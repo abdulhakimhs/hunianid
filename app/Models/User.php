@@ -120,4 +120,12 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasMany(OtpCode::class);
     }
+
+    /**
+     * @return HasMany<PushSubscription, $this>
+     */
+    public function pushSubscriptions(): HasMany
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
 }

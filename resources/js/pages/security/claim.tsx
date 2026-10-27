@@ -2,6 +2,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { AlertTriangle, CheckCircle2, Loader2, ShieldCheck, Smartphone } from 'lucide-react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import PushNotificationPrompt from '@/components/shared/push-notification-prompt';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useInstallPrompt } from '@/hooks/use-install-prompt';
@@ -94,6 +95,10 @@ export default function SecurityClaim({
                         <Button asChild variant="outline" className="w-full">
                             <Link href="/security">Lanjut ke Dashboard</Link>
                         </Button>
+                    </div>
+
+                    <div className="mt-4 w-full">
+                        <PushNotificationPrompt />
                     </div>
                 </div>
             </>

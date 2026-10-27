@@ -9,11 +9,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['area_id', 'complex_id', 'unit_number', 'block', 'normalized_address', 'status'])]
+#[Fillable(['area_id', 'complex_id', 'unit_number', 'block', 'normalized_address', 'status', 'latitude', 'longitude'])]
 class Unit extends Model
 {
     /** @use HasFactory<UnitFactory> */
     use HasFactory;
+
+    protected function casts(): array
+    {
+        return [
+            'latitude' => 'decimal:8',
+            'longitude' => 'decimal:8',
+        ];
+    }
+
+    public function hasPin(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
+    }
 
     /**
      * @return BelongsTo<Area, $this>

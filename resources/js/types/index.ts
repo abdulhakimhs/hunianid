@@ -12,6 +12,8 @@ export type Unit = {
     block?: string;
     normalized_address: string;
     status: 'active' | 'inactive';
+    latitude?: number | string | null;
+    longitude?: number | string | null;
     created_at?: string;
     updated_at?: string;
 };

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Settings\PasswordUpdateRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,5 +25,14 @@ class TenantProfileController extends Controller
                 'phone' => $user->phone,
             ],
         ]);
+    }
+
+    public function updatePassword(PasswordUpdateRequest $request): RedirectResponse
+    {
+        $request->user()->update(['password' => $request->password]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Kata sandi berhasil diperbarui.')]);
+
+        return to_route('tenant.profile');
     }
 }

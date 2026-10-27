@@ -1,6 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
-    AlertOctagon,
     CheckCircle2,
     ChevronRight,
     Clock,
@@ -9,13 +8,15 @@ import {
     ShieldCheck,
     XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import SecurityBottomNav from '@/components/security/bottom-nav';
 import type { PanicAlert } from '@/components/security/panic-alert-overlay';
 import PanicAlertOverlay from '@/components/security/panic-alert-overlay';
 import LogoutConfirm from '@/components/shared/logout-confirm';
 import PageHeader from '@/components/shared/page-header';
 import HunianLogo from '@/components/hunian-logo';
+import { usePanicAlertListener } from '@/hooks/use-panic-alert-listener';
+import type { PanicAlertPushPayload } from '@/hooks/use-panic-alert-listener';
 import { logout } from '@/routes';
 
 type ActivityStatus = 'valid' | 'invalid' | 'expired';
@@ -90,18 +91,20 @@ export default function SecurityDashboard({
         router.post(logout.url(), {}, { onFinish: () => setLoggingOut(false) });
     }
 
-    function simulateAlert() {
-        if (activeAlert) {
-            return;
-        }
+    const handlePanicAlert = useCallback((payload: PanicAlertPushPayload) => {
+        setActiveAlert((current) =>
+            current
+                ? current
+                : {
+                      id: payload.data.alertId,
+                      tenantName: payload.data.tenantName,
+                      unit: payload.data.unit,
+                      triggeredAt: payload.data.triggeredAt,
+                  },
+        );
+    }, []);
 
-        setActiveAlert({
-            id: Date.now(),
-            tenantName: 'Dewi Lestari',
-            unit: 'Blok B-08',
-            triggeredAt: Date.now(),
-        });
-    }
+    usePanicAlertListener(handlePanicAlert);
 
     function acknowledgeAlert(id: number) {
         if (!activeAlert || activeAlert.id !== id) {
@@ -248,18 +251,6 @@ export default function SecurityDashboard({
                             })}
                         </div>
                     </div>
-
-                    {/* Dev-only: stands in for the real-time push that will
-                        arrive via WebSocket/Web Push once the backend exists.
-                        Remove once panic alerts are wired to a real trigger. */}
-                    <button
-                        type="button"
-                        onClick={simulateAlert}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-(--color-ink)/20 px-4 py-3 text-xs font-medium text-(--color-ink)/50"
-                    >
-                        <AlertOctagon className="h-3.5 w-3.5" />
-                        [Dev] Simulasikan Panic Alert
-                    </button>
                 </div>
 
                 <SecurityBottomNav active="home" />

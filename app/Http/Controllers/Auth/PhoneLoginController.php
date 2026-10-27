@@ -52,7 +52,9 @@ class PhoneLoginController extends Controller
         return response()->json([
             'ok' => true,
             'expires_in' => 300,
-            ...(app()->environment(['local', 'testing']) ? ['dev_code' => $code] : []),
+            ...(app()->environment(['local', 'testing']) || config('services.wablas.otp_dev_mode')
+                ? ['dev_code' => $code]
+                : []),
         ]);
     }
 

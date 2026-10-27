@@ -87,6 +87,13 @@ export type Auth = {
     memberships: Membership[];
     currentMembershipId: number | null;
     adminAccess: AdminAccess;
+    pendingJoinRequestsCount: number;
+};
+
+export type SubscriptionStatus = {
+    status: 'trialing' | 'active' | 'past_due' | 'expired' | 'canceled';
+    trialEndsAt: string | null;
+    daysLeft: number | null;
 };
 
 /* @chisel-passkeys */

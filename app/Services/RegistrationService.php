@@ -17,6 +17,7 @@ class RegistrationService
     public function __construct(
         private readonly ComplexResolverService $complexResolver,
         private readonly UnitResolverService $unitResolver,
+        private readonly SubscriptionService $subscriptions,
     ) {}
 
     public function register(array $data, string $mode = 'normal'): User
@@ -97,6 +98,8 @@ class RegistrationService
             'approved_by' => $user->id,
             'approved_at' => now(),
         ]);
+
+        $this->subscriptions->startTrial($area);
     }
 
     private function registerPenghuni(User $user, Complex $complex, array $data): void

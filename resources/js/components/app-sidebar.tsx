@@ -13,6 +13,7 @@ import {
     Ticket,
     UserCheck,
     UserCog,
+    UserPlus,
     Users,
     UsersRound,
 } from 'lucide-react';
@@ -32,7 +33,7 @@ import {
 import { dashboard } from '@/routes';
 import type { AdminAccess, NavItem } from '@/types';
 
-function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
+function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean, pendingJoinRequestsCount: number) {
     return [
         {
             label: 'Utama',
@@ -43,15 +44,21 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
                     icon: LayoutGrid,
                 },
                 {
-                    title: 'Peta Unit',
-                    href: '/units-map',
-                    icon: MapPinned,
-                },
-                {
                     title: 'Keluarga Saya',
                     href: '/family',
                     icon: UsersRound,
                     requires: isTenant,
+                },
+                {
+                    // Someone else claimed to live in one of this user's units and
+                    // needs their confirm/decline. Visible regardless of current
+                    // membership role — this is about units they personally reside
+                    // in, not the area they're currently acting as admin/staff for.
+                    title: 'Permintaan Bergabung',
+                    href: '/unit/join-requests',
+                    icon: UserPlus,
+                    requires: pendingJoinRequestsCount > 0,
+                    badge: pendingJoinRequestsCount,
                 },
             ].filter((item) => item.requires ?? true),
         },
@@ -83,6 +90,12 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean) {
                     title: 'Unit / Rumah',
                     href: '/admin/units',
                     icon: Building2,
+                    requires: adminAccess.members,
+                },
+                {
+                    title: 'Peta Unit',
+                    href: '/admin/units-map',
+                    icon: MapPinned,
                     requires: adminAccess.members,
                 },
             ].filter((item) => item.requires ?? true),
@@ -183,7 +196,7 @@ export function AppSidebar() {
     const { auth } = usePage().props;
     const currentMembership = auth.memberships.find((m) => m.id === auth.currentMembershipId);
     const isTenant = currentMembership?.roleKey === 'resident';
-    const mainNavGroups = buildNavGroups(auth.adminAccess, isTenant);
+    const mainNavGroups = buildNavGroups(auth.adminAccess, isTenant, auth.pendingJoinRequestsCount);
 
     return (
         <Sidebar
@@ -196,7 +209,7 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href={dashboard()} prefetch>
-                                <AppLogo />
+                                <AppLogo variant="light" />
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

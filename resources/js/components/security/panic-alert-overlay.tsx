@@ -73,9 +73,8 @@ export default function PanicAlertOverlay({
     onAcknowledge: (id: number) => void;
 }) {
     const [now, setNow] = useState(() => Date.now());
-    const [acking, setAcking] = useState(false);
 
-    useSirenSound(!acking);
+    useSirenSound(true);
 
     useEffect(() => {
         const tick = setInterval(() => setNow(Date.now()), 1000);
@@ -83,18 +82,10 @@ export default function PanicAlertOverlay({
         return () => clearInterval(tick);
     }, []);
 
-    function handleAcknowledge() {
-        if (acking) {
-            return;
-        }
-
-        setAcking(true);
-
-        // Dummy delay — swap for a real POST /security/alerts/:id/acknowledge
-        // call once the backend endpoint exists.
-        setTimeout(() => {
-            onAcknowledge(alert.id);
-        }, 500);
+    // There's no backend "acknowledge" — nothing is tracked or sent to the
+    // tenant. This just stops the siren and clears the overlay locally.
+    function handleDismiss() {
+        onAcknowledge(alert.id);
     }
 
     return (
@@ -125,14 +116,12 @@ export default function PanicAlertOverlay({
             <div className="px-6 pb-8">
                 <Button
                     className="h-14 w-full bg-white text-base font-semibold text-red-600 hover:bg-white/90"
-                    onClick={handleAcknowledge}
-                    disabled={acking}
+                    onClick={handleDismiss}
                 >
-                    {acking ? 'Memproses...' : 'Konfirmasi Diterima'}
+                    Tutup Peringatan
                 </Button>
                 <p className="mt-3 text-center text-xs text-white/70">
-                    Segera menuju lokasi. Alarm akan berhenti setelah
-                    dikonfirmasi.
+                    Segera menuju lokasi yang disebutkan di atas.
                 </p>
             </div>
         </div>

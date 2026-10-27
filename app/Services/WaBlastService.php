@@ -20,7 +20,7 @@ class WaBlastService
                 'message' => $message,
             ]);
 
-            return app()->environment(['local', 'testing'])
+            return app()->environment(['local', 'testing']) || config('services.wablas.otp_dev_mode')
                 ? ['ok' => true, 'error' => null]
                 : ['ok' => false, 'error' => 'WABLAS_TOKEN belum dikonfigurasi.'];
         }

@@ -3,8 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Models\AreaMember;
+use App\Models\User;
 use App\Services\MembershipContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -58,8 +60,59 @@ class HandleInertiaRequests extends Middleware
                 'currentMembershipId' => $current?->id,
 
                 'adminAccess' => $this->adminAccess($current),
+
+                'pendingJoinRequestsCount' => $user ? $this->pendingJoinRequestsCount($user) : 0,
             ],
+            'subscription' => $this->subscriptionStatus($current),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * How many people are waiting on this user to confirm/decline them joining one
+     * of their active units (unit_user status=pending). Drives the sidebar badge.
+     */
+    private function pendingJoinRequestsCount(User $user): int
+    {
+        $unitIds = $user->units()->wherePivot('status', 'active')->pluck('units.id');
+
+        if ($unitIds->isEmpty()) {
+            return 0;
+        }
+
+        return DB::table('unit_user')
+            ->whereIn('unit_id', $unitIds)
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    /**
+     * Drives the top-of-app upsell banner. Null when the current membership
+     * isn't an admin of an area at all (resident/security PWAs don't carry
+     * their own area's subscription state).
+     *
+     * @return array{status: string, trialEndsAt: ?string, daysLeft: ?int}|null
+     */
+    private function subscriptionStatus(?AreaMember $current): ?array
+    {
+        if (! $current || ! in_array($current->role->key_name, ['superadmin', 'staff'], true)) {
+            return null;
+        }
+
+        $subscription = $current->area->subscription;
+
+        if (! $subscription) {
+            return null;
+        }
+
+        $daysLeft = $subscription->trial_ends_at
+            ? max(0, (int) now()->diffInDays($subscription->trial_ends_at, false))
+            : null;
+
+        return [
+            'status' => $subscription->status,
+            'trialEndsAt' => $subscription->trial_ends_at?->toIso8601String(),
+            'daysLeft' => $daysLeft,
         ];
     }
 

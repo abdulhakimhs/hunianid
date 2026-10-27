@@ -9,6 +9,11 @@ use Illuminate\Validation\ValidationException;
 
 class UnitResolverService
 {
+    public function __construct(
+        private readonly UnitJoinNotificationService $joinNotifier,
+        private readonly SubscriptionService $subscriptions,
+    ) {}
+
     /**
      * Resolve a unit within an area for a given user.
      *
@@ -26,6 +31,12 @@ class UnitResolverService
             ->first();
 
         if (! $existing) {
+            if (! $this->subscriptions->canAddUnit($area)) {
+                throw ValidationException::withMessages([
+                    'unit_number' => 'RT/pengelola ini sudah mencapai batas jumlah unit pada paketnya saat ini. Hubungi pengurus untuk upgrade paket.',
+                ]);
+            }
+
             $unit = Unit::create([
                 'area_id' => $area->id,
                 'complex_id' => $area->complex_id,
@@ -61,6 +72,10 @@ class UnitResolverService
             'confirmed_by' => $existingResident ? null : $user->id,
             'confirmed_at' => $existingResident ? null : now(),
         ]);
+
+        if ($existingResident) {
+            $this->joinNotifier->notifyResidentsOfJoinRequest($existing, $user);
+        }
 
         return $existing;
     }

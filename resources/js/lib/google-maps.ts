@@ -14,7 +14,7 @@ export function loadGoogleMaps(): Promise<typeof google> {
         return Promise.reject(new Error('Google Maps can only load in the browser.'));
     }
 
-    if (window.google?.maps?.places) {
+    if (window.google?.maps?.places && window.google?.maps?.marker) {
         return Promise.resolve(window.google);
     }
 
@@ -44,7 +44,7 @@ export function loadGoogleMaps(): Promise<typeof google> {
             // so just poll briefly until it's ready.
             const startedAt = Date.now();
             const check = () => {
-                if (window.google?.maps?.places) {
+                if (window.google?.maps?.places && window.google?.maps?.marker) {
                     resolve(window.google);
                 } else if (Date.now() - startedAt > 10000) {
                     fail(new Error('Timed out waiting for an in-flight Google Maps load.'));
@@ -62,16 +62,18 @@ export function loadGoogleMaps(): Promise<typeof google> {
         (window as unknown as Record<string, () => void>)[callbackName] = () => {
             delete (window as unknown as Record<string, unknown>)[callbackName];
 
-            if (window.google?.maps?.places) {
+            if (window.google?.maps?.places && window.google?.maps?.marker) {
                 resolve(window.google);
             } else {
-                fail(new Error('Google Maps callback fired but google.maps.places is still missing.'));
+                fail(new Error('Google Maps callback fired but google.maps.places/marker is still missing.'));
             }
         };
 
         const script = document.createElement('script');
         script.dataset.googleMaps = 'true';
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=${callbackName}`;
+        // `marker` adds AdvancedMarkerElement — the units map builds rich DOM markers
+        // (per-house labels/badges) with it instead of static icon images.
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&callback=${callbackName}`;
         script.async = true;
         script.defer = true;
         script.addEventListener('error', () => fail(new Error(`Failed to load Google Maps script from ${script.src}. Check network/CSP/ad-blocker.`)), { once: true });

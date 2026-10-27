@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAdminRole;
+use App\Http\Middleware\EnsureSubscriptionActive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RedirectIfPendingApproval;
@@ -15,8 +16,8 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__ . '/../routes/web.php',
-        commands: __DIR__ . '/../routes/console.php',
+        web: __DIR__.'/../routes/web.php',
+        commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
     ->withSchedule(function (Schedule $schedule): void {
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('invoices:flip-overdue')->dailyAt('01:05')->withoutOverlapping();
         $schedule->command('invoices:send-reminders')->dailyAt('08:00')->withoutOverlapping();
         $schedule->command('tickets:send-escalation-reminders')->dailyAt('09:00')->withoutOverlapping();
+        $schedule->command('subscriptions:expire-trials')->dailyAt('00:05')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Nginx and any HTTPS-terminating proxy in front of it (cloudflared tunnel,
@@ -38,13 +40,14 @@ return Application::configure(basePath: dirname(__DIR__))
         // browsers block them as mixed content on an https:// page.
         $middleware->trustProxies(at: '*');
 
-        $middleware->redirectGuestsTo(fn(Request $request) => $request->is('security', 'security/*')
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('security', 'security/*')
             ? route('login-security')
             : route('login'));
 
         $middleware->alias([
             'admin.role' => EnsureAdminRole::class,
             'pending.approval' => RedirectIfPendingApproval::class,
+            'subscription.active' => EnsureSubscriptionActive::class,
         ]);
 
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
@@ -61,7 +64,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn(Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
         // Renders a branded error page instead of Laravel's default view, for both hard

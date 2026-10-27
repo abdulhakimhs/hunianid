@@ -52,12 +52,17 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: false,
-            workbox: {
+            // injectManifest (rather than the default generateSW) is required so
+            // our own sw.ts can add a `push`/`notificationclick` handler for the
+            // panic-alert feature — generateSW auto-builds the whole worker and
+            // gives us no hook point to add custom event listeners.
+            strategies: 'injectManifest',
+            srcDir: 'resources/js',
+            filename: 'sw.ts',
+            injectManifest: {
                 globPatterns: ['**/*.{js,css,ico,png,svg}'],
-                navigateFallback: null,
-                runtimeCaching: [/* unchanged */],
             },
-            devOptions: { enabled: true },
+            devOptions: { enabled: true, type: 'module' },
             // Chrome/Android only offers the "Add to Home Screen" prompt when the
             // manifest has name/short_name + real icons and start_url/scope cover
             // the whole app — without this key, vite-plugin-pwa fell back to its
