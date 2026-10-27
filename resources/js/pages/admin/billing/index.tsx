@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
 
 type Plan = {
     id: number;
@@ -23,7 +24,7 @@ type Plan = {
 };
 
 type Subscription = {
-    status: 'trialing' | 'active' | 'past_due' | 'expired' | 'canceled';
+    status: 'pending' | 'trialing' | 'active' | 'past_due' | 'expired' | 'canceled';
     billing_cycle: 'monthly' | 'yearly' | 'trial';
     trial_ends_at: string | null;
     current_period_ends_at: string | null;
@@ -39,6 +40,7 @@ type Props = {
 };
 
 const STATUS_LABEL: Record<Subscription['status'], string> = {
+    pending: 'Menunggu pembayaran',
     trialing: 'Masa coba gratis',
     active: 'Aktif',
     past_due: 'Pembayaran tertunda',
@@ -76,50 +78,12 @@ export default function BillingIndex({
 }: Props) {
     const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
     const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null);
-    const [snapReady, setSnapReady] = useState(false);
-
-    useEffect(() => {
-        if (!midtransClientKey) {
-return;
-}
-
-        const script = document.createElement('script');
-        script.src =
-            midtransMode === 'production'
-                ? 'https://app.midtrans.com/snap/snap.js'
-                : 'https://app.sandbox.midtrans.com/snap/snap.js';
-        script.setAttribute('data-client-key', midtransClientKey);
-        script.onload = () => setSnapReady(true);
-        document.body.appendChild(script);
-
-        return () => {
-            document.body.removeChild(script);
-        };
-    }, [midtransClientKey, midtransMode]);
+    const snapReady = useMidtransSnap(midtransClientKey, midtransMode);
 
     function choosePlan(plan: Plan) {
         setLoadingPlanId(plan.id);
 
-        // Laravel's VerifyCsrfToken reads this cookie (set on every response)
-        // against the X-XSRF-TOKEN header — the same mechanism axios/Inertia use
-        // automatically; this page uses a plain fetch so it's done by hand here.
-        const xsrfToken = decodeURIComponent(
-            document.cookie
-                .split('; ')
-                .find((row) => row.startsWith('XSRF-TOKEN='))
-                ?.split('=')[1] ?? '',
-        );
-
-        fetch('/admin/billing/checkout', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-XSRF-TOKEN': xsrfToken,
-            },
-            body: JSON.stringify({ plan_id: plan.id, billing_cycle: cycle }),
-        })
-            .then((res) => res.json())
+        startPlanCheckout(plan.id, cycle)
             .then((data) => {
                 if (data.token && snapReady && window.snap) {
                     window.snap.pay(data.token, {
@@ -164,7 +128,40 @@ return;
                 )}
             </div>
 
-            {subscription && (
+            {subscription && subscription.status === 'pending' && (
+                <Card className="border-(--color-sky)/40 bg-(--color-sky)/5">
+                    <CardHeader>
+                        <CardTitle>Keranjang: {subscription.plan.name}</CardTitle>
+                        <CardDescription>
+                            Anda memilih paket ini saat mendaftar. Selesaikan
+                            pembayaran untuk mengaktifkan akses penuh.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="mb-3 font-mono text-2xl font-semibold text-(--color-ink)">
+                            {cycle === 'yearly'
+                                ? formatRupiah(subscription.plan.price_yearly)
+                                : formatRupiah(subscription.plan.price_monthly)}
+                            <span className="ml-1 text-sm font-normal text-(--color-ink)/50">
+                                /{cycle === 'yearly' ? 'tahun' : 'bulan'}
+                            </span>
+                        </p>
+                        <Button
+                            disabled={loadingPlanId === subscription.plan.id}
+                            onClick={() => choosePlan(subscription.plan)}
+                        >
+                            {loadingPlanId === subscription.plan.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                            )}
+                            Bayar Sekarang
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
+
+            {subscription && subscription.status !== 'pending' && (
                 <Card>
                     <CardHeader>
                         <CardTitle>Paket saat ini: {subscription.plan.name}</CardTitle>
@@ -234,15 +231,4 @@ return;
             </div>
         </div>
     );
-}
-
-declare global {
-    interface Window {
-        snap?: {
-            pay: (
-                token: string,
-                options?: { onSuccess?: () => void; onPending?: () => void },
-            ) => void;
-        };
-    }
 }

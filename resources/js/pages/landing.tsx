@@ -121,6 +121,7 @@ const PLANS = [
         ],
         cta: 'Mulai Coba Gratis',
         highlight: false,
+        planKey: 'trial',
     },
     {
         name: 'Standard',
@@ -137,6 +138,7 @@ const PLANS = [
         ],
         cta: 'Pilih Standard',
         highlight: true,
+        planKey: 'standard',
     },
     {
         name: 'Custom',
@@ -151,6 +153,7 @@ const PLANS = [
         ],
         cta: 'Hubungi Kami',
         highlight: false,
+        planKey: null,
     },
 ];
 
@@ -1260,7 +1263,7 @@ export default function Landing() {
                                             ))}
                                         </ul>
                                         <a
-                                            href={plan.cta === 'Hubungi Kami' ? '#kontak' : '#daftar'}
+                                            href={plan.planKey ? `/register?plan=${plan.planKey}` : '#kontak'}
                                             className={`mt-8 inline-block rounded-full px-5 py-2.5 text-center text-sm font-semibold transition hover:-translate-y-0.5 ${
                                                 plan.highlight
                                                     ? 'shadow-elevated text-white'
@@ -1336,7 +1339,7 @@ export default function Landing() {
                             Siap kelola perumahan tanpa ribet catat manual?
                         </h2>
                         <a
-                            href="/register"
+                            href="/register?plan=trial"
                             className="pulse-cta shadow-elevated-lg mt-8 inline-block rounded-full px-7 py-3.5 text-sm font-semibold text-white transition hover:-translate-y-0.5"
                             style={{
                                 background:

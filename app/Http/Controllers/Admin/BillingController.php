@@ -34,9 +34,13 @@ class BillingController extends Controller
         ]);
     }
 
-    public function expired(): Response
+    public function expired(Request $request): Response
     {
-        return Inertia::render('admin/billing/expired');
+        $area = $request->attributes->get('adminArea');
+
+        return Inertia::render('admin/billing/expired', [
+            'reason' => $area->subscription?->status ?? 'expired',
+        ]);
     }
 
     public function checkout(Request $request)
