@@ -44,7 +44,13 @@ class PasswordPolicy
 
         $policy = self::toArray();
 
-        $rule = Password::min($policy['minLength'])->uncompromised();
+        // Deliberately no ->uncompromised() — that calls out to the HaveIBeenPwned
+        // API on every submit, and a hit there ("password has appeared in a data
+        // leak") isn't something the frontend can check or warn about ahead of
+        // time, so it surprised users at the very end of registration. Length +
+        // character-class rules below are enough and match what the live
+        // checklist in register.tsx already shows.
+        $rule = Password::min($policy['minLength']);
 
         if ($policy['requireUpper'] && $policy['requireLower']) {
             $rule->mixedCase();
