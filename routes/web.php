@@ -45,7 +45,7 @@ Route::post('login/phone/request', [PhoneLoginController::class, 'request'])->mi
 Route::post('login/phone/verify', [PhoneLoginController::class, 'verify'])->middleware('throttle:otp-verify')->name('login.phone.verify');
 Route::post('login/phone/password', [PhoneLoginController::class, 'loginWithPassword'])->middleware('throttle:otp-verify')->name('login.phone.password');
 
-Route::get('login-security', function (Request $request) {
+Route::get('security/login', function (Request $request) {
     if ($request->user()) {
         return redirect()->route('dashboard');
     }
