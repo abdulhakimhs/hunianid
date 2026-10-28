@@ -51,7 +51,7 @@ class SecurityScanTest extends TestCase
 
     public function test_unauthenticated_guest_cannot_access_security_pages(): void
     {
-        $this->get('/security')->assertRedirect('/login-security');
+        $this->get('/security')->assertRedirect('/security/login');
     }
 
     public function test_non_security_role_is_forbidden(): void
