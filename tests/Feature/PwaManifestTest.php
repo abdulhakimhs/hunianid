@@ -15,14 +15,14 @@ class PwaManifestTest extends TestCase
 
     public function test_security_entry_page_advertises_the_security_manifest(): void
     {
-        $this->get('/login-security')
+        $this->get('/security/login')
             ->assertOk()
             ->assertSee('href="/manifest-security.webmanifest"', false);
     }
 
     public function test_unauthenticated_security_visit_redirects_to_the_security_login(): void
     {
-        $this->get('/security')->assertRedirect('/login-security');
+        $this->get('/security')->assertRedirect('/security/login');
     }
 
     public function test_tenant_page_advertises_the_tenant_manifest(): void

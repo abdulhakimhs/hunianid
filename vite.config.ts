@@ -52,6 +52,13 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             injectRegister: false,
+            // sw.js is emitted under public/build/ (Laravel's asset build dir), so
+            // without an explicit scope the browser defaults the service worker's
+            // max allowed scope to that directory — it could then never control
+            // any real app page (/security/*, /tenant/*, …), only static files
+            // nobody navigates to. navigator.serviceWorker.ready would then hang
+            // forever on every real page, which is what broke push notifications.
+            scope: '/',
             // injectManifest (rather than the default generateSW) is required so
             // our own sw.ts can add a `push`/`notificationclick` handler for the
             // panic-alert feature — generateSW auto-builds the whole worker and
