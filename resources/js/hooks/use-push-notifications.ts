@@ -88,7 +88,7 @@ export function usePushNotifications() {
                 applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
             });
 
-            await fetch('/push-subscriptions', {
+            const response = await fetch('/push-subscriptions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -96,6 +96,10 @@ export function usePushNotifications() {
                 },
                 body: JSON.stringify(subscription.toJSON()),
             });
+
+            if (!response.ok) {
+                throw new Error(`Failed to save subscription: ${response.status}`);
+            }
 
             setStatus('subscribed');
         } catch (error) {

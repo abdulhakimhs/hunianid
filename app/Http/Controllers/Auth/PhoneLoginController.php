@@ -89,7 +89,7 @@ class PhoneLoginController extends Controller
 
         $otp->update(['verified_at' => now()]);
 
-        Auth::login($user);
+        Auth::login($user, remember: true);
         $request->session()->regenerate();
 
         return response()->json(['redirect' => route('dashboard')]);
@@ -108,7 +108,7 @@ class PhoneLoginController extends Controller
             throw ValidationException::withMessages(['password' => 'Nomor HP atau kata sandi salah.']);
         }
 
-        Auth::login($user);
+        Auth::login($user, remember: true);
         $request->session()->regenerate();
 
         return response()->json(['redirect' => route('dashboard')]);

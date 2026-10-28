@@ -34,7 +34,7 @@ class SocialLoginController extends Controller
         $user = User::whereRaw('LOWER(email) = ?', [strtolower($email)])->first();
 
         if ($user) {
-            Auth::login($user);
+            Auth::login($user, remember: true);
             $request->session()->regenerate();
 
             return redirect()->intended(route('dashboard'));
