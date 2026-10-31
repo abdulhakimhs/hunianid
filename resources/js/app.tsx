@@ -42,7 +42,13 @@ createInertiaApp({
             case name.startsWith('invite/'):
             case name.startsWith('visitor-pass/'):
                 return AuthLayout;
-            // Security/Staff pages (dashboard/scan/history/profile, claim) each build
+            // The claim pages are a one-off password-setup form (same shape as
+            // auth/*), not part of the PWA shell — they need AuthLayout's centered
+            // card, unlike the rest of security/*·staff/* below.
+            case name === 'security/claim':
+            case name === 'staff/claim':
+                return AuthLayout;
+            // Security/Staff pages (dashboard/scan/history/profile) each build
             // their own full-height mobile app shell — wrapping them in AuthLayout's
             // centered, max-w-md login card squeezed the whole screen into a small
             // padded box.
