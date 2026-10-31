@@ -62,7 +62,7 @@ class BillingController extends Controller
 
         $subscription = $this->subscriptions->ensureSubscriptionAnchor($area, $plan);
 
-        $result = $this->midtrans->createSnapTransaction($subscription, $plan, $data['billing_cycle']);
+        $result = $this->midtrans->createSnapTransaction($subscription, $plan, $data['billing_cycle'], $request->user());
 
         if (! $result['ok']) {
             throw ValidationException::withMessages(['plan_id' => $result['error']]);

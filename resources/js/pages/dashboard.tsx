@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+    ArrowRight,
     CheckCircle2,
     CircleCheck,
     CircleDollarSign,
@@ -12,6 +13,7 @@ import {
     Send,
     ShieldCheck,
     Sparkles,
+    Tags,
     Ticket as TicketIcon,
     UserCircle,
     Users,
@@ -32,11 +34,19 @@ import { Input } from '@/components/ui/input';
 import { startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
 import { dashboard } from '@/routes';
 
+type SetupChecklistItem = {
+    key: string;
+    title: string;
+    description: string;
+    href: string;
+    done: boolean;
+};
+
 type Guidance =
     | { type: 'complete_profile' }
+    | { type: 'pengelola_setup'; areaId: number; areaName: string; checklist: SetupChecklistItem[] }
     | {
           type:
-              | 'pengelola_new'
               | 'penghuni_unclaimed'
               | 'penghuni_unclaimed_and_pending_unit'
               | 'penghuni_pending_unit'
@@ -45,6 +55,94 @@ type Guidance =
           areaName: string;
       }
     | null;
+
+const SETUP_CHECKLIST_ICONS: Record<string, typeof Home> = {
+    units: Home,
+    invoice_categories: Tags,
+    invites: Send,
+    security: ShieldCheck,
+};
+
+function SetupChecklist({ areaName, checklist }: { areaName: string; checklist: SetupChecklistItem[] }) {
+    const doneCount = checklist.filter((item) => item.done).length;
+
+    return (
+        <section className="rounded-[1.5rem] border border-[color:var(--color-sky,#2FC2E8)]/25 bg-[color:var(--color-sky,#2FC2E8)]/10 p-5 shadow-elevated">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep,#1aa3c9)]">
+                        Langkah awal
+                    </p>
+                    <h2 className="mt-2 font-display text-lg font-semibold text-[color:var(--color-ink,#142033)]">
+                        Siapkan {areaName} sebelum warga mulai bergabung
+                    </h2>
+                </div>
+                <span className="shrink-0 rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)]/15 px-3 py-1 text-xs font-semibold text-[color:var(--color-sky-deep,#1aa3c9)]">
+                    {doneCount}/{checklist.length} selesai
+                </span>
+            </div>
+
+            <div
+                className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--color-ink,#142033)]/8"
+                role="progressbar"
+                aria-valuenow={doneCount}
+                aria-valuemin={0}
+                aria-valuemax={checklist.length}
+                aria-label={`${doneCount} dari ${checklist.length} langkah persiapan selesai`}
+            >
+                <div
+                    className="h-full rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)] transition-[width] duration-300"
+                    style={{ width: `${(doneCount / checklist.length) * 100}%` }}
+                />
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {checklist.map((item) => {
+                    const Icon = SETUP_CHECKLIST_ICONS[item.key] ?? Home;
+
+                    return (
+                        <Link
+                            key={item.key}
+                            href={item.href}
+                            className={`flex min-h-[44px] items-start gap-3 rounded-2xl border p-3.5 text-left transition-colors ${
+                                item.done
+                                    ? 'border-[color:var(--color-mint,#1FCB82)]/25 bg-[color:var(--color-mint,#1FCB82)]/8'
+                                    : 'border-[color:var(--color-ink,#142033)]/8 bg-[color:var(--color-surface,#fff)] hover:border-[color:var(--color-sky-deep,#1aa3c9)]/40'
+                            }`}
+                        >
+                            <span
+                                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                                    item.done
+                                        ? 'bg-[color:var(--color-mint,#1FCB82)]/15 text-[color:var(--color-mint-deep,#14a869)]'
+                                        : 'bg-[color:var(--color-sky,#2FC2E8)]/12 text-[color:var(--color-sky-deep,#1aa3c9)]'
+                                }`}
+                            >
+                                {item.done ? <CheckCircle2 className="h-4.5 w-4.5" /> : <Icon className="h-4.5 w-4.5" />}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                                <span
+                                    className={`block text-sm font-semibold ${
+                                        item.done
+                                            ? 'text-[color:var(--color-ink,#142033)]/55 line-through'
+                                            : 'text-[color:var(--color-ink,#142033)]'
+                                    }`}
+                                >
+                                    {item.title}
+                                </span>
+                                <span className="mt-0.5 block text-xs text-[color:var(--color-ink,#142033)]/60">
+                                    {item.description}
+                                </span>
+                            </span>
+                            {!item.done && (
+                                <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-[color:var(--color-sky-deep,#1aa3c9)]" />
+                            )}
+                        </Link>
+                    );
+                })}
+            </div>
+        </section>
+    );
+}
 
 function DashboardGuidance({ guidance }: { guidance: Guidance }) {
     if (!guidance) {
@@ -71,26 +169,8 @@ return null;
         );
     }
 
-    if (guidance.type === 'pengelola_new') {
-        return (
-            <section className="rounded-[1.5rem] border border-[color:var(--color-sky,#2FC2E8)]/25 bg-[color:var(--color-sky,#2FC2E8)]/10 p-5 shadow-elevated">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep,#1aa3c9)]">
-                    Langkah selanjutnya
-                </p>
-                <h2 className="mt-2 font-display text-lg font-semibold text-[color:var(--color-ink,#142033)]">
-                    Undang warga Anda
-                </h2>
-                <p className="mt-1 text-sm text-[color:var(--color-ink,#142033)]/70">
-                    Buat tautan undangan agar warga {guidance.areaName} bisa mulai bergabung.
-                </p>
-                <Link
-                    href="/admin/invites"
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)] px-4 py-2 text-sm font-semibold text-white"
-                >
-                    <Send className="h-4 w-4" /> Buat tautan undangan
-                </Link>
-            </section>
-        );
+    if (guidance.type === 'pengelola_setup') {
+        return <SetupChecklist areaName={guidance.areaName} checklist={guidance.checklist} />;
     }
 
     const showUnclaimedCards =

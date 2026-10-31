@@ -117,11 +117,11 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{members: bool, invites: bool, pendingApprovals: bool, settings: bool, families: bool, security: bool, invoices: bool, announcements: bool, staffManagement: bool, visitorPasses: bool, tickets: bool}
+     * @return array{members: bool, invites: bool, pendingApprovals: bool, settings: bool, families: bool, security: bool, invoices: bool, announcements: bool, staffManagement: bool, visitorPasses: bool, tickets: bool, billing: bool}
      */
     private function adminAccess(?AreaMember $current): array
     {
-        $none = ['members' => false, 'invites' => false, 'pendingApprovals' => false, 'settings' => false, 'families' => false, 'security' => false, 'invoices' => false, 'announcements' => false, 'staffManagement' => false, 'visitorPasses' => false, 'tickets' => false];
+        $none = ['members' => false, 'invites' => false, 'pendingApprovals' => false, 'settings' => false, 'families' => false, 'security' => false, 'invoices' => false, 'announcements' => false, 'staffManagement' => false, 'visitorPasses' => false, 'tickets' => false, 'billing' => false];
 
         if (! $current || $current->status !== 'active') {
             return $none;
@@ -133,19 +133,21 @@ class HandleInertiaRequests extends Middleware
                 'families' => true, 'security' => true, 'invoices' => true, 'announcements' => true,
                 // Staff RT management stays superadmin-only — unlike every other flag
                 // here, `staff` itself is deliberately excluded so staff can't add more
-                // staff accounts.
+                // staff accounts. Same gate for billing — the area's own SaaS
+                // subscription/payment is a superadmin-only concern.
                 'staffManagement' => $current->role->key_name === 'superadmin',
                 'visitorPasses' => true,
                 // Same gate as invoices — superadmin/staff only, not the broader
                 // unclaimed_creator/area_without_admin groups below.
                 'tickets' => true,
+                'billing' => $current->role->key_name === 'superadmin',
             ];
         }
 
         // families/security/announcements/visitorPasses mirror members: same admin.role
         // gate (superadmin, staff, unclaimed_creator). invoices is deliberately NOT
         // granted here — invoicing/payment status stays superadmin/staff-only, unlike
-        // the setup actions below. staffManagement is never granted outside the
+        // the setup actions below. staffManagement/billing are never granted outside the
         // superadmin branch.
         $isUnclaimedCreator = MembershipContext::isUnclaimedCreator($current);
 
@@ -161,6 +163,7 @@ class HandleInertiaRequests extends Middleware
             'staffManagement' => false,
             'visitorPasses' => $isUnclaimedCreator,
             'tickets' => false,
+            'billing' => false,
         ];
     }
 }

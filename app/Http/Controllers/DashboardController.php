@@ -151,6 +151,50 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Setup steps for a newly-registered pengelola area, re-evaluated from
+     * real data on every dashboard load (not a dismissible flag) — the
+     * checklist keeps surfacing on login until each step is genuinely done,
+     * and disappears on its own once all four are, with no stored "seen" state.
+     *
+     * @return list<array{key: string, title: string, description: string, href: string, done: bool}>
+     */
+    private function setupChecklistFor(Area $area): array
+    {
+        return [
+            [
+                'key' => 'units',
+                'title' => 'Tambahkan unit/rumah',
+                'description' => 'Daftarkan rumah-rumah di perumahan Anda agar warga bisa terhubung ke alamatnya.',
+                'href' => '/admin/units',
+                'done' => $area->units()->exists(),
+            ],
+            [
+                'key' => 'invoice_categories',
+                'title' => 'Atur kategori tagihan',
+                'description' => 'Buat kategori seperti iuran keamanan atau kebersihan sebelum mengirim tagihan ke warga.',
+                'href' => '/admin/invoice-categories',
+                'done' => $area->invoiceCategories()->exists(),
+            ],
+            [
+                'key' => 'invites',
+                'title' => 'Undang warga',
+                'description' => 'Buat tautan undangan agar warga bisa mendaftar dan terhubung ke rumah mereka.',
+                'href' => '/admin/invites',
+                'done' => $area->invites()->where('type', 'resident')->where('status', 'active')->exists()
+                    || $area->areaMembers()->whereHas('role', fn ($q) => $q->where('key_name', 'resident'))->exists(),
+            ],
+            [
+                'key' => 'security',
+                'title' => 'Tambah petugas keamanan',
+                'description' => 'Tambahkan akun satpam agar mereka bisa memindai izin tamu dan menerima alarm darurat.',
+                'href' => '/admin/security',
+                'done' => $area->areaMembers()->where('status', 'active')
+                    ->whereHas('role', fn ($q) => $q->where('key_name', 'security'))->exists(),
+            ],
+        ];
+    }
+
     private function guidanceFor(User $user, AreaMember $current): ?array
     {
         if ($user->profile_completed_at === null) {
@@ -160,13 +204,14 @@ class DashboardController extends Controller
         $area = $current->area;
 
         if ($current->role->key_name === 'superadmin' || $current->role->key_name === 'staff') {
-            $hasActiveInvite = $area->invites()->where('status', 'active')->exists();
+            $checklist = $this->setupChecklistFor($area);
 
-            if (! $hasActiveInvite) {
+            if (array_filter($checklist, fn (array $item) => ! $item['done'])) {
                 return [
-                    'type' => 'pengelola_new',
+                    'type' => 'pengelola_setup',
                     'areaId' => $area->id,
                     'areaName' => $area->name,
+                    'checklist' => $checklist,
                 ];
             }
 
