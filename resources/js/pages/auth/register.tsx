@@ -124,7 +124,7 @@ const PLAN_INFO: Record<
         period: '/bulan',
         badge: 'Paling populer',
         features: ['Sampai 150 unit untuk 1 RT', 'Riwayat & laporan lengkap', 'Support prioritas via WhatsApp'],
-        note: 'Lengkapi data di bawah, lalu selesaikan pembayaran untuk mulai memakai HunianID.',
+        note: '30 hari pertama gratis dengan limit paket ini — baru ditagih setelah masa coba berakhir.',
     },
 };
 

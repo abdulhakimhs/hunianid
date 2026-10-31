@@ -6,6 +6,7 @@ use App\Models\PaymentGatewaySetting;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\Log;
  */
 class MidtransService
 {
-    public function createSnapTransaction(Subscription $subscription, Plan $plan, string $billingCycle): array
+    public function createSnapTransaction(Subscription $subscription, Plan $plan, string $billingCycle, User $payer): array
     {
         $settings = PaymentGatewaySetting::current();
 
@@ -45,8 +46,15 @@ class MidtransService
                         'order_id' => $orderId,
                         'gross_amount' => $grossAmount,
                     ],
+                    // The person actually paying (the admin clicking "Bayar Sekarang"),
+                    // not the area's name — Midtrans uses first_name/email to address
+                    // the payer directly in its own "Pembayaran sudah diterima" receipt
+                    // email, so this previously showed "Dear {area name}" instead of
+                    // the admin's own name.
                     'customer_details' => [
-                        'first_name' => $subscription->area->name,
+                        'first_name' => $payer->name,
+                        'email' => $payer->email,
+                        'phone' => $payer->phone,
                     ],
                     'item_details' => [[
                         'id' => "plan-{$plan->key}-{$billingCycle}",
@@ -130,7 +138,17 @@ class MidtransService
             $payment->update(['paid_at' => now()]);
 
             $subscription = $payment->subscription;
+
+            // Reward early payers: whatever trial time was left when they paid
+            // gets added on top of the new paid period instead of being
+            // discarded. Only applies while still trialing with time left —
+            // reactivating an expired/past_due subscription gets no bonus.
+            $remainingTrialSeconds = ($subscription->status === 'trialing' && $subscription->trial_ends_at?->isFuture())
+                ? now()->diffInSeconds($subscription->trial_ends_at)
+                : 0;
+
             $periodEnd = $payment->billing_cycle === 'yearly' ? now()->addYear() : now()->addMonth();
+            $periodEnd = $periodEnd->addSeconds($remainingTrialSeconds);
 
             $subscription->update([
                 'status' => 'active',

@@ -22,7 +22,7 @@ class RegistrationService
     ) {}
 
     /**
-     * @return array{user: User, requiresPayment: bool}
+     * @return array{user: User}
      */
     public function register(array $data, string $mode = 'normal'): array
     {
@@ -30,10 +30,8 @@ class RegistrationService
             $complex = $this->resolveComplex($data);
             $user = User::create($this->userAttributes($data, $mode));
 
-            $requiresPayment = false;
-
             if ($data['role'] === 'pengelola') {
-                $requiresPayment = $this->createPengelolaArea(
+                $this->createPengelolaArea(
                     $user,
                     $complex,
                     $data['sub_type'],
@@ -44,7 +42,7 @@ class RegistrationService
                 $this->registerPenghuni($user, $complex, $data);
             }
 
-            return ['user' => $user, 'requiresPayment' => $requiresPayment];
+            return ['user' => $user];
         });
     }
 
@@ -92,13 +90,12 @@ class RegistrationService
     }
 
     /**
-     * Returns whether the new area is now gated on an unpaid checkout (true)
-     * vs. granted the usual free trial (false) — the controller uses this to
-     * decide whether to land the new admin on the dashboard or straight on
-     * the billing "cart" to finish paying for the plan they picked on the
-     * landing page.
+     * Every pengelola area gets the same free trial regardless of which plan
+     * was picked on the landing page — the picked plan is just recorded on
+     * the subscription's plan_id so trial unit limits match the intended
+     * tier, and the eventual invoice is for the right plan.
      */
-    private function createPengelolaArea(User $user, Complex $complex, string $subType, string $areaName, ?string $intendedPlanKey): bool
+    private function createPengelolaArea(User $user, Complex $complex, string $subType, string $areaName, ?string $intendedPlanKey): void
     {
         $area = Area::create([
             'complex_id' => $complex->id,
@@ -118,19 +115,11 @@ class RegistrationService
             'approved_at' => now(),
         ]);
 
-        $paidPlan = $intendedPlanKey && $intendedPlanKey !== 'trial'
+        $intendedPlan = $intendedPlanKey && $intendedPlanKey !== 'trial'
             ? Plan::where('key', $intendedPlanKey)->where('is_self_service', true)->first()
             : null;
 
-        if ($paidPlan) {
-            $this->subscriptions->startPendingCheckout($area, $paidPlan);
-
-            return true;
-        }
-
-        $this->subscriptions->startTrial($area);
-
-        return false;
+        $this->subscriptions->startTrial($area, $intendedPlan);
     }
 
     private function registerPenghuni(User $user, Complex $complex, array $data): void

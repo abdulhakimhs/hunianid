@@ -32,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('invoices:send-reminders')->dailyAt('08:00')->withoutOverlapping();
         $schedule->command('tickets:send-escalation-reminders')->dailyAt('09:00')->withoutOverlapping();
         $schedule->command('subscriptions:expire-trials')->dailyAt('00:05')->withoutOverlapping();
+        $schedule->command('subscriptions:send-trial-reminders')->dailyAt('08:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
         // Nginx and any HTTPS-terminating proxy in front of it (cloudflared tunnel,

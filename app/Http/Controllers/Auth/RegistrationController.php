@@ -82,9 +82,10 @@ class RegistrationController extends Controller
             'unit_number' => ['nullable', 'string', 'max:50'],
             'block' => ['nullable', 'string', 'max:50'],
 
-            // Which plan card was clicked on the landing page — 'trial' (or
-            // absent) grants the usual free trial; a paid plan key sends the
-            // new admin straight to billing to pay before they can use anything.
+            // Which plan card was clicked on the landing page — every
+            // registration gets the same free trial regardless; this only
+            // determines which plan's limits apply during the trial and
+            // which plan the eventual invoice is for.
             'intended_plan' => ['nullable', 'string', Rule::in(['trial', 'standard'])],
         ]);
 
@@ -96,9 +97,7 @@ class RegistrationController extends Controller
         $request->session()->forget('google_prefill');
 
         return response()->json([
-            'redirect' => $result['requiresPayment']
-                ? route('admin.billing.index')
-                : route('dashboard'),
+            'redirect' => route('dashboard'),
         ]);
     }
 }

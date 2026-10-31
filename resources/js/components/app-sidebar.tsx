@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Building2,
     CircleDollarSign,
+    CreditCard,
     LayoutGrid,
     MapPinned,
     Megaphone,
@@ -162,6 +163,19 @@ function buildNavGroups(adminAccess: AdminAccess, isTenant: boolean, pendingJoin
                     href: '/admin/invoice-categories',
                     icon: Tags,
                     requires: adminAccess.invoices,
+                },
+            ].filter((item) => item.requires ?? true),
+        },
+        {
+            // The area's own SaaS subscription/payment to HunianID — distinct from
+            // "Keuangan" above, which is per-resident invoicing. Superadmin-only.
+            label: 'Langganan',
+            items: [
+                {
+                    title: 'Paket & Pembayaran',
+                    href: '/admin/billing',
+                    icon: CreditCard,
+                    requires: adminAccess.billing,
                 },
             ].filter((item) => item.requires ?? true),
         },

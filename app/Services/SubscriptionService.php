@@ -10,47 +10,32 @@ use Illuminate\Support\Facades\Log;
 class SubscriptionService
 {
     /**
-     * Starts a trial subscription for a newly-created pengelola area. Reads
-     * trial length off the `plans` row (not hardcoded) so it stays
-     * DB-editable, same spirit as the Midtrans key setup.
+     * Starts a trial subscription for a newly-created pengelola area. Every
+     * registration gets the same 30-day full-access trial regardless of
+     * which plan was picked — $intendedPlan is only recorded on `plan_id` so
+     * trial limits (maxUnits()) match the tier the admin intends to buy, and
+     * the eventual invoice is for the right plan. Trial length itself always
+     * comes off the canonical `trial` plan row, not the intended plan (whose
+     * own trial_days may be null).
      */
-    public function startTrial(Area $area): Subscription
+    public function startTrial(Area $area, ?Plan $intendedPlan = null): Subscription
     {
-        $plan = Plan::where('key', 'trial')->first();
+        $trialPlan = Plan::where('key', 'trial')->first();
 
-        if (! $plan) {
+        if (! $trialPlan) {
             Log::warning('[subscription] no trial plan configured, skipping trial start', ['area_id' => $area->id]);
 
             throw new \RuntimeException('Paket trial belum dikonfigurasi.');
         }
 
-        $trialDays = $plan->trial_days ?? 30;
+        $trialDays = $trialPlan->trial_days ?? 30;
 
         return Subscription::create([
             'area_id' => $area->id,
-            'plan_id' => $plan->id,
+            'plan_id' => ($intendedPlan ?? $trialPlan)->id,
             'billing_cycle' => 'trial',
             'status' => 'trialing',
             'trial_ends_at' => now()->addDays($trialDays),
-        ]);
-    }
-
-    /**
-     * Starts a NEW pengelola area's subscription in `pending` — chosen a paid
-     * plan at registration but hasn't paid yet. Deliberately NOT
-     * ensureSubscriptionAnchor() (which anchors as `active` — correct only for
-     * a pre-existing grandfathered area where "merely checking out" must not
-     * newly lock out access that already existed). A brand-new area has never
-     * had access, so it must stay locked (isActive() === false) until the
-     * Midtrans webhook actually confirms payment and flips this to `active`.
-     */
-    public function startPendingCheckout(Area $area, Plan $plan): Subscription
-    {
-        return Subscription::create([
-            'area_id' => $area->id,
-            'plan_id' => $plan->id,
-            'billing_cycle' => 'monthly',
-            'status' => 'pending',
         ]);
     }
 

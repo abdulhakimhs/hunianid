@@ -13,7 +13,7 @@ export function MockupChat() {
         <Frame className="space-y-2.5">
             <div className="flex items-center gap-2 border-b border-[color:var(--color-ink)]/8 pb-2.5">
                 <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-mint)]" />
-                <p className="font-mono text-[11px] text-[color:var(--color-ink)]/45">
+                <p className="text-[11px] font-semibold text-[color:var(--color-ink)]/45">
                     WhatsApp • Pos Satpam Blok C
                 </p>
             </div>
@@ -38,7 +38,7 @@ export function MockupProcessing() {
     ];
     return (
         <Frame className="space-y-3">
-            <p className="font-mono text-[11px] tracking-wide text-[color:var(--color-sky-deep)] uppercase">
+            <p className="text-[11px] font-bold tracking-wide text-[color:var(--color-sky-deep)] uppercase">
                 AI memproses
             </p>
             {rows.map((row) => (
@@ -73,7 +73,7 @@ export function MockupDashboard() {
                 <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-coral)]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-sky)]" />
                 <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-mint)]" />
-                <span className="ml-2 font-mono text-[11px] text-[color:var(--color-ink)]/45">
+                <span className="ml-2 text-[11px] font-semibold text-[color:var(--color-ink)]/45">
                     Dashboard Pengurus
                 </span>
             </div>
@@ -83,7 +83,7 @@ export function MockupDashboard() {
                         key={s.label}
                         className="rounded-xl bg-[color:var(--color-bg)] p-2.5 text-center"
                     >
-                        <p className="font-mono text-base font-semibold text-[color:var(--color-ink)]">
+                        <p className="font-display text-base font-extrabold tabular-nums text-[color:var(--color-ink)]">
                             {s.value}
                         </p>
                         <p className="mt-0.5 text-[10px] leading-tight text-[color:var(--color-ink)]/55">
@@ -151,10 +151,10 @@ export function MockupBilling() {
                     key={r.unit}
                     className="flex items-center justify-between rounded-xl bg-[color:var(--color-bg)] px-3 py-2"
                 >
-                    <span className="font-mono text-[12px] text-[color:var(--color-ink)]/65">
+                    <span className="text-[12px] font-semibold text-[color:var(--color-ink)]/65">
                         {r.unit}
                     </span>
-                    <span className="font-mono text-[12px] font-medium">
+                    <span className="text-[12px] font-semibold tabular-nums">
                         {r.amount}
                     </span>
                     <span
@@ -201,7 +201,7 @@ export function MockupTicket() {
             <div className="flex items-center justify-between rounded-xl border border-[color:var(--color-sky)]/25 bg-[color:var(--color-sky)]/[0.07] px-3 py-2.5">
                 <div>
                     <p className="text-[13px] font-semibold">Tiket #114</p>
-                    <span className="font-mono text-[10px] tracking-wide text-[color:var(--color-sky-deep)] uppercase">
+                    <span className="text-[10px] font-bold tracking-wide text-[color:var(--color-sky-deep)] uppercase">
                         AI: Kategori Perpipaan
                     </span>
                 </div>
@@ -236,7 +236,7 @@ export function MockupBroadcast() {
                         strokeLinecap="round"
                     />
                 </svg>
-                <span className="font-mono text-[11px] tracking-wide text-[color:var(--color-ink)]/45 uppercase">
+                <span className="text-[11px] font-bold tracking-wide text-[color:var(--color-ink)]/45 uppercase">
                     Pengumuman
                 </span>
             </div>

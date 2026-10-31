@@ -80,6 +80,7 @@ export type AdminAccess = {
     staffManagement: boolean;
     visitorPasses: boolean;
     tickets: boolean;
+    billing: boolean;
 };
 
 export type Auth = {
