@@ -38,10 +38,12 @@ self.addEventListener('push', (event: PushEvent) => {
 
                 if (focused) {
                     focused.postMessage({ type: 'panic-alert', payload });
-
-                    return;
                 }
 
+                // Always show the OS notification too — a panic alert must
+                // never depend on the dashboard specifically being the open
+                // tab. postMessage above is a same-page bonus (instant siren
+                // overlay), not a replacement for this.
                 const options: NotificationOptionsWithVibrate = {
                     body: payload.body,
                     vibrate: [400, 200, 400, 200, 400],
