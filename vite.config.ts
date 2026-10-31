@@ -24,12 +24,13 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
+            // Single-family system (Plus Jakarta Sans at different weights for
+            // display vs. body) reads warmer and friendlier for this audience
+            // than the old Sora/Instrument Sans split — see app.css for how the
+            // weights map to --font-display vs --font-sans.
             fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
-                bunny('Sora', {
-                    weights: [600, 700, 800],
+                bunny('Plus Jakarta Sans', {
+                    weights: [400, 500, 600, 700, 800],
                 }),
                 bunny('IBM Plex Mono', {
                     weights: [400, 500, 600],

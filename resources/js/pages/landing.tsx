@@ -107,26 +107,32 @@ const FEATURES = [
     },
 ];
 
+// Every plan below grants the exact same thing at signup: 30 days free with
+// full access at that plan's unit limit, no card required. priceMonthly/
+// priceYearly only describe what kicks in automatically once day 30 passes —
+// there's no separate "trial product" vs. "paid product" anymore, so the
+// copy and CTAs below all lead with the free period, not the eventual price.
 const PLANS = [
     {
         name: 'Coba Gratis',
-        price: 'Gratis',
-        period: '30 hari',
-        desc: 'Coba semua fitur, tanpa kartu kredit dan tanpa komitmen.',
+        priceMonthly: null,
+        priceYearly: null,
+        note: 'Tidak otomatis ditagih — upgrade kapan saja kalau mau lanjut.',
+        desc: 'Buat satu RT kecil untuk mulai coba, tanpa kartu kredit.',
         features: [
             'Tagihan, Tamu, Komplain, Broadcast',
             'Tombol darurat & aplikasi satpam',
             '1 RT / komplek, sampai 50 unit',
             'Bantuan setup via WhatsApp',
         ],
-        cta: 'Mulai Coba Gratis',
+        cta: 'Daftar & Coba Gratis',
         highlight: false,
         planKey: 'trial',
     },
     {
         name: 'Standard',
-        price: 'Rp149rb',
-        period: '/bulan',
+        priceMonthly: 149000,
+        priceYearly: 1490000,
         note: 'sampai 150 unit, sekitar Rp1.000 per unit',
         desc: 'Untuk RT yang sudah pakai HunianID sehari-hari.',
         features: [
@@ -134,16 +140,16 @@ const PLANS = [
             'Sampai 150 unit untuk 1 RT',
             'Riwayat & laporan lengkap',
             'Support prioritas via WhatsApp',
-            'Bayar tahunan hemat 2 bulan (Rp1.490.000/tahun)',
         ],
-        cta: 'Pilih Standard',
+        cta: 'Mulai 30 Hari Gratis',
         highlight: true,
         planKey: 'standard',
     },
     {
         name: 'Custom',
-        price: 'Hubungi Kami',
-        period: '',
+        priceMonthly: null,
+        priceYearly: null,
+        note: null,
         desc: 'Untuk lebih dari 150 unit, beberapa RT, atau kebutuhan khusus.',
         features: [
             'Unit & RT sesuai kebutuhan',
@@ -156,6 +162,10 @@ const PLANS = [
         planKey: null,
     },
 ];
+
+function formatRupiahLanding(amount: number): string {
+    return `Rp${amount.toLocaleString('id-ID')}`;
+}
 
 const FAQS = [
     {
@@ -173,6 +183,10 @@ const FAQS = [
     {
         q: 'Bisa buat 2 RT dalam 1 komplek?',
         a: 'Bisa. Ini justru salah satu kasus penggunaan yang didukung — tiap RT punya data dan pengurusnya sendiri dalam satu komplek.',
+    },
+    {
+        q: 'Setelah 30 hari, apa yang terjadi?',
+        a: 'Kami ingatkan lewat WhatsApp beberapa hari sebelum masa coba habis. Kalau belum sempat bayar saat masanya habis, akses sementara dikunci sampai paket dipilih — tapi semua data yang sudah tercatat (unit, tagihan, riwayat) tetap aman dan langsung bisa dipakai lagi begitu dibayar.',
     },
     {
         q: 'Kalau tombol darurat kepencet, gimana?',
@@ -503,7 +517,7 @@ function WaToQrVisual() {
 
                     <div className="wa-qr-frame wa-qr-frame--1 absolute inset-0 flex items-center justify-center px-5 pt-12">
                         <div className="shadow-elevated w-full rounded-2xl rounded-bl-sm bg-(--color-surface) p-3.5">
-                            <p className="font-mono text-[10px] text-(--color-mint-deep)">
+                            <p className="text-[10px] font-semibold text-(--color-mint-deep)">
                                 09:58
                             </p>
                             <p className="mt-1 text-[15px] leading-snug text-(--color-ink)">
@@ -523,7 +537,7 @@ function WaToQrVisual() {
                             <span className="h-2 w-2 animate-bounce rounded-full bg-white [animation-delay:-0.3s]" />
                             <span className="h-2 w-2 animate-bounce rounded-full bg-white [animation-delay:-0.15s]" />
                             <span className="h-2 w-2 animate-bounce rounded-full bg-white" />
-                            <span className="ml-1 font-mono text-[11px] text-white">
+                            <span className="ml-1 text-[11px] font-semibold text-white">
                                 AI mencatat…
                             </span>
                         </div>
@@ -554,7 +568,7 @@ function WaToQrVisual() {
                                     />
                                 ))}
                             </div>
-                            <p className="mt-2.5 font-mono text-[11px] text-(--color-mint-deep)">
+                            <p className="mt-2.5 text-[11px] font-semibold text-(--color-mint-deep)">
                                 Tamu: Budi · 10:00
                             </p>
                         </div>
@@ -563,7 +577,7 @@ function WaToQrVisual() {
                     <div className="wa-qr-frame wa-qr-frame--4 absolute inset-0 flex items-center justify-center px-5 pt-12">
                         <div className="flex w-full flex-col gap-2">
                             <div className="shadow-elevated w-full rounded-2xl rounded-bl-sm bg-(--color-surface) p-3">
-                                <p className="font-mono text-[10px] text-(--color-mint-deep)">
+                                <p className="text-[10px] font-semibold text-(--color-mint-deep)">
                                     14:02
                                 </p>
                                 <p className="mt-1 text-[13px] leading-snug text-(--color-ink)">
@@ -628,7 +642,7 @@ function SectionLabel({ children, tone = 'sky' }) {
 
     return (
         <p
-            className="font-mono text-xs font-medium tracking-[0.18em] uppercase"
+            className="text-xs font-bold tracking-[0.1em] uppercase"
             style={{ color }}
         >
             {children}
@@ -731,7 +745,7 @@ function Faq({ item, open, onToggle }) {
             >
                 {item.q}
                 <span
-                    className={`icon-chip-ai grid h-7 w-7 shrink-0 place-items-center rounded-full font-mono text-base text-white transition-transform duration-300 ${
+                    className={`icon-chip-ai grid h-7 w-7 shrink-0 place-items-center rounded-full text-base font-semibold text-white transition-transform duration-300 ${
                         open ? 'rotate-45' : ''
                     }`}
                 >
@@ -754,6 +768,7 @@ function Faq({ item, open, onToggle }) {
 export default function Landing() {
     const [openFaq, setOpenFaq] = useState(0);
     const [scrolled, setScrolled] = useState(false);
+    const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
     useEffect(() => {
         function onScroll() {
@@ -897,7 +912,7 @@ export default function Landing() {
 
                             <Reveal delay={120}>
                                 <WaToQrVisual />
-                                <p className="mt-6 text-center font-mono text-xs text-(--color-ink)/45">
+                                <p className="mt-6 text-center text-xs text-(--color-ink)/45">
                                     dari pesan WhatsApp jadi QR tamu — otomatis
                                 </p>
                             </Reveal>
@@ -992,7 +1007,7 @@ export default function Landing() {
                                     className="relative"
                                 >
                                     <span
-                                        className="shadow-elevated relative z-10 inline-flex h-12 w-12 items-center justify-center rounded-full font-mono text-sm font-semibold text-white"
+                                        className="shadow-elevated relative z-10 inline-flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white"
                                         style={{
                                             background:
                                                 'linear-gradient(135deg, var(--color-sky-deep), var(--color-sky))',
@@ -1026,7 +1041,7 @@ export default function Landing() {
                     />
                     <div className="relative mx-auto max-w-6xl px-5 py-20">
                         <Reveal>
-                            <p className="font-mono text-xs font-medium tracking-[0.18em] text-(--color-sky) uppercase">
+                            <p className="text-xs font-bold tracking-[0.1em] text-(--color-sky) uppercase">
                                 Fitur
                             </p>
                         </Reveal>
@@ -1092,7 +1107,7 @@ export default function Landing() {
                                                         }
                                                     />
                                                     <span
-                                                        className="font-mono text-xs font-medium tracking-wide uppercase"
+                                                        className="text-xs font-bold tracking-wide uppercase"
                                                         style={{
                                                             color: accent,
                                                         }}
@@ -1179,18 +1194,55 @@ export default function Landing() {
                                 as="h2"
                                 className="mx-auto mt-3 max-w-lg font-display text-2xl font-bold text-balance sm:text-3xl"
                             >
-                                Harga menyesuaikan jumlah unit
+                                Coba 30 hari dulu, baru mikir bayar
                             </Reveal>
                             <Reveal
                                 delay={140}
                                 as="p"
-                                className="mt-2 font-mono text-sm text-(--color-mint-deep)"
+                                className="mt-2 text-sm font-semibold text-(--color-mint-deep)"
                             >
-                                coba gratis 30 hari, tanpa kartu kredit
+                                semua paket mulai gratis 30 hari — tanpa kartu kredit
                             </Reveal>
                         </div>
 
-                        <div className="mt-12 grid gap-6 md:grid-cols-3 md:items-start">
+                        <Reveal
+                            delay={180}
+                            className="mt-8 flex items-center justify-center gap-2"
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setBillingCycle('monthly')}
+                                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                                    billingCycle === 'monthly'
+                                        ? 'bg-(--color-ink) text-white'
+                                        : 'text-(--color-ink)/60 hover:text-(--color-ink)'
+                                }`}
+                            >
+                                Bulanan
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBillingCycle('yearly')}
+                                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+                                    billingCycle === 'yearly'
+                                        ? 'bg-(--color-ink) text-white'
+                                        : 'text-(--color-ink)/60 hover:text-(--color-ink)'
+                                }`}
+                            >
+                                Tahunan
+                                <span
+                                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                                        billingCycle === 'yearly'
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-(--color-mint)/15 text-(--color-mint-deep)'
+                                    }`}
+                                >
+                                    Hemat 2 bulan
+                                </span>
+                            </button>
+                        </Reveal>
+
+                        <div className="mt-10 grid gap-6 md:grid-cols-3 md:items-start">
                             {PLANS.map((plan, i) => (
                                 <Reveal
                                     key={plan.name}
@@ -1221,17 +1273,45 @@ export default function Landing() {
                                         <p className="mt-1 text-sm text-(--color-ink)/60">
                                             {plan.desc}
                                         </p>
-                                        <div className="mt-5 flex items-baseline gap-1.5">
-                                            <span className="font-mono text-3xl font-semibold text-(--color-ink)">
-                                                {plan.price}
-                                            </span>
-                                            {plan.period && (
-                                                <span className="font-mono text-sm text-(--color-ink)/50">
-                                                    {plan.period}
+
+                                        <div className="mt-5">
+                                            {plan.priceMonthly !== null && (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-(--color-mint)/12 px-2.5 py-1 text-xs font-semibold text-(--color-mint-deep)">
+                                                    30 hari pertama gratis
                                                 </span>
                                             )}
+
+                                            {plan.priceMonthly !== null ? (
+                                                <div className="mt-2.5 flex items-baseline gap-1.5">
+                                                    <span className="font-display text-3xl font-extrabold tabular-nums text-(--color-ink)">
+                                                        {formatRupiahLanding(
+                                                            billingCycle === 'yearly'
+                                                                ? Math.round(plan.priceYearly! / 12)
+                                                                : plan.priceMonthly,
+                                                        )}
+                                                    </span>
+                                                    <span className="text-sm text-(--color-ink)/50">
+                                                        /bulan
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <p className="mt-2.5 font-display text-2xl font-extrabold text-(--color-ink)">
+                                                    {plan.planKey ? 'Gratis' : 'Hubungi Kami'}
+                                                </p>
+                                            )}
+
+                                            {(plan.priceMonthly !== null || plan.note) && (
+                                                <p className="mt-1 text-xs text-(--color-ink)/50">
+                                                    {plan.priceMonthly !== null
+                                                        ? billingCycle === 'yearly'
+                                                            ? `lalu ditagih ${formatRupiahLanding(plan.priceYearly!)}/tahun setelah masa coba`
+                                                            : `lalu ${formatRupiahLanding(plan.priceMonthly)}/bulan setelah masa coba`
+                                                        : plan.note}
+                                                </p>
+                                            )}
                                         </div>
-                                        {plan.note && (
+
+                                        {plan.priceMonthly !== null && plan.note && (
                                             <p className="mt-1 text-xs text-(--color-ink)/50">
                                                 {plan.note}
                                             </p>
@@ -1348,6 +1428,9 @@ export default function Landing() {
                         >
                             Daftar Sekarang
                         </a>
+                        <p className="mt-3 text-xs text-(--color-ink)/45">
+                            30 hari gratis · tanpa kartu kredit
+                        </p>
                     </Reveal>
                 </section>
 

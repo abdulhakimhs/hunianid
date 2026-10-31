@@ -31,7 +31,7 @@ export default function MockupPanic() {
         <div className="grid gap-3 sm:grid-cols-2">
             {/* Resident: hold to send */}
             <div className="shadow-elevated rounded-2xl bg-(--color-surface) p-4 text-center">
-                <p className="font-mono text-[10px] tracking-wide text-(--color-ink)/45 uppercase">
+                <p className="text-[10px] font-bold tracking-wide text-(--color-ink)/45 uppercase">
                     Aplikasi warga
                 </p>
 
@@ -77,7 +77,7 @@ export default function MockupPanic() {
 
             {/* Guard: full-screen alert */}
             <div className="shadow-elevated flex flex-col items-center justify-center rounded-2xl bg-red-600 p-4 text-center text-white">
-                <p className="font-mono text-[10px] tracking-wide text-white/70 uppercase">
+                <p className="text-[10px] font-bold tracking-wide text-white/70 uppercase">
                     Layar satpam
                 </p>
 
