@@ -1,10 +1,12 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { AlertTriangle, CheckCircle2, Loader2, Smartphone, UserCog } from 'lucide-react';
 import InputError from '@/components/input-error';
+import PasswordChecklist from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useInstallPrompt } from '@/hooks/use-install-prompt';
+import { passwordMeetsPolicy, type PasswordPolicy } from '@/lib/password-policy';
 
 type Props = {
     valid: boolean;
@@ -14,6 +16,8 @@ type Props = {
     complexName?: string;
     areaName?: string;
     claimed?: boolean;
+    passwordRules?: string;
+    passwordPolicy?: PasswordPolicy | null;
 };
 
 export default function StaffClaim({
@@ -23,6 +27,8 @@ export default function StaffClaim({
     name,
     complexName,
     claimed,
+    passwordRules,
+    passwordPolicy,
 }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         password: '',
@@ -30,6 +36,9 @@ export default function StaffClaim({
     });
 
     const { canInstall, installed, promptInstall } = useInstallPrompt();
+
+    const passwordReady =
+        passwordMeetsPolicy(data.password, passwordPolicy ?? null) && data.password === data.password_confirmation;
 
     function submit(e: React.FormEvent) {
         e.preventDefault();
@@ -124,8 +133,12 @@ export default function StaffClaim({
                         id="password"
                         value={data.password}
                         onChange={(e) => setData('password', e.target.value)}
+                        passwordrules={passwordRules}
                         autoFocus
                     />
+                    {passwordPolicy && data.password.length > 0 && (
+                        <PasswordChecklist password={data.password} policy={passwordPolicy} />
+                    )}
                     <InputError message={errors.password} />
                 </div>
 
@@ -139,11 +152,12 @@ export default function StaffClaim({
                         onChange={(e) =>
                             setData('password_confirmation', e.target.value)
                         }
+                        passwordrules={passwordRules}
                     />
                     <InputError message={errors.password_confirmation} />
                 </div>
 
-                <Button type="submit" className="mt-2 w-full" disabled={processing}>
+                <Button type="submit" className="mt-2 w-full" disabled={processing || !passwordReady}>
                     {processing && <Loader2 className="h-4 w-4 animate-spin" />}
                     Lanjutkan
                 </Button>

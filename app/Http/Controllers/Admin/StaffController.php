@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\AreaMember;
 use App\Models\Invite;
 use App\Services\MembershipContext;
 use App\Services\StaffInviteService;
+use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -22,6 +25,8 @@ use Inertia\Response;
  */
 class StaffController extends Controller
 {
+    use PasswordValidationRules;
+
     public function index(Request $request): Response
     {
         $area = $request->attributes->get('adminArea');
@@ -217,6 +222,8 @@ class StaffController extends Controller
             'name' => $invite->areaMember->user->name,
             'complexName' => $invite->areaMember->area->complex->name,
             'areaName' => $invite->areaMember->area->name,
+            'passwordRules' => Password::default()->toPasswordRulesString(),
+            'passwordPolicy' => PasswordPolicy::active() ? PasswordPolicy::toArray() : null,
         ]);
     }
 
@@ -232,7 +239,7 @@ class StaffController extends Controller
         }
 
         $data = $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => $this->passwordRules(),
         ]);
 
         $user = $invite->areaMember->user;
