@@ -3,8 +3,10 @@ import { Building2, Check, CheckCircle2, Home, Loader2, MapPin, Navigation, Sear
 import { useEffect, useRef, useState } from 'react';
 import { GoogleIcon } from '@/components/google-icon';
 import InputError from '@/components/input-error';
+import PasswordChecklist from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
+import { passwordMeetsPolicy, type PasswordPolicy } from '@/lib/password-policy';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,37 +44,12 @@ type LocationState = {
 
 type GooglePrefill = { name: string; email: string };
 type QuickPhonePrefill = { phone: string };
-type PasswordPolicy = {
-    minLength: number;
-    requireUpper: boolean;
-    requireLower: boolean;
-    requireNumber: boolean;
-    requireSymbol: boolean;
-};
 type Props = {
     passwordRules: string;
     passwordPolicy: PasswordPolicy | null;
     googlePrefill?: GooglePrefill | null;
     quickPhonePrefill?: QuickPhonePrefill | null;
 };
-
-function passwordPolicyChecks(password: string, policy: PasswordPolicy) {
-    return {
-        minLength: password.length >= policy.minLength,
-        upper: !policy.requireUpper || /[A-Z]/.test(password),
-        lower: !policy.requireLower || /[a-z]/.test(password),
-        number: !policy.requireNumber || /[0-9]/.test(password),
-        symbol: !policy.requireSymbol || /[^A-Za-z0-9]/.test(password),
-    };
-}
-
-function passwordMeetsPolicy(password: string, policy: PasswordPolicy | null): boolean {
-    if (!policy) {
-        return true;
-    }
-
-    return Object.values(passwordPolicyChecks(password, policy)).every(Boolean);
-}
 
 const STEP_LABEL: Record<StepKey, string> = { akun: 'Akun', peran: 'Peran', lokasi: 'Lokasi', unit: 'Unit' };
 
@@ -1171,34 +1148,6 @@ function AccountStep({
                 Sudah punya akun? <TextLink href={login()}>Masuk</TextLink>
             </p>
         </div>
-    );
-}
-
-function PasswordChecklist({ password, policy }: { password: string; policy: PasswordPolicy }) {
-    const checks = passwordPolicyChecks(password, policy);
-
-    const items: Array<{ key: keyof typeof checks; label: string }> = [
-        { key: 'minLength', label: `Minimal ${policy.minLength} karakter` },
-        ...(policy.requireUpper ? [{ key: 'upper' as const, label: 'Ada huruf besar' }] : []),
-        ...(policy.requireLower ? [{ key: 'lower' as const, label: 'Ada huruf kecil' }] : []),
-        ...(policy.requireNumber ? [{ key: 'number' as const, label: 'Ada angka' }] : []),
-        ...(policy.requireSymbol ? [{ key: 'symbol' as const, label: 'Ada simbol (!@#$...)' }] : []),
-    ];
-
-    return (
-        <ul className="grid grid-cols-2 gap-1">
-            {items.map((item) => (
-                <li
-                    key={item.key}
-                    className={`flex items-center gap-1.5 text-xs ${
-                        checks[item.key] ? 'text-[color:var(--color-mint-deep)]' : 'text-[color:var(--color-ink)]/45'
-                    }`}
-                >
-                    <Check className={`h-3.5 w-3.5 shrink-0 ${checks[item.key] ? 'opacity-100' : 'opacity-30'}`} />
-                    {item.label}
-                </li>
-            ))}
-        </ul>
     );
 }
 
