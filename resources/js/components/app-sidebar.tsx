@@ -19,6 +19,7 @@ import {
     UsersRound,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
+import AppLogoIcon from '@/components/app-logo-icon';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -223,7 +224,8 @@ export function AppSidebar() {
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
                             <Link href={dashboard()} prefetch>
-                                <AppLogo variant="light" />
+                                <AppLogo variant="light" className="group-data-[collapsible=icon]:hidden" />
+                                <AppLogoIcon className="hidden h-8 w-8 group-data-[collapsible=icon]:block" />
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
