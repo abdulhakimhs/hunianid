@@ -32,12 +32,14 @@ self.addEventListener('push', (event: PushEvent) => {
         self.clients
             .matchAll({ type: 'window', includeUncontrolled: true })
             .then((clients) => {
-                const focused = clients.find(
-                    (client) => (client as WindowClient).focused,
-                );
-
-                if (focused) {
-                    focused.postMessage({ type: 'panic-alert', payload });
+                // Post to every open window, not just the one reported as
+                // `.focused` — that flag is unreliable for installed/
+                // standalone PWA windows on several Android/Chromium builds
+                // and can report false while the app is genuinely on screen,
+                // which silently dropped the in-app siren overlay. A window
+                // that isn't listening just ignores the message.
+                for (const client of clients) {
+                    client.postMessage({ type: 'panic-alert', payload });
                 }
 
                 // Always show the OS notification too — a panic alert must
@@ -62,8 +64,15 @@ self.addEventListener('push', (event: PushEvent) => {
 self.addEventListener('notificationclick', (event: NotificationEvent) => {
     event.notification.close();
 
-    const url = (event.notification.data as PanicAlertPushData | undefined)
-        ?.url ?? '/security';
+    const data = event.notification.data as PanicAlertPushData | undefined;
+    const base = data?.url ?? '/security';
+
+    // Carry the alert along in the URL so opening from a backgrounded/closed
+    // notification drops the guard straight into the ringing siren screen —
+    // the data is already in the push payload, no extra API call needed.
+    const url = data
+        ? `${base}?panicAlertId=${data.alertId}&unit=${encodeURIComponent(data.unit)}&tenantName=${encodeURIComponent(data.tenantName)}&triggeredAt=${data.triggeredAt}`
+        : base;
 
     event.waitUntil(
         self.clients.matchAll({ type: 'window' }).then((clients) => {

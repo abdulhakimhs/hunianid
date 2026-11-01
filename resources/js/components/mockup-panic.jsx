@@ -68,10 +68,10 @@ export default function MockupPanic() {
                 </div>
 
                 <p className="mt-3 text-xs font-semibold text-(--color-ink)">
-                    Tahan 2 detik
+                    Tahan 1 detik
                 </p>
                 <p className="mt-0.5 text-[11px] text-(--color-ink)/50">
-                    Salah pencet? Ada 15 detik untuk batalkan
+                    Salah pencet? Ada 8 detik untuk batalkan
                 </p>
             </div>
 

@@ -8,7 +8,7 @@ import {
     ShieldCheck,
     XCircle,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import SecurityBottomNav from '@/components/security/bottom-nav';
 import type { PanicAlert } from '@/components/security/panic-alert-overlay';
 import PanicAlertOverlay from '@/components/security/panic-alert-overlay';
@@ -90,6 +90,28 @@ export default function SecurityDashboard({
     const [activeAlert, setActiveAlert] = useState<PanicAlert | null>(null);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
+
+    // Opening the app from a backgrounded notification lands here with the
+    // alert encoded in the URL (see sw.ts's notificationclick) — seed the
+    // overlay straight away so it rings immediately instead of showing a
+    // plain dashboard, then strip the params so a reload doesn't replay it.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const alertId = params.get('panicAlertId');
+
+        if (!alertId) {
+            return;
+        }
+
+        setActiveAlert({
+            id: Number(alertId),
+            tenantName: params.get('tenantName') ?? '',
+            unit: params.get('unit') ?? '',
+            triggeredAt: Number(params.get('triggeredAt') ?? Date.now()),
+        });
+
+        window.history.replaceState(null, '', window.location.pathname);
+    }, []);
 
     function confirmLogout() {
         setLoggingOut(true);
