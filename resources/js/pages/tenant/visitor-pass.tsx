@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 // Mirrors the visitor_passes table. `token` is the QR payload and also
 // what /pass/{token} resolves to on the guest-facing page.
 
-type PassStatus = 'pending' | 'used' | 'cancelled';
+type PassStatus = 'pending' | 'used' | 'exited' | 'cancelled';
 
 type VisitorPass = {
     id: number;
@@ -35,6 +35,7 @@ type VisitorPass = {
     status: PassStatus;
     validFrom: string; // ISO
     validUntil: string; // ISO
+    exitedAt: string | null;
 };
 
 type Props = {
@@ -235,8 +236,12 @@ const statusBadge: Record<
         className: 'bg-(--color-mint)/12 text-(--color-mint-deep)',
     },
     used: {
-        label: 'Digunakan',
+        label: 'Sedang di Dalam',
         className: 'bg-(--color-sky)/15 text-(--color-sky-deep)',
+    },
+    exited: {
+        label: 'Sudah Keluar',
+        className: 'bg-(--color-ink)/8 text-(--color-ink)/45',
     },
     cancelled: {
         label: 'Dibatalkan',
@@ -290,6 +295,17 @@ function PassCard({
                     <span className="flex items-center gap-1">
                         <Car className="h-3.5 w-3.5" />
                         {pass.vehicleInfo}
+                    </span>
+                )}
+
+                {pass.status === 'exited' && pass.exitedAt && (
+                    <span className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        Keluar{' '}
+                        {new Date(pass.exitedAt).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        })}
                     </span>
                 )}
             </div>

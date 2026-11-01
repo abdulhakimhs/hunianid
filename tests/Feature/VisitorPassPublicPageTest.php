@@ -55,14 +55,28 @@ class VisitorPassPublicPageTest extends TestCase
                 ->has('qrSvg'));
     }
 
-    public function test_used_pass_shows_used_state_without_qr(): void
+    public function test_used_pass_still_shows_its_qr_so_the_guest_can_scan_out(): void
     {
+        // A guest still inside (used, not yet exited) must keep a scannable
+        // QR — otherwise there's nothing left to show the guard on the way
+        // out. This is the regression guard for the IN-only bug.
         $pass = $this->makePass(['status' => 'used', 'used_at' => now()]);
 
         $this->get("/pass/{$pass->token}")
             ->assertOk()
             ->assertInertia(fn ($page) => $page->component('visitor-pass/show')
                 ->where('state', 'used')
+                ->has('qrSvg'));
+    }
+
+    public function test_exited_pass_shows_exited_state_without_qr(): void
+    {
+        $pass = $this->makePass(['status' => 'exited', 'used_at' => now()->subHour(), 'exited_at' => now()]);
+
+        $this->get("/pass/{$pass->token}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('visitor-pass/show')
+                ->where('state', 'exited')
                 ->where('qrSvg', null));
     }
 

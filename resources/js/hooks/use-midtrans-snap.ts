@@ -5,7 +5,12 @@ declare global {
         snap?: {
             pay: (
                 token: string,
-                options?: { onSuccess?: () => void; onPending?: () => void },
+                options?: {
+                    onSuccess?: () => void;
+                    onPending?: () => void;
+                    onClose?: () => void;
+                    onError?: () => void;
+                },
             ) => void;
         };
     }
@@ -63,4 +68,22 @@ export async function startPlanCheckout(planId: number, billingCycle: 'monthly' 
     });
 
     return response.json();
+}
+
+/**
+ * Tells the server the Snap popup was closed without paying, so the
+ * abandoned payment is flagged immediately instead of only being caught
+ * later by the subscriptions:expire-stale-payments sweep. Best-effort —
+ * the backend's supersede-on-next-checkout logic is the real safety net.
+ */
+export function reportCheckoutClosed(paymentId: number) {
+    fetch(`/admin/billing/checkout/${paymentId}/abandon`, {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'X-XSRF-TOKEN': xsrfToken(),
+        },
+    }).catch(() => {
+        // Best-effort only — nothing to show the user, nothing to retry.
+    });
 }

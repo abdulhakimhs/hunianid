@@ -77,6 +77,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
         Route::get('billing/expired', [BillingController::class, 'expired'])->name('billing.expired');
         Route::post('billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+        Route::post('billing/checkout/{payment}/abandon', [BillingController::class, 'abandonCheckout'])->name('billing.checkout.abandon');
 
         // Invoicing touches money and payment status, so it stays out of the broader
         // unclaimed_creator/area_without_admin groups below — only a fully-approved

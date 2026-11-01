@@ -114,9 +114,14 @@ class DashboardController extends Controller
                 'unit' => ['id' => $ticket->unit->id, 'label' => trim(($ticket->unit->block ?? '').' '.$ticket->unit->unit_number)],
             ]);
 
+        // "Active" means still relevant right now: either a still-valid pass
+        // the guest hasn't arrived on yet, or one they've already entered on
+        // and haven't exited — not just "not yet used". A guest currently
+        // inside the complex is the most active case there is.
         $activePassesQuery = VisitorPass::where('area_id', $areaId)
-            ->where('status', 'pending')
-            ->where('valid_until', '>', Carbon::now());
+            ->where(fn ($query) => $query
+                ->where(fn ($q) => $q->where('status', 'pending')->where('valid_until', '>', Carbon::now()))
+                ->orWhere('status', 'used'));
         $activeVisitorPasses = $activePassesQuery->clone()
             ->with(['unit:id,unit_number,block'])
             ->latest()
@@ -125,6 +130,7 @@ class DashboardController extends Controller
             ->map(fn (VisitorPass $pass) => [
                 'id' => $pass->id,
                 'guestName' => $pass->guest_name,
+                'status' => $pass->status,
                 'validUntil' => $pass->valid_until?->toIso8601String(),
                 'unit' => trim(($pass->unit?->block ?? '').' '.($pass->unit?->unit_number ?? '')) ?: '—',
             ]);

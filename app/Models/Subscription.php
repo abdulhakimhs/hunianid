@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['area_id', 'plan_id', 'billing_cycle', 'status', 'trial_ends_at', 'trial_reminder_sent_at', 'current_period_starts_at', 'current_period_ends_at', 'canceled_at'])]
+#[Fillable(['area_id', 'plan_id', 'billing_cycle', 'status', 'payment_version', 'trial_ends_at', 'trial_reminder_sent_at', 'current_period_starts_at', 'current_period_ends_at', 'canceled_at'])]
 class Subscription extends Model
 {
     protected function casts(): array
@@ -43,5 +43,10 @@ class Subscription extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(SubscriptionPayment::class);
+    }
+
+    public function latestPendingPayment(): ?SubscriptionPayment
+    {
+        return $this->payments()->pending()->latest('id')->first();
     }
 }

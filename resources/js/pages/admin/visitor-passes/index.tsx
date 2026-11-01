@@ -20,11 +20,12 @@ type Props = {
 
 type SortKey = 'guestName' | 'createdAt';
 type SortDir = 'asc' | 'desc';
-type StatusFilter = 'all' | 'pending' | 'used' | 'expired' | 'cancelled';
+type StatusFilter = 'all' | 'pending' | 'used' | 'exited' | 'expired' | 'cancelled';
 
 const STATUS_LABEL: Record<VisitorPassAdmin['status'], string> = {
     pending: 'Berlaku',
-    used: 'Sudah Masuk',
+    used: 'Sedang di Dalam',
+    exited: 'Sudah Keluar',
     expired: 'Kedaluwarsa',
     cancelled: 'Dibatalkan',
 };
@@ -32,6 +33,7 @@ const STATUS_LABEL: Record<VisitorPassAdmin['status'], string> = {
 const STATUS_BADGE_CLASS: Record<VisitorPassAdmin['status'], string> = {
     pending: 'bg-(--color-sky)/12 text-(--color-sky-deep)',
     used: 'bg-(--color-mint)/12 text-(--color-mint-deep)',
+    exited: 'bg-(--color-ink)/6 text-(--color-ink)/50',
     expired: 'bg-(--color-ink)/6 text-(--color-ink)/50',
     cancelled: 'bg-(--color-coral)/12 text-(--color-coral)',
 };
@@ -63,6 +65,7 @@ export default function VisitorPassesIndex({ passes, area }: Props) {
             total: passes.length,
             pending: passes.filter((p) => p.status === 'pending').length,
             used: passes.filter((p) => p.status === 'used').length,
+            exited: passes.filter((p) => p.status === 'exited').length,
             expired: passes.filter((p) => p.status === 'expired').length,
             cancelled: passes.filter((p) => p.status === 'cancelled').length,
         };
@@ -138,7 +141,8 @@ export default function VisitorPassesIndex({ passes, area }: Props) {
     const FILTERS: { key: StatusFilter; label: string; count: number }[] = [
         { key: 'all', label: 'Semua', count: stats.total },
         { key: 'pending', label: 'Berlaku', count: stats.pending },
-        { key: 'used', label: 'Sudah Masuk', count: stats.used },
+        { key: 'used', label: 'Sedang di Dalam', count: stats.used },
+        { key: 'exited', label: 'Sudah Keluar', count: stats.exited },
         { key: 'expired', label: 'Kedaluwarsa', count: stats.expired },
         { key: 'cancelled', label: 'Dibatalkan', count: stats.cancelled },
     ];
@@ -265,6 +269,11 @@ export default function VisitorPassesIndex({ passes, area }: Props) {
                                     >
                                         {STATUS_LABEL[p.status]}
                                     </span>
+                                    {p.status === 'exited' && p.exitedAt && (
+                                        <span className="mt-1 block text-[11px] text-(--color-ink)/40">
+                                            Keluar {formatDateTime(p.exitedAt)}
+                                        </span>
+                                    )}
                                 </TableCell>
                                 <TableCell className="py-2">
                                     <span className="text-xs text-(--color-ink)/45">

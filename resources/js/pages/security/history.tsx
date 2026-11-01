@@ -13,6 +13,7 @@ type ScanEntry = {
     unit: string;
     time: string;
     date: string;
+    exitedTime: string | null;
     status: ScanStatus;
 };
 
@@ -149,7 +150,9 @@ export default function SecurityHistory({ entries }: Props) {
                                                 </p>
                                             </div>
                                             <p className="shrink-0 text-xs text-(--color-ink)/40">
-                                                {entry.time}
+                                                {entry.exitedTime
+                                                    ? `Masuk ${entry.time} · Keluar ${entry.exitedTime}`
+                                                    : entry.time}
                                             </p>
                                         </div>
                                     );

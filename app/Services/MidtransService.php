@@ -18,6 +18,10 @@ use Illuminate\Support\Facades\Log;
  */
 class MidtransService
 {
+    public function __construct(
+        private readonly SubscriptionService $subscriptions,
+    ) {}
+
     public function createSnapTransaction(Subscription $subscription, Plan $plan, string $billingCycle, User $payer): array
     {
         $settings = PaymentGatewaySetting::current();
@@ -26,6 +30,19 @@ class MidtransService
             Log::info('[midtrans] not configured, cannot create transaction', ['subscription_id' => $subscription->id]);
 
             return ['ok' => false, 'error' => 'Payment gateway belum dikonfigurasi.'];
+        }
+
+        // Starting a new checkout always supersedes any existing pending one —
+        // re-clicking any plan button is always safe and always represents
+        // the user's current intent, no separate "resume vs cancel" flow.
+        $previousPending = $subscription->latestPendingPayment();
+
+        if ($previousPending) {
+            if ($previousPending->snap_token) {
+                $this->cancelTransaction($settings, $previousPending->order_id);
+            }
+
+            $this->subscriptions->supersedePendingPayments($subscription);
         }
 
         $grossAmount = $billingCycle === 'yearly' ? $plan->price_yearly : $plan->price_monthly;
@@ -71,6 +88,7 @@ class MidtransService
                     'ok' => true,
                     'token' => $response->json('token'),
                     'redirect_url' => $response->json('redirect_url'),
+                    'payment_id' => $payment->id,
                 ];
             }
 
@@ -79,6 +97,24 @@ class MidtransService
             Log::error('[midtrans] create transaction failed', ['order_id' => $orderId, 'exception' => $e->getMessage()]);
 
             return ['ok' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Best-effort: tells Midtrans to invalidate a superseded Snap token so the
+     * stale checkout link stops being payable. Never blocks the new checkout
+     * on failure — if the old transaction is already final (e.g. the user
+     * actually paid it in the background) Midtrans's own cancel API errors,
+     * which is fine to ignore; applyPaymentIfLatest() is the real defense.
+     */
+    private function cancelTransaction(PaymentGatewaySetting $settings, string $orderId): void
+    {
+        try {
+            Http::withBasicAuth($settings->serverKey(), '')
+                ->asJson()
+                ->post("{$settings->baseUrl()}/v2/{$orderId}/cancel");
+        } catch (\Throwable $e) {
+            Log::warning('[midtrans] cancel superseded transaction failed', ['order_id' => $orderId, 'exception' => $e->getMessage()]);
         }
     }
 
@@ -137,25 +173,15 @@ class MidtransService
         if (in_array($transactionStatus, ['capture', 'settlement'], true)) {
             $payment->update(['paid_at' => now()]);
 
-            $subscription = $payment->subscription;
-
-            // Reward early payers: whatever trial time was left when they paid
-            // gets added on top of the new paid period instead of being
-            // discarded. Only applies while still trialing with time left —
-            // reactivating an expired/past_due subscription gets no bonus.
-            $remainingTrialSeconds = ($subscription->status === 'trialing' && $subscription->trial_ends_at?->isFuture())
-                ? now()->diffInSeconds($subscription->trial_ends_at)
-                : 0;
-
-            $periodEnd = $payment->billing_cycle === 'yearly' ? now()->addYear() : now()->addMonth();
-            $periodEnd = $periodEnd->addSeconds($remainingTrialSeconds);
-
-            $subscription->update([
-                'status' => 'active',
-                'billing_cycle' => $payment->billing_cycle,
-                'current_period_starts_at' => now(),
-                'current_period_ends_at' => $periodEnd,
-            ]);
+            // Only applies the settlement if no newer payment has already won
+            // for this subscription — guards against a stale/duplicate/
+            // out-of-order webhook (e.g. for an abandoned checkout) silently
+            // overwriting a subscription a later payment already upgraded.
+            $this->subscriptions->applyPaymentIfLatest($payment->refresh());
+        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire', 'failure'], true)) {
+            if ($payment->isPending()) {
+                $payment->update(['status' => SubscriptionPayment::STATUS_FAILED]);
+            }
         }
     }
 }
