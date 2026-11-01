@@ -10,8 +10,8 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const HOLD_DURATION_MS = 2000;
-const CANCEL_WINDOW_MS = 15000;
+const HOLD_DURATION_MS = 1000;
+const CANCEL_WINDOW_MS = 8000;
 
 function now() {
     return performance.now();
@@ -262,7 +262,7 @@ function IdleView({
                     Tombol Darurat
                 </p>
                 <p className="mt-1 text-sm text-(--color-ink)/50">
-                    Tahan tombol selama 2 detik untuk mengirim sinyal darurat ke
+                    Tahan tombol selama 1 detik untuk mengirim sinyal darurat ke
                     keamanan
                 </p>
 

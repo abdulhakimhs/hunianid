@@ -26,24 +26,29 @@ function useSirenSound(active: boolean) {
         function beep(freq: number) {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
+            osc.type = 'square';
             osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.setValueAtTime(1.0, ctx.currentTime);
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start();
             osc.stop(ctx.currentTime + 0.35);
         }
 
+        function pulse() {
+            if (navigator.vibrate) {
+                navigator.vibrate([400, 200, 400, 200, 400]);
+            }
+        }
+
         let toggle = false;
         beep(880);
+        pulse();
         intervalRef.current = setInterval(() => {
             toggle = !toggle;
             beep(toggle ? 880 : 660);
+            pulse();
         }, 500);
-
-        if (navigator.vibrate) {
-            navigator.vibrate([400, 200, 400, 200, 400]);
-        }
 
         return () => {
             if (intervalRef.current) {
