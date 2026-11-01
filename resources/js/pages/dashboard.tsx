@@ -31,7 +31,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
+import { reportCheckoutClosed, startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
 import { dashboard } from '@/routes';
 
 type SetupChecklistItem = {
@@ -338,9 +338,22 @@ function PaymentRequiredView({ paymentRequired }: { paymentRequired: NonNullable
         startPlanCheckout(plan.id, cycle)
             .then((data) => {
                 if (data.token && snapReady && window.snap) {
+                    let settled = false;
+
                     window.snap.pay(data.token, {
-                        onSuccess: () => router.reload(),
-                        onPending: () => router.reload(),
+                        onSuccess: () => {
+                            settled = true;
+                            router.reload();
+                        },
+                        onPending: () => {
+                            settled = true;
+                            router.reload();
+                        },
+                        onClose: () => {
+                            if (!settled && data.payment_id) {
+                                reportCheckoutClosed(data.payment_id);
+                            }
+                        },
                     });
                 } else if (data.token) {
                     toast.error('Pembayaran sedang disiapkan, silakan coba lagi dalam beberapa detik.');
@@ -453,6 +466,7 @@ type OpenTicket = {
 type ActiveVisitorPass = {
     id: number;
     guestName: string;
+    status: 'pending' | 'used';
     validUntil: string | null;
     unit: string;
 };
@@ -693,7 +707,9 @@ export default function Dashboard({
                             >
                                 <p className="min-w-0 truncate text-sm font-medium text-[color:var(--color-ink)]">{pass.guestName}</p>
                                 <p className="text-xs text-[color:var(--color-ink)]/50">{pass.unit}</p>
-                                <p className="text-xs text-[color:var(--color-ink)]/50">Berlaku s.d. {formatDate(pass.validUntil)}</p>
+                                <p className="text-xs text-[color:var(--color-ink)]/50">
+                                    {pass.status === 'used' ? 'Sedang di dalam' : `Berlaku s.d. ${formatDate(pass.validUntil)}`}
+                                </p>
                             </div>
                         ))}
                     </WidgetCard>

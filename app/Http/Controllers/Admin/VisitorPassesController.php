@@ -28,6 +28,7 @@ class VisitorPassesController extends Controller
                 'resident' => $pass->user?->name ?? '—',
                 'source' => $pass->source,
                 'status' => match (true) {
+                    $pass->status === 'exited' => 'exited',
                     $pass->status === 'used' => 'used',
                     $pass->status === 'cancelled' => 'cancelled',
                     $pass->isExpired() => 'expired',
@@ -36,6 +37,7 @@ class VisitorPassesController extends Controller
                 'validFrom' => $pass->valid_from?->toIso8601String(),
                 'validUntil' => $pass->valid_until?->toIso8601String(),
                 'usedAt' => $pass->used_at?->toIso8601String(),
+                'exitedAt' => $pass->exited_at?->toIso8601String(),
                 'createdAt' => $pass->created_at?->toIso8601String(),
             ]);
 

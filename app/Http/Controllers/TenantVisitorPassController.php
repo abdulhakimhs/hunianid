@@ -22,9 +22,10 @@ class TenantVisitorPassController extends Controller
                 'vehicleInfo' => $pass->vehicle_info,
                 'purpose' => $pass->purpose,
                 'token' => $pass->token,
-                'status' => $pass->status === 'exited' ? 'used' : $pass->status,
+                'status' => $pass->status,
                 'validFrom' => $pass->valid_from->toIso8601String(),
                 'validUntil' => $pass->valid_until->toIso8601String(),
+                'exitedAt' => $pass->exited_at?->toIso8601String(),
             ]);
 
         return Inertia::render('tenant/visitor-pass', [
@@ -73,6 +74,7 @@ class TenantVisitorPassController extends Controller
             'status' => $pass->status,
             'validFrom' => $pass->valid_from->toIso8601String(),
             'validUntil' => $pass->valid_until->toIso8601String(),
+            'exitedAt' => null,
         ]);
     }
 

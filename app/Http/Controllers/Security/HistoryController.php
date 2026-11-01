@@ -26,6 +26,7 @@ class HistoryController extends Controller
                 'unit' => trim("{$pass->unit?->block} {$pass->unit?->unit_number}") ?: '—',
                 'time' => ($pass->used_at ?? $pass->created_at)->translatedFormat('H:i'),
                 'date' => ($pass->used_at ?? $pass->created_at)->translatedFormat('d M Y'),
+                'exitedTime' => $pass->exited_at?->translatedFormat('H:i'),
                 'status' => match (true) {
                     $pass->status === 'used', $pass->status === 'exited' => 'used',
                     $pass->status === 'cancelled' => 'cancelled',

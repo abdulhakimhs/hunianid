@@ -15,8 +15,11 @@ class DashboardController extends Controller
         $area = $request->attributes->get('adminArea');
 
         $stats = [
+            // A guest who already exited today still counts as handled
+            // today — don't drop them out of the count just because their
+            // status moved on from 'used' to 'exited'.
             'scansToday' => VisitorPass::where('area_id', $area->id)
-                ->where('status', 'used')
+                ->whereIn('status', ['used', 'exited'])
                 ->whereDate('used_at', today())
                 ->count(),
             'pendingToday' => VisitorPass::where('area_id', $area->id)
@@ -39,6 +42,7 @@ class DashboardController extends Controller
                 'unit' => trim("{$pass->unit?->block} {$pass->unit?->unit_number}") ?: '—',
                 'time' => ($pass->used_at ?? $pass->created_at)->diffForHumans(),
                 'status' => match (true) {
+                    $pass->status === 'exited' => 'exited',
                     $pass->status === 'used' => 'valid',
                     $pass->status === 'cancelled' => 'invalid',
                     $pass->isExpired() => 'expired',

@@ -11,7 +11,7 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
+import { reportCheckoutClosed, startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
 
 type Plan = {
     id: number;
@@ -23,12 +23,23 @@ type Plan = {
     is_self_service: boolean;
 };
 
+type Payment = {
+    id: number;
+    order_id: string;
+    gross_amount: number;
+    billing_cycle: 'monthly' | 'yearly';
+    status: 'pending' | 'paid' | 'failed' | 'superseded';
+    paid_at: string | null;
+    created_at: string;
+};
+
 type Subscription = {
     status: 'trialing' | 'active' | 'past_due' | 'expired' | 'canceled';
     billing_cycle: 'monthly' | 'yearly' | 'trial';
     trial_ends_at: string | null;
     current_period_ends_at: string | null;
     plan: Plan;
+    payments?: Payment[];
 };
 
 type Props = {
@@ -125,9 +136,22 @@ export default function BillingIndex({
         startPlanCheckout(plan.id, cycle)
             .then((data) => {
                 if (data.token && snapReady && window.snap) {
+                    let settled = false;
+
                     window.snap.pay(data.token, {
-                        onSuccess: () => router.reload(),
-                        onPending: () => router.reload(),
+                        onSuccess: () => {
+                            settled = true;
+                            router.reload();
+                        },
+                        onPending: () => {
+                            settled = true;
+                            router.reload();
+                        },
+                        onClose: () => {
+                            if (!settled && data.payment_id) {
+                                reportCheckoutClosed(data.payment_id);
+                            }
+                        },
                     });
                 } else if (data.token) {
                     // Checkout succeeded but the Snap.js script hasn't finished loading yet.
@@ -157,6 +181,15 @@ export default function BillingIndex({
     const trialProgressPct = trialDaysLeft !== null
         ? Math.min(100, Math.max(4, Math.round((trialDaysLeft / 30) * 100)))
         : null;
+
+    const pendingPayment = subscription?.payments?.find((payment) => payment.status === 'pending');
+
+    const PAYMENT_STATUS_LABEL: Record<Payment['status'], string> = {
+        pending: 'Menunggu pembayaran',
+        paid: 'Lunas',
+        failed: 'Gagal / kedaluwarsa',
+        superseded: 'Diganti pembayaran baru',
+    };
 
     const purchasablePlans = plans.filter(
         // The trial plan is auto-granted at registration, not something to
@@ -233,6 +266,14 @@ export default function BillingIndex({
                         <div className="relative mt-5 flex items-start gap-2 rounded-2xl border border-(--color-coral)/25 bg-(--color-coral)/8 px-4 py-3 text-sm text-(--color-coral)">
                             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                             Akses Anda sedang terkunci. Pilih paket di bawah untuk mengaktifkan kembali.
+                        </div>
+                    )}
+
+                    {pendingPayment && (
+                        <div className="relative mt-5 flex items-start gap-2 rounded-2xl border border-(--color-sky)/25 bg-(--color-sky)/8 px-4 py-3 text-sm text-(--color-sky-deep)">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                            Anda memiliki pembayaran yang belum selesai ({pendingPayment.billing_cycle === 'yearly' ? 'tahunan' : 'bulanan'}).
+                            Klik paket mana pun di bawah untuk melanjutkan atau memilih paket lain.
                         </div>
                     )}
                 </section>
@@ -349,6 +390,29 @@ export default function BillingIndex({
                     );
                 })}
             </div>
+
+            {subscription?.payments && subscription.payments.length > 0 && (
+                <section className="rounded-[1.75rem] border border-(--color-ink)/8 bg-(--color-surface) p-5 shadow-elevated">
+                    <h3 className="text-sm font-semibold text-(--color-ink)">Riwayat pembayaran</h3>
+                    <ul className="mt-3 divide-y divide-(--color-ink)/8">
+                        {subscription.payments.map((payment) => (
+                            <li key={payment.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                                <div>
+                                    <p className="font-medium text-(--color-ink)">
+                                        {formatRupiah(payment.gross_amount)} · {payment.billing_cycle === 'yearly' ? 'Tahunan' : 'Bulanan'}
+                                    </p>
+                                    <p className="text-xs text-(--color-ink)/50">
+                                        #{payment.order_id.split('-').pop()}
+                                    </p>
+                                </div>
+                                <span className="text-xs font-semibold text-(--color-ink)/60">
+                                    {PAYMENT_STATUS_LABEL[payment.status]}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
 
             <p className="flex items-center justify-center gap-1.5 text-center text-xs text-(--color-ink)/45">
                 <ShieldCheck className="h-3.5 w-3.5" />

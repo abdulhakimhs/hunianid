@@ -19,7 +19,7 @@ import { usePanicAlertListener } from '@/hooks/use-panic-alert-listener';
 import type { PanicAlertPushPayload } from '@/hooks/use-panic-alert-listener';
 import { logout } from '@/routes';
 
-type ActivityStatus = 'valid' | 'invalid' | 'expired';
+type ActivityStatus = 'valid' | 'exited' | 'invalid' | 'expired';
 
 type ActivityItem = {
     id: number;
@@ -63,6 +63,11 @@ const statusMeta = {
         label: 'Valid',
         icon: CheckCircle2,
         className: 'text-(--color-mint-deep) bg-(--color-mint)/12',
+    },
+    exited: {
+        label: 'Sudah Keluar',
+        icon: LogOut,
+        className: 'text-(--color-ink)/50 bg-(--color-ink)/6',
     },
     invalid: {
         label: 'Tidak valid',

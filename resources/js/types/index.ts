@@ -92,9 +92,10 @@ export type VisitorPassAdmin = {
     unit: string;
     resident: string;
     source: string;
-    status: 'pending' | 'used' | 'cancelled' | 'expired';
+    status: 'pending' | 'used' | 'exited' | 'cancelled' | 'expired';
     validFrom: string | null;
     validUntil: string | null;
     usedAt: string | null;
+    exitedAt: string | null;
     createdAt: string | null;
 };

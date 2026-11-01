@@ -21,7 +21,8 @@ class VisitorPassController extends Controller
 
         $state = match (true) {
             $pass->status === 'cancelled' => 'cancelled',
-            $pass->status === 'used', $pass->status === 'exited' => 'used',
+            $pass->status === 'exited' => 'exited',
+            $pass->status === 'used' => 'used',
             $pass->isExpired() => 'expired',
             default => 'valid',
         };
@@ -36,7 +37,11 @@ class VisitorPassController extends Controller
             'complexName' => $pass->area?->complex?->name,
             'validFrom' => $pass->valid_from->toIso8601String(),
             'validUntil' => $pass->valid_until->toIso8601String(),
-            'qrSvg' => $state === 'valid'
+            // Keep the QR scannable while the guest is still inside ('used')
+            // — not just while 'valid' — so they have something to show the
+            // guard on the way out. It only disappears once they've actually
+            // exited (or the pass was cancelled/expired/never used).
+            'qrSvg' => in_array($state, ['valid', 'used'], true)
                 ? $this->qrCode->svg(url("/pass/{$pass->token}"))
                 : null,
         ]);

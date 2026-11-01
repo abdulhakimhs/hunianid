@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { AlertTriangle, Car, Clock, MapPin, Sparkles, UserRound, XCircle } from 'lucide-react';
 
-type PassState = 'valid' | 'used' | 'expired' | 'cancelled';
+type PassState = 'valid' | 'used' | 'exited' | 'expired' | 'cancelled';
 
 type Props = {
     found: boolean;
@@ -23,9 +23,15 @@ const STATE_COPY: Record<PassState, { title: string; description: string; tone: 
         tone: 'mint',
     },
     used: {
-        title: 'Sudah digunakan',
-        description: 'Visitor pass ini sudah dipakai untuk masuk sebelumnya.',
-        tone: 'coral',
+        title: 'Sudah masuk',
+        description:
+            'Tamu sudah tercatat masuk. Tunjukkan QR ini lagi ke petugas keamanan saat akan pulang, untuk tercatat keluar.',
+        tone: 'mint',
+    },
+    exited: {
+        title: 'Sudah keluar',
+        description: 'Tamu sudah keluar dari area. Terima kasih atas kunjungan Anda.',
+        tone: 'mint',
     },
     expired: {
         title: 'Kedaluwarsa',
@@ -82,7 +88,9 @@ export default function VisitorPassShow({
     }
 
     const copy = STATE_COPY[state ?? 'valid'];
-    const isValid = state === 'valid';
+    // The guest still has a scannable QR while inside ('used'), not only
+    // while 'valid' — they need it again at the gate on the way out.
+    const showQr = state === 'valid' || state === 'used';
 
     return (
         <>
@@ -109,7 +117,7 @@ export default function VisitorPassShow({
                     {copy.title}
                 </span>
 
-                {isValid && qrSvg ? (
+                {showQr && qrSvg ? (
                     <div
                         className="flex h-64 w-64 items-center justify-center rounded-2xl border border-(--color-ink)/8 bg-white p-4 shadow-elevated"
                         dangerouslySetInnerHTML={{ __html: qrSvg }}
