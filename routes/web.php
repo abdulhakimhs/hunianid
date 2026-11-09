@@ -14,6 +14,40 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::inertia('/', 'landing')->name('home');
+Route::get('/robots.txt', function () {
+    $lines = [
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /admin',
+        'Disallow: /tenant',
+        'Disallow: /security',
+        'Disallow: /login',
+        'Disallow: /login-tenant',
+        'Disallow: /login-security',
+        'Disallow: /register',
+        'Disallow: /settings',
+        'Disallow: /pass/',
+        '',
+        'Sitemap: ' . url('/sitemap.xml'),
+    ];
+
+    return response(implode("\n", $lines), 200)
+        ->header('Content-Type', 'text/plain');
+});
+
+Route::get('/sitemap.xml', function () {
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'
+        . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        . '<url>'
+        . '<loc>' . url('/') . '</loc>'
+        . '<changefreq>monthly</changefreq>'
+        . '<priority>1.0</priority>'
+        . '</url>'
+        . '</urlset>';
+
+    return response($xml, 200)
+        ->header('Content-Type', 'application/xml');
+});
 
 Route::get('pass/{token}', [VisitorPassController::class, 'show'])->name('visitor-pass.show');
 
@@ -52,6 +86,6 @@ Route::get('security/login', function (Request $request) {
 
     return Inertia::render('auth/login-security');
 })->name('login-security');
-require __DIR__.'/settings.php';
-require __DIR__.'/admin.php';
-require __DIR__.'/webhooks.php';
+require __DIR__ . '/settings.php';
+require __DIR__ . '/admin.php';
+require __DIR__ . '/webhooks.php';
