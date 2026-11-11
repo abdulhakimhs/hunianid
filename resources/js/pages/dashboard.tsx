@@ -8,7 +8,6 @@ import {
     Home,
     Loader2,
     Megaphone,
-    MessageCircle,
     ReceiptText,
     Send,
     ShieldCheck,
@@ -45,15 +44,6 @@ type SetupChecklistItem = {
 type Guidance =
     | { type: 'complete_profile' }
     | { type: 'pengelola_setup'; areaId: number; areaName: string; checklist: SetupChecklistItem[] }
-    | {
-          type:
-              | 'penghuni_unclaimed'
-              | 'penghuni_unclaimed_and_pending_unit'
-              | 'penghuni_pending_unit'
-              | 'penghuni_active';
-          areaId: number;
-          areaName: string;
-      }
     | null;
 
 const SETUP_CHECKLIST_ICONS: Record<string, typeof Home> = {
@@ -173,88 +163,7 @@ return null;
         return <SetupChecklist areaName={guidance.areaName} checklist={guidance.checklist} />;
     }
 
-    const showUnclaimedCards =
-        guidance.type === 'penghuni_unclaimed' || guidance.type === 'penghuni_unclaimed_and_pending_unit';
-    const showPendingUnit =
-        guidance.type === 'penghuni_pending_unit' || guidance.type === 'penghuni_unclaimed_and_pending_unit';
-
-    return (
-        <div className="flex flex-col gap-4">
-            {showUnclaimedCards && (
-                <section className="rounded-[1.5rem] border border-[color:var(--color-ink,#142033)]/8 bg-[color:var(--color-surface,#fff)] p-5 shadow-elevated">
-                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.24em] text-[color:var(--color-sky-deep,#1aa3c9)]">
-                        Belum ada pengurus di {guidance.areaName}
-                    </p>
-                    <h2 className="mt-2 font-display text-lg font-semibold text-[color:var(--color-ink,#142033)]">
-                        Ajak orang lain bergabung
-                    </h2>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        <Link
-                            href="/admin/invites?frame=pengelola"
-                            className="flex flex-col gap-2 rounded-2xl border-2 border-[color:var(--color-mint,#1FCB82)] bg-[color:var(--color-mint,#1FCB82)]/10 p-4 text-left"
-                        >
-                            <ShieldCheck className="h-5 w-5 text-[color:var(--color-mint-deep,#14a869)]" />
-                            <span className="font-semibold text-[color:var(--color-ink,#142033)]">Ajak RT/Pengelola Bergabung</span>
-                            <span className="text-sm text-[color:var(--color-ink,#142033)]/70">
-                                Setelah mereka bergabung, Anda bisa menyerahkan akses pengelola ke akun mereka.
-                            </span>
-                        </Link>
-                        <Link
-                            href="/admin/invites?frame=resident"
-                            className="flex flex-col gap-2 rounded-2xl border border-[color:var(--color-ink,#142033)]/8 bg-[color:var(--color-bg,#F3FBF9)]/70 p-4 text-left"
-                        >
-                            <Users className="h-5 w-5 text-[color:var(--color-sky-deep,#1aa3c9)]" />
-                            <span className="font-semibold text-[color:var(--color-ink,#142033)]">Ajak Warga Lain Bergabung</span>
-                            <span className="text-sm text-[color:var(--color-ink,#142033)]/70">
-                                Undang tetangga Anda untuk ikut terdaftar di sini.
-                            </span>
-                        </Link>
-                    </div>
-                    <p className="mt-4 text-sm text-[color:var(--color-ink,#142033)]/60">
-                        Anda bisa mengundang siapa saja duluan. Nanti, akses sebagai pengelola bisa dipindahkan ke akun warga
-                        manapun kapan saja dari halaman ini.
-                    </p>
-                </section>
-            )}
-
-            {showPendingUnit && (
-                <section className="flex items-start gap-3 rounded-[1.5rem] border border-[color:var(--color-ink,#142033)]/8 bg-[color:var(--color-surface,#fff)] p-5 shadow-elevated">
-                    <Home className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-sky-deep,#1aa3c9)]" />
-                    <p className="text-sm text-[color:var(--color-ink,#142033)]">
-                        Menunggu konfirmasi dari penghuni yang sudah terdaftar di rumah ini sebelum akses Anda aktif.
-                    </p>
-                </section>
-            )}
-
-            {guidance.type === 'penghuni_active' && (
-                <section className="flex items-start gap-3 rounded-[1.5rem] border border-[color:var(--color-sky,#2FC2E8)]/25 bg-[color:var(--color-sky,#2FC2E8)]/10 p-5 shadow-elevated">
-                    <MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--color-sky-deep,#1aa3c9)]" />
-                    <div className="flex-1">
-                        <h2 className="font-display text-lg font-semibold text-[color:var(--color-ink,#142033)]">
-                            Akun Anda sudah aktif
-                        </h2>
-                        <p className="mt-1 text-sm text-[color:var(--color-ink,#142033)]/70">
-                            Anda terdaftar sebagai warga {guidance.areaName}. Selain lewat aplikasi ini, Anda juga bisa
-                            mengobrol langsung dengan asisten WhatsApp kami untuk:
-                        </p>
-                        <ul className="mt-3 space-y-1.5 text-sm text-[color:var(--color-ink,#142033)]/70">
-                            <li className="flex items-start gap-2">
-                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)]" />
-                                Membuat izin tamu hanya dengan mengetik nama tamu, kendaraan, dan tujuan kunjungan.
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--color-sky-deep,#1aa3c9)]" />
-                                Menambah atau melihat anggota keluarga yang terdaftar di rumah Anda.
-                            </li>
-                        </ul>
-                        <p className="mt-3 text-sm text-[color:var(--color-ink,#142033)]/70">
-                            Cukup kirim pesan ke WhatsApp yang terdaftar untuk akun Anda — tidak perlu membuka aplikasi.
-                        </p>
-                    </div>
-                </section>
-            )}
-        </div>
-    );
+    return null;
 }
 
 type PlanInfo = {

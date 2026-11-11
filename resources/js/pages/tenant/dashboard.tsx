@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import PageHeader from '@/components/shared/page-header';
 import TenantBottomNav from '@/components/tenant/bottom-nav';
+import ResidentGuidanceCard from '@/components/tenant/resident-guidance';
+import type { ResidentGuidance } from '@/components/tenant/resident-guidance';
 
 function formatCurrency(amount: number) {
     return new Intl.NumberFormat('id-ID', {
@@ -41,6 +43,7 @@ type Props = {
         dueDate: string | null;
     } | null;
     isFirstTimeTenant: boolean;
+    guidance: ResidentGuidance;
 };
 
 type Tile = {
@@ -77,7 +80,7 @@ const tiles: Tile[] = [
     // as a fourth tile once that feature is ready.
 ];
 
-export default function TenantDashboard({ resident, nextBill, isFirstTimeTenant }: Props) {
+export default function TenantDashboard({ resident, nextBill, isFirstTimeTenant, guidance }: Props) {
     return (
         <>
             <Head title="Beranda" />
@@ -104,6 +107,8 @@ export default function TenantDashboard({ resident, nextBill, isFirstTimeTenant 
                 </div>
 
                 <div className="flex-1 space-y-6 overflow-y-auto px-5 pt-3 pb-28">
+                    <ResidentGuidanceCard guidance={guidance} />
+
                     {isFirstTimeTenant || !nextBill ? (
                         <OnboardingCard name={resident.name} />
                     ) : (

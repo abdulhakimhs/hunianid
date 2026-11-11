@@ -4,13 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\VisitorPass;
+use App\Services\MembershipContext;
+use App\Services\ResidentGuidanceService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class TenantDashboardController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, ResidentGuidanceService $guidance): Response
     {
         $user = $request->user();
 
@@ -37,6 +39,7 @@ class TenantDashboardController extends Controller
                 'dueDate' => $nextBill->due_date?->toDateString(),
             ] : null,
             'isFirstTimeTenant' => ! $hasAnyActivity,
+            'guidance' => $guidance->for($user, MembershipContext::current($user, $request)),
         ]);
     }
 }
