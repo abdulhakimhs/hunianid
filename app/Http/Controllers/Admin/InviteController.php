@@ -23,6 +23,8 @@ use Inertia\Response;
 
 class InviteController extends Controller
 {
+    use PasswordValidationRules;
+
     public function index(Request $request): Response
     {
         $area = $request->attributes->get('adminArea');
@@ -158,6 +160,7 @@ class InviteController extends Controller
             'name' => $invite->name,
             'phone' => $invite->phone,
             'unit' => $invite->unit ? trim(($invite->unit->block ?? '').' '.$invite->unit->unit_number) : null,
+            'passwordPolicy' => PasswordPolicy::active() ? PasswordPolicy::toArray() : null,
         ]);
     }
 
@@ -174,7 +177,7 @@ class InviteController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => $this->passwordRules(),
             'phone' => ['required', 'string', 'max:20'],
         ];
 

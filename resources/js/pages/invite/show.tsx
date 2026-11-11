@@ -1,10 +1,13 @@
 import { Head, useForm } from '@inertiajs/react';
 import { AlertTriangle, Home, Loader2, Phone, Sparkles, Users } from 'lucide-react';
 import InputError from '@/components/input-error';
+import PasswordChecklist from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { passwordMeetsPolicy } from '@/lib/password-policy';
+import type { PasswordPolicy } from '@/lib/password-policy';
 
 type Props = {
     valid: boolean;
@@ -16,17 +19,22 @@ type Props = {
     name?: string | null;
     phone?: string | null;
     unit?: string | null;
+    passwordPolicy?: PasswordPolicy | null;
 };
 
-export default function InviteShow({ valid, code, complexName, areaName, isUnclaimed, isTenantInvite, name, phone, unit }: Props) {
+export default function InviteShow({ valid, code, complexName, areaName, isUnclaimed, isTenantInvite, name, phone, unit, passwordPolicy }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         name: name ?? '',
         email: '',
         password: '',
+        password_confirmation: '',
         phone: phone ?? '',
         unit_number: '',
         block: '',
     });
+
+    const passwordReady =
+        passwordMeetsPolicy(data.password, passwordPolicy ?? null) && data.password === data.password_confirmation;
 
     function submit(e: React.FormEvent) {
         e.preventDefault();
@@ -116,7 +124,20 @@ export default function InviteShow({ valid, code, complexName, areaName, isUncla
                 <div className="grid gap-2">
                     <Label htmlFor="password">Kata sandi</Label>
                     <PasswordInput id="password" value={data.password} onChange={(e) => setData('password', e.target.value)} />
+                    {passwordPolicy && data.password.length > 0 && (
+                        <PasswordChecklist password={data.password} policy={passwordPolicy} />
+                    )}
                     <InputError message={errors.password} />
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="password_confirmation">Konfirmasi kata sandi</Label>
+                    <PasswordInput
+                        id="password_confirmation"
+                        value={data.password_confirmation}
+                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                    />
+                    <InputError message={errors.password_confirmation} />
                 </div>
 
                 {!isTenantInvite && (
@@ -133,7 +154,7 @@ export default function InviteShow({ valid, code, complexName, areaName, isUncla
                     </div>
                 )}
 
-                <Button type="submit" className="mt-2 w-full" disabled={processing}>
+                <Button type="submit" className="mt-2 w-full" disabled={processing || !passwordReady}>
                     {processing && <Loader2 className="h-4 w-4 animate-spin" />}
                     Daftar
                 </Button>

@@ -13,12 +13,15 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import PasswordChecklist from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import PageHeader from '@/components/shared/page-header';
 import TenantBottomNav from '@/components/tenant/bottom-nav';
 import { Button } from '@/components/ui/button';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { switchMembership } from '@/lib/membership';
+import { passwordMeetsPolicy } from '@/lib/password-policy';
+import type { PasswordPolicy } from '@/lib/password-policy';
 import { logout } from '@/routes';
 import type { Membership } from '@/types';
 
@@ -28,9 +31,10 @@ type Props = {
         unit: string | null;
         phone: string | null;
     };
+    passwordPolicy?: PasswordPolicy | null;
 };
 
-export default function TenantProfile({ resident }: Props) {
+export default function TenantProfile({ resident, passwordPolicy }: Props) {
     const { auth } = usePage().props;
     const [loggingOut, setLoggingOut] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -220,13 +224,13 @@ export default function TenantProfile({ resident }: Props) {
             )}
 
             {passwordOpen && (
-                <ChangePasswordSheet onClose={() => setPasswordOpen(false)} />
+                <ChangePasswordSheet policy={passwordPolicy ?? null} onClose={() => setPasswordOpen(false)} />
             )}
         </>
     );
 }
 
-function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
+function ChangePasswordSheet({ policy, onClose }: { policy: PasswordPolicy | null; onClose: () => void }) {
     const [currentPassword, setCurrentPassword] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -278,6 +282,9 @@ function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
+                        {policy && password.length > 0 && (
+                            <PasswordChecklist password={password} policy={policy} />
+                        )}
                         <InputError message={errors.password} />
                     </div>
                     <div className="grid gap-1.5">
@@ -302,7 +309,7 @@ function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
                     <Button
                         className="h-12 flex-1"
                         onClick={submit}
-                        disabled={!currentPassword || !password || !passwordConfirmation || submitting}
+                        disabled={!currentPassword || !password || !passwordMeetsPolicy(password, policy) || password !== passwordConfirmation || submitting}
                     >
                         {submitting && (
                             <Loader2 className="h-4 w-4 animate-spin" />

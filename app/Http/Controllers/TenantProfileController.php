@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Settings\PasswordUpdateRequest;
+use App\Support\PasswordPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,6 +25,7 @@ class TenantProfileController extends Controller
                 'unit' => $unit ? trim(($unit->block ? $unit->block.' ' : '').$unit->unit_number) : null,
                 'phone' => $user->phone,
             ],
+            'passwordPolicy' => PasswordPolicy::active() ? PasswordPolicy::toArray() : null,
         ]);
     }
 
