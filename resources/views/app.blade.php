@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
+    @include('partials.seo')
     {{--
     Dark mode is intentionally disabled: the design system only defines a
     light theme, so the <html> element never gets a "dark" class here.
@@ -35,7 +35,8 @@
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
     <x-inertia::head>
-        <title>{{ config('app.name', 'HunianID') }}</title>
+        <title inertia>{{ request()->is('/') ? config('app.name'). ' - Kelola Perumahan Tanpa Ribet Catat Manual' :
+            config('app.name') }}</title>
     </x-inertia::head>
 </head>
 
