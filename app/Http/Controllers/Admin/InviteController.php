@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
 use App\Models\AreaMember;
 use App\Models\Invite;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Services\MembershipContext;
 use App\Services\TenantInviteService;
 use App\Services\UnitResolverService;
+use App\Support\PasswordPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
