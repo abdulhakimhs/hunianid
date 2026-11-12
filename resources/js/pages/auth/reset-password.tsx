@@ -1,19 +1,25 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
+import PasswordChecklist from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import type { PasswordPolicy } from '@/lib/password-policy';
 import { update } from '@/routes/password';
 
 type Props = {
     token: string;
     email: string;
     passwordRules: string;
+    passwordPolicy?: PasswordPolicy | null;
 };
 
-export default function ResetPassword({ token, email, passwordRules }: Props) {
+export default function ResetPassword({ token, email, passwordRules, passwordPolicy }: Props) {
+    const [password, setPassword] = useState('');
+
     return (
         <>
             <Head title="Reset password" />
@@ -52,7 +58,11 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                                 autoFocus
                                 placeholder="Password"
                                 passwordrules={passwordRules}
+                                onChange={(e) => setPassword(e.target.value)}
                             />
+                            {passwordPolicy && password.length > 0 && (
+                                <PasswordChecklist password={password} policy={passwordPolicy} />
+                            )}
                             <InputError message={errors.password} />
                         </div>
 

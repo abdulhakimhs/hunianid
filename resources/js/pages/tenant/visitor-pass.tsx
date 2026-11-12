@@ -9,6 +9,7 @@ import {
     MessageCircle,
     Plus,
     QrCode,
+    User,
     X,
 } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -36,6 +37,9 @@ type VisitorPass = {
     validFrom: string; // ISO
     validUntil: string; // ISO
     exitedAt: string | null;
+    createdBy: string | null;
+    // Household members see each other's passes, but only the creator can cancel.
+    canCancel: boolean;
 };
 
 type Props = {
@@ -75,12 +79,12 @@ export default function TenantVisitorPass({ passes: initialPasses }: Props) {
     const [shareTarget, setShareTarget] = useState<VisitorPass | null>(null);
     const now = new Date();
 
-    const active = passes.filter(
-        (p) => p.status === 'pending' && !isExpired(p, now),
-    );
-    const history = passes.filter(
-        (p) => p.status !== 'pending' || isExpired(p, now),
-    );
+    // Same rule as the admin dashboard's "Tamu Aktif" widget: a pass that is
+    // still valid, or a guest who has checked in and not yet exited.
+    const isActivePass = (p: VisitorPass) =>
+        (p.status === 'pending' && !isExpired(p, now)) || p.status === 'used';
+    const active = passes.filter(isActivePass);
+    const history = passes.filter((p) => !isActivePass(p));
 
     function handleCreated(pass: VisitorPass) {
         setPasses((prev) => [pass, ...prev]);
@@ -298,6 +302,13 @@ function PassCard({
                     </span>
                 )}
 
+                {pass.createdBy && (
+                    <span className="flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {pass.canCancel ? 'Dibuat oleh Anda' : `Dibuat oleh ${pass.createdBy}`}
+                    </span>
+                )}
+
                 {pass.status === 'exited' && pass.exitedAt && (
                     <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
@@ -320,14 +331,16 @@ function PassCard({
                         <MessageCircle className="h-3.5 w-3.5" />
                         Bagikan
                     </Button>
-                    <Button
-                        variant="outline"
-                        className="h-9 flex-1 text-xs text-red-600 hover:text-red-600"
-                        onClick={onCancel}
-                    >
-                        <X className="h-3.5 w-3.5" />
-                        Batalkan
-                    </Button>
+                    {pass.canCancel && (
+                        <Button
+                            variant="outline"
+                            className="h-9 flex-1 text-xs text-red-600 hover:text-red-600"
+                            onClick={onCancel}
+                        >
+                            <X className="h-3.5 w-3.5" />
+                            Batalkan
+                        </Button>
+                    )}
                 </div>
             )}
         </div>

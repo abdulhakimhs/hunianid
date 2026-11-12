@@ -33,30 +33,32 @@ class DashboardController extends Controller
             return redirect()->route('security.dashboard');
         }
 
-        $guidance = $current ? $this->guidanceFor($user, $current) : null;
+        $isPengelola = $current && in_array($current->role->key_name, ['superadmin', 'staff'], true);
 
-        // A resident with nothing pending (profile complete, approved, unit
-        // confirmed) belongs on the tenant PWA, not the pengelola-oriented
-        // admin dashboard. Residents who still have something to resolve
-        // stay here, since the tenant PWA has no wiring yet for those states.
-        if ($current && $current->role->key_name === 'resident' && ($guidance['type'] ?? null) === 'penghuni_active') {
+        // The web dashboard is for pengelola only. Everyone else — residents in
+        // any state, family members (no area membership at all), or accounts
+        // with no membership — lives in the tenant PWA, which shows any pending
+        // resident guidance itself (see ResidentGuidanceService). Every login
+        // and registration path lands on /dashboard, so this is the one place
+        // that decides it.
+        if (! $isPengelola) {
             return redirect()->route('tenant.dashboard');
         }
 
-        $isPengelola = $current && in_array($current->role->key_name, ['superadmin', 'staff'], true);
+        $guidance = $this->guidanceFor($user, $current);
 
         // An admin whose area isn't paid up (just registered on a paid plan and
         // hasn't checked out yet, or a trial that ran out) gets ONLY a payment
         // prompt here — no operational widgets, since every other admin route is
         // already gated behind EnsureSubscriptionActive and would just bounce
         // them to the same upsell screen anyway.
-        $paymentRequired = $isPengelola ? $this->paymentRequiredFor($current->area) : null;
+        $paymentRequired = $this->paymentRequiredFor($current->area);
 
         return Inertia::render('dashboard', [
             'guidance' => $paymentRequired ? null : $guidance,
             'status' => $request->session()->get('status'),
             'paymentRequired' => $paymentRequired,
-            ...($isPengelola && ! $paymentRequired ? $this->operationalWidgets($current->area_id) : $this->emptyOperationalWidgets()),
+            ...(! $paymentRequired ? $this->operationalWidgets($current->area_id) : $this->emptyOperationalWidgets()),
         ]);
     }
 
@@ -201,6 +203,10 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Only superadmin/staff reach the web dashboard (see __invoke), so only
+     * pengelola guidance lives here. Resident guidance: ResidentGuidanceService.
+     */
     private function guidanceFor(User $user, AreaMember $current): ?array
     {
         if ($user->profile_completed_at === null) {
@@ -208,44 +214,17 @@ class DashboardController extends Controller
         }
 
         $area = $current->area;
+        $checklist = $this->setupChecklistFor($area);
 
-        if ($current->role->key_name === 'superadmin' || $current->role->key_name === 'staff') {
-            $checklist = $this->setupChecklistFor($area);
-
-            if (array_filter($checklist, fn (array $item) => ! $item['done'])) {
-                return [
-                    'type' => 'pengelola_setup',
-                    'areaId' => $area->id,
-                    'areaName' => $area->name,
-                    'checklist' => $checklist,
-                ];
-            }
-
-            return null;
+        if (array_filter($checklist, fn (array $item) => ! $item['done'])) {
+            return [
+                'type' => 'pengelola_setup',
+                'areaId' => $area->id,
+                'areaName' => $area->name,
+                'checklist' => $checklist,
+            ];
         }
 
-        if ($current->role->key_name !== 'resident') {
-            return null;
-        }
-
-        $inUnclaimedArea = $area->status === 'unclaimed';
-        // A resident with status === 'pending_approval' (outside an unclaimed area)
-        // never reaches this code — the `pending.approval` middleware redirects them
-        // to the dedicated waiting page before the dashboard route resolves.
-        $pendingUnitConfirmation = $user->units()->wherePivot('status', 'pending')->exists();
-
-        if ($inUnclaimedArea && $pendingUnitConfirmation) {
-            return ['type' => 'penghuni_unclaimed_and_pending_unit', 'areaId' => $area->id, 'areaName' => $area->name];
-        }
-
-        if ($inUnclaimedArea) {
-            return ['type' => 'penghuni_unclaimed', 'areaId' => $area->id, 'areaName' => $area->name];
-        }
-
-        if ($pendingUnitConfirmation) {
-            return ['type' => 'penghuni_pending_unit', 'areaId' => $area->id, 'areaName' => $area->name];
-        }
-
-        return ['type' => 'penghuni_active', 'areaId' => $area->id, 'areaName' => $area->name];
+        return null;
     }
 }

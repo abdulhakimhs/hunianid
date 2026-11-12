@@ -1,5 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -7,20 +7,25 @@ import type { Props as ManagePasskeysProps } from '@/components/manage-passkeys'
 import ManagePasskeys from '@/components/manage-passkeys';
 import type { Props as ManageTwoFactorProps } from '@/components/manage-two-factor';
 import ManageTwoFactor from '@/components/manage-two-factor';
+import PasswordChecklist from '@/components/password-checklist';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import type { PasswordPolicy } from '@/lib/password-policy';
 import { edit } from '@/routes/security';
 
 type Props = {
     passwordRules: string;
+    passwordPolicy?: PasswordPolicy | null;
 } & ManagePasskeysProps &
     ManageTwoFactorProps;
 
 export default function Security(props: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
+    // Mirrors the uncontrolled new-password field so the checklist can react while typing.
+    const [newPassword, setNewPassword] = useState('');
 
     return (
         <>
@@ -48,7 +53,10 @@ export default function Security(props: Props) {
                                 'current_password',
                             ]}
                             resetOnSuccess
+                            onSuccess={() => setNewPassword('')}
                             onError={(errors) => {
+                                setNewPassword('');
+
                                 if (errors.password) {
                                     passwordInput.current?.focus();
                                 }
@@ -89,7 +97,12 @@ export default function Security(props: Props) {
                                             autoComplete="new-password"
                                             placeholder="Kata sandi baru"
                                             passwordrules={props.passwordRules}
+                                            onChange={(e) => setNewPassword(e.target.value)}
                                         />
+
+                                        {props.passwordPolicy && newPassword.length > 0 && (
+                                            <PasswordChecklist password={newPassword} policy={props.passwordPolicy} />
+                                        )}
 
                                         <InputError message={errors.password} />
                                     </div>

@@ -14,15 +14,18 @@ import {
     SquarePen,
 } from 'lucide-react';
 import { useState } from 'react';
+import InputError from '@/components/input-error';
+import PasswordChecklist from '@/components/password-checklist';
+import PasswordInput from '@/components/password-input';
 import SecurityBottomNav from '@/components/security/bottom-nav';
 import LogoutConfirm from '@/components/shared/logout-confirm';
 import PageHeader from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import InputError from '@/components/input-error';
-import PasswordInput from '@/components/password-input';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { postJson } from '@/lib/api';
+import { passwordMeetsPolicy } from '@/lib/password-policy';
+import type { PasswordPolicy } from '@/lib/password-policy';
 import { logout } from '@/routes';
 import type { Membership } from '@/types';
 
@@ -36,6 +39,7 @@ type Guard = {
 
 type Props = {
     guard: Guard;
+    passwordPolicy?: PasswordPolicy | null;
 };
 
 type MenuItem = {
@@ -44,7 +48,7 @@ type MenuItem = {
     onClick?: () => void;
 };
 
-export default function SecurityProfile({ guard }: Props) {
+export default function SecurityProfile({ guard, passwordPolicy }: Props) {
     const { auth } = usePage().props;
     const [loggingOut, setLoggingOut] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -189,7 +193,7 @@ export default function SecurityProfile({ guard }: Props) {
             )}
 
             {passwordOpen && (
-                <ChangePasswordSheet onClose={() => setPasswordOpen(false)} />
+                <ChangePasswordSheet policy={passwordPolicy ?? null} onClose={() => setPasswordOpen(false)} />
             )}
 
             {switchOpen && (
@@ -277,7 +281,7 @@ function EditNameSheet({
     );
 }
 
-function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
+function ChangePasswordSheet({ policy, onClose }: { policy: PasswordPolicy | null; onClose: () => void }) {
     const [currentPassword, setCurrentPassword] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -329,6 +333,9 @@ function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
+                        {policy && password.length > 0 && (
+                            <PasswordChecklist password={password} policy={policy} />
+                        )}
                         <InputError message={errors.password} />
                     </div>
                     <div className="grid gap-1.5">
@@ -353,7 +360,7 @@ function ChangePasswordSheet({ onClose }: { onClose: () => void }) {
                     <Button
                         className="h-12 flex-1"
                         onClick={submit}
-                        disabled={!currentPassword || !password || !passwordConfirmation || submitting}
+                        disabled={!currentPassword || !password || !passwordMeetsPolicy(password, policy) || password !== passwordConfirmation || submitting}
                     >
                         {submitting && (
                             <Loader2 className="h-4 w-4 animate-spin" />

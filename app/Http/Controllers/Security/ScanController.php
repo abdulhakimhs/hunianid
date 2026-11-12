@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Security;
 
 use App\Http\Controllers\Controller;
 use App\Models\VisitorPass;
+use App\Services\VisitorPassNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+
+use function Illuminate\Support\defer;
 
 class ScanController extends Controller
 {
@@ -61,7 +64,7 @@ class ScanController extends Controller
         ]);
     }
 
-    public function confirm(Request $request): JsonResponse
+    public function confirm(Request $request, VisitorPassNotificationService $notifications): JsonResponse
     {
         $data = $request->validate([
             'code' => ['required', 'string'],
@@ -78,6 +81,10 @@ class ScanController extends Controller
             'used_at' => now(),
             'used_by' => $request->user()->id,
         ]);
+
+        // After the response, so the guard's scan screen isn't held up by the
+        // synchronous Wablas call.
+        defer(fn () => $notifications->notifyArrival($pass));
 
         return response()->json(['ok' => true]);
     }

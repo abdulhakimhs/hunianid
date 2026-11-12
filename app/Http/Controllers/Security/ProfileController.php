@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Security;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Security\UpdateSecurityProfileRequest;
 use App\Http\Requests\Settings\PasswordUpdateRequest;
+use App\Support\PasswordPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -26,6 +27,7 @@ class ProfileController extends Controller
                 'areaLabel' => "{$area->complex->name}-{$area->name}",
                 'joinedAt' => ($membership->approved_at ?? $membership->created_at)->translatedFormat('F Y'),
             ],
+            'passwordPolicy' => PasswordPolicy::active() ? PasswordPolicy::toArray() : null,
         ]);
     }
 
