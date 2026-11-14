@@ -97,7 +97,7 @@ const PLAN_INFO: Record<
     },
     standard: {
         name: 'Standard',
-        price: 'Rp149.000',
+        price: 'Rp299.000',
         period: '/bulan',
         badge: 'Paling populer',
         features: ['Sampai 150 unit untuk 1 RT', 'Riwayat & laporan lengkap', 'Support prioritas via WhatsApp'],

@@ -131,9 +131,9 @@ const PLANS = [
     },
     {
         name: 'Standard',
-        priceMonthly: 149000,
-        priceYearly: 1490000,
-        note: 'sampai 150 unit, sekitar Rp1.000 per unit',
+        priceMonthly: 299000,
+        priceYearly: 2990000,
+        note: 'sampai 150 unit, sekitar Rp2.000 per unit',
         desc: 'Untuk RT yang sudah pakai HunianID sehari-hari.',
         features: [
             'Semua fitur Coba Gratis',
