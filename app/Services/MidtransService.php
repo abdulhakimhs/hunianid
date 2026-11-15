@@ -112,7 +112,7 @@ class MidtransService
         try {
             Http::withBasicAuth($settings->serverKey(), '')
                 ->asJson()
-                ->post("{$settings->baseUrl()}/v2/{$orderId}/cancel");
+                ->post("{$settings->coreApiBaseUrl()}/v2/{$orderId}/cancel");
         } catch (\Throwable $e) {
             Log::warning('[midtrans] cancel superseded transaction failed', ['order_id' => $orderId, 'exception' => $e->getMessage()]);
         }
@@ -185,7 +185,7 @@ class MidtransService
         try {
             $response = Http::withBasicAuth($settings->serverKey(), '')
                 ->acceptJson()
-                ->get("{$settings->baseUrl()}/v2/{$payment->order_id}/status");
+                ->get("{$settings->coreApiBaseUrl()}/v2/{$payment->order_id}/status");
 
             if (! $response->successful()) {
                 return ['ok' => false, 'error' => $response->json('status_message') ?? "HTTP {$response->status()}"];
