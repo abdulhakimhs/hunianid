@@ -102,4 +102,18 @@ class BillingController extends Controller
 
         return response()->noContent();
     }
+
+    /**
+     * Called right after Snap reports success/pending — asks Midtrans
+     * directly for this order's status instead of waiting on the webhook,
+     * which depends on a Notification URL configured on Midtrans's side.
+     */
+    public function syncCheckout(Request $request, SubscriptionPayment $payment)
+    {
+        $area = $request->attributes->get('adminArea');
+
+        abort_unless($payment->subscription->area_id === $area->id, 404);
+
+        return response()->json($this->midtrans->syncPaymentStatus($payment));
+    }
 }

@@ -11,7 +11,7 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { reportCheckoutClosed, startPlanCheckout, useMidtransSnap } from '@/hooks/use-midtrans-snap';
+import { reportCheckoutClosed, startPlanCheckout, syncCheckoutStatus, useMidtransSnap } from '@/hooks/use-midtrans-snap';
 
 type Plan = {
     id: number;
@@ -141,11 +141,11 @@ export default function BillingIndex({
                     window.snap.pay(data.token, {
                         onSuccess: () => {
                             settled = true;
-                            router.reload();
+                            syncCheckoutStatus(data.payment_id).finally(() => router.reload());
                         },
                         onPending: () => {
                             settled = true;
-                            router.reload();
+                            syncCheckoutStatus(data.payment_id).finally(() => router.reload());
                         },
                         onClose: () => {
                             if (!settled && data.payment_id) {

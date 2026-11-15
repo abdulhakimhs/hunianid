@@ -87,3 +87,25 @@ export function reportCheckoutClosed(paymentId: number) {
         // Best-effort only — nothing to show the user, nothing to retry.
     });
 }
+
+/**
+ * Called right after Snap reports success/pending — asks the server to
+ * check the order's status with Midtrans directly rather than relying on
+ * the async webhook (which needs a Notification URL configured on
+ * Midtrans's side to ever fire). Awaited before reloading the page so the
+ * subscription is already up to date when it does.
+ */
+export async function syncCheckoutStatus(paymentId: number) {
+    try {
+        await fetch(`/admin/billing/checkout/${paymentId}/sync`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'X-XSRF-TOKEN': xsrfToken(),
+            },
+        });
+    } catch {
+        // Best-effort — the stale-pending sweep and a page reload still
+        // leave the user able to retry manually.
+    }
+}
