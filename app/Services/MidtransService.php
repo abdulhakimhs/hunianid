@@ -161,6 +161,53 @@ class MidtransService
             return;
         }
 
+        $this->applyTransactionStatus($payment, $payload);
+    }
+
+    /**
+     * Fallback for when Midtrans's webhook never arrives (dashboard
+     * Notification URL unset/misconfigured, or just delayed) — asks Midtrans
+     * directly what an order's current status is, right after Snap reports
+     * success/pending, instead of waiting on the async notification. No
+     * signature to check here: the trust boundary is the authenticated
+     * outbound request itself, not an inbound payload.
+     *
+     * @see https://docs.midtrans.com/reference/get-transaction-status
+     */
+    public function syncPaymentStatus(SubscriptionPayment $payment): array
+    {
+        $settings = PaymentGatewaySetting::current();
+
+        if (! $settings || ! $settings->serverKey()) {
+            return ['ok' => false, 'error' => 'Payment gateway belum dikonfigurasi.'];
+        }
+
+        try {
+            $response = Http::withBasicAuth($settings->serverKey(), '')
+                ->acceptJson()
+                ->get("{$settings->baseUrl()}/v2/{$payment->order_id}/status");
+
+            if (! $response->successful()) {
+                return ['ok' => false, 'error' => $response->json('status_message') ?? "HTTP {$response->status()}"];
+            }
+
+            $this->applyTransactionStatus($payment, $response->json());
+
+            return ['ok' => true];
+        } catch (\Throwable $e) {
+            Log::error('[midtrans] status sync failed', ['order_id' => $payment->order_id, 'exception' => $e->getMessage()]);
+
+            return ['ok' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Shared by the webhook and the status-sync fallback: records Midtrans's
+     * reported transaction state and, on settlement, applies it to the
+     * subscription.
+     */
+    private function applyTransactionStatus(SubscriptionPayment $payment, array $payload): void
+    {
         $transactionStatus = $payload['transaction_status'] ?? null;
 
         $payment->update([
@@ -175,8 +222,9 @@ class MidtransService
 
             // Only applies the settlement if no newer payment has already won
             // for this subscription — guards against a stale/duplicate/
-            // out-of-order webhook (e.g. for an abandoned checkout) silently
-            // overwriting a subscription a later payment already upgraded.
+            // out-of-order notification (e.g. for an abandoned checkout)
+            // silently overwriting a subscription a later payment already
+            // upgraded.
             $this->subscriptions->applyPaymentIfLatest($payment->refresh());
         } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire', 'failure'], true)) {
             if ($payment->isPending()) {
