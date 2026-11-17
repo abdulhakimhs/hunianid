@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::inertia('/', 'landing')->name('home');
+Route::inertia('privacy-policy', 'privacy-policy')->name('privacy-policy');
+Route::inertia('terms-of-service', 'terms-of-service')->name('terms-of-service');
 Route::get('/robots.txt', function () {
     $lines = [
         'User-agent: *',
