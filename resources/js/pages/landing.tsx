@@ -2,7 +2,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import HunianLogo from '@/components/hunian-logo';
-import { login } from '@/routes';
+import { login, privacyPolicy, termsOfService } from '@/routes';
 import MockupPanic from '../components/mockup-panic.jsx';
 import {
     MockupChat,
@@ -1467,6 +1467,20 @@ export default function Landing() {
                                 halo@hunianid.com
                             </a>
                         </p>
+                        <div className="flex gap-4 text-sm text-(--color-ink)/55">
+                            <Link
+                                href={privacyPolicy()}
+                                className="underline hover:text-(--color-ink)"
+                            >
+                                Kebijakan Privasi
+                            </Link>
+                            <Link
+                                href={termsOfService()}
+                                className="underline hover:text-(--color-ink)"
+                            >
+                                Ketentuan Layanan
+                            </Link>
+                        </div>
                     </div>
                 </footer>
             </div>
