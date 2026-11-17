@@ -1,6 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import HunianLogo from '@/components/hunian-logo';
-import { home } from '@/routes';
+import SiteHeader from '@/components/site-header';
 
 const SECTIONS: { title: string; body: React.ReactNode }[] = [
     {
@@ -152,19 +152,7 @@ export default function TermsOfService() {
         <>
             <Head title="Ketentuan Layanan — HunianID" />
             <div className="min-h-screen bg-(--color-bg) font-sans text-(--color-ink) antialiased">
-                <header className="border-b border-(--color-ink)/8">
-                    <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-5">
-                        <Link href={home()}>
-                            <HunianLogo className="h-7 w-auto" />
-                        </Link>
-                        <Link
-                            href={home()}
-                            className="text-sm font-medium text-(--color-ink)/70 underline hover:text-(--color-ink)"
-                        >
-                            ← Kembali ke Beranda
-                        </Link>
-                    </div>
-                </header>
+                <SiteHeader />
 
                 <main className="mx-auto max-w-3xl px-5 py-12">
                     <h1 className="font-display text-3xl font-bold">
